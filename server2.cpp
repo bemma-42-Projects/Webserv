@@ -1,12 +1,13 @@
 #define _POSIX_C_SOURCE 200112L
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
-#include <unistd.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+// #include "Client.hpp"
 
 #define PORT "8080" // the ports users will be connecting to
 #define BACKLOG 10  // how many pending connections queue holds
@@ -146,6 +147,11 @@ int main(void)
         printf("--- RECEIVED %zd BYTES FROM CLIENT ---\n", bytes_received);
         printf("%s\n", buffer);
         printf("--------------------------------------\n\n");
+
+        // parsing HTTP
+        // read from buffer
+
+        // send the response back to the client
 
         // --- SEND (Sending the response) ---
         const char *response = "Good talking to you!\n";
