@@ -97,6 +97,50 @@ int main(void)
     addr_size = sizeof(their_addr);
     new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
 
+    if (new_fd == -1) {
+        fprintf(stderr, "Fatal error: accept() failed.\n");
+        close(sockfd);
+        return (4);
+    }
+
+    printf("Connection accepted on new socket %d!\n\n", new_fd);
+
+    // --- RECV (Reading the client's request) ---
+    char buffer[1024]; // Allocate a buffer large enough for basic messages
+    memset(buffer, 0, sizeof(buffer)); // Zero it out to prevent reading garbage memory
+
+    // recv blocks until the client sends some data
+    ssize_t bytes_received = recv(new_fd, buffer, sizeof(buffer) - 1, 0);
+
+    if (bytes_received < 0) {
+        fprintf(stderr, "Error reading from socket.\n");
+    } else if (bytes_received == 0) {
+        printf("Client unexpectedly closed the connection.\n");
+    } else {
+        printf("--- RECEIVED %zd BYTES FROM CLIENT ---\n", bytes_received);
+        printf("%s\n", buffer);
+        printf("--------------------------------------\n\n");
+
+        // --- SEND (Sending the response) ---
+        // Just a simple, friendly raw text message
+        const char *response = "Good talking to you!\n";
+
+        ssize_t bytes_sent = send(new_fd, response, strlen(response), 0);
+        
+        if (bytes_sent < 0) {
+            fprintf(stderr, "Error sending response.\n");
+        } else {
+            printf("Successfully sent %zd bytes back to the client.\n", bytes_sent);
+        }
+    }
+
+    // Close the connection with this specific client
+    printf("\nClosing the connection (new_fd).\n");
+    close(new_fd);
+
+    // Shut down the main listening server socket
+    printf("Shutting down the server (sockfd).\n");
     close(sockfd);
+    
     return (0);
 }
