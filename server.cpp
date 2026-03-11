@@ -1,5 +1,6 @@
+// Définit le niveau de conformité POSIX pour s'assurer que les fonctions réseau sont disponibles (getaddrinfo et les sockets modernes)
 #define _POSIX_C_SOURCE 200112L
-#include <cstdio>
+
 #include <cstring>
 #include <unistd.h>
 #include <sys/types.h>
@@ -28,11 +29,11 @@ int main(void)
     struct addrinfo         *p;
     int                     status;
     char                    ipstr[INET6_ADDRSTRLEN];
-    int                     sockfd;
+    int                     sockfd = 1;
     int                     yes = 1;    // setsockopt
-    
+
     try {
-        memset(&hints, 0, sizeof hints);
+        std::memset(&hints, 0, sizeof hints);
         hints.ai_family = AF_UNSPEC;    // use IPv4 or IPv6, whichever
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_flags = AI_PASSIVE;    // fill in my IP for me
@@ -50,11 +51,11 @@ int main(void)
             struct sockaddr_in6 *ipv6;
 
             if (p->ai_family == AF_INET) {  // IPv4
-                ipv4 = (struct sockaddr_in *)p->ai_addr;
+                ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
                 addr = &(ipv4->sin_addr);
                 ipver = "IPv4";
             } else {    // IPv6
-                ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+                ipv6 = reinterpret_cast<struct sockaddr_in6 *>(p->ai_addr);
                 addr = &(ipv6->sin6_addr);
                 ipver = "IPv6";
             }
@@ -65,7 +66,7 @@ int main(void)
             // make a socket
             sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
             if (sockfd == -1) {
-                std::cerr << "Failed to create socket: " << strerror(errno) << ". Moving to next..." << std::endl;
+                std::cerr << "Failed to create socket: " << std::strerror(errno) << ". Moving to next..." << std::endl;
                 continue ;
             }
             std::cout << "Socket successfully created!" << std::endl;
@@ -75,7 +76,7 @@ int main(void)
             // bind it
             std::cout << "Attempting to bind to port " << PORT << "..." << std::endl;
             if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-                std::cerr << "Bind failed: " << strerror(errno) << " Closing socket..." << std::endl;
+                std::cerr << "Bind failed: " << std::strerror(errno) << " Closing socket..." << std::endl;
                 close(sockfd);
                 continue ;
             }
@@ -83,12 +84,11 @@ int main(void)
             break ;
         }
 
+        freeaddrinfo(res);
+
         if (p == NULL) {
-            freeaddrinfo(res);
             throw SystemError("Fatal error: Failed to bind to any of the local interfaces");
         }
-
-        freeaddrinfo(res);
 
         // listen on it
         std::cout << "Setting up the listener..." << std::endl;
@@ -117,7 +117,7 @@ int main(void)
             // 3 : Appeler poll()
             // 4 : Parcourir les résultats pour savoir s'il faut accept() ou recv()
 
-            time_t current_time = time(NULL);
+            time_t current_time = std::time(NULL);
 
             for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ) {
                 Client &client = it->second;
@@ -141,10 +141,10 @@ int main(void)
             int                     client_fd;
 
             addr_size = sizeof(client_addr);
-            client_fd = accept(sockfd, (struct sockaddr *)&client_addr, &addr_size);
+            client_fd = accept(sockfd, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
 
             if (client_fd == -1) {
-                std::cerr << "Error: accept() failed: " << strerror(errno) << std::endl;
+                std::cerr << "Error: accept() failed: " << std::strerror(errno) << std::endl;
                 continue ;
             }
 
@@ -167,11 +167,11 @@ int main(void)
             // client_addr is of type sockaddr_storage. We use ss_family to determine
             // if the client connected via IPv4 or IPv6.
             if (client_addr.ss_family == AF_INET) { // IPv4
-                struct sockaddr_in *ipv4 = (struct sockaddr_in *)&client_addr;
+                struct sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(&client_addr);
                 raw_ip_addr = &(ipv4->sin_addr);
                 client_ipver = "IPv4";
             } else { // IPv6
-                struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)&client_addr;
+                struct sockaddr_in6 *ipv6 = reinterpret_cast<struct sockaddr_in6 *>(&client_addr);
                 raw_ip_addr = &(ipv6->sin6_addr);
                 client_ipver = "IPv6";
             }
@@ -200,6 +200,8 @@ int main(void)
                 // 3. close(fd)
                 // =========================================================
                 std::cout << "Client unexpectedly closed the connection." << std::endl;
+                close(client.getSocketFd());
+                clients.erase(client.getSocketFd());
             } else {
                 std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM CLIENT ---" << std::endl;
                 std::cout << buffer << std::endl;
@@ -230,7 +232,9 @@ int main(void)
                 // 3. Si buffer vide -> repasser en READING_REQUEST ou FINISHED
                 // =========================================================
                 ssize_t bytes_sent = send(client.getSocketFd(), response, strlen(response), 0);
-                
+                close(client.getSocketFd());
+                clients.erase(client.getSocketFd());
+
                 if (bytes_sent < 0) {
                     std::cerr << "Error sending response." << std::endl;
                 } else {
