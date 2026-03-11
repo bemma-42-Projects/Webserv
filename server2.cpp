@@ -94,6 +94,8 @@ int main(void)
     printf("Server is now actively listening on port %s! (Backlog: 10)\n\n", PORT);
 
     // now accept incoming connection
+    printf("⏳ Waiting for incoming connections... (Program is blocked here)\n\n");
+    
     addr_size = sizeof(their_addr);
     new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
 
@@ -103,7 +105,31 @@ int main(void)
         return (4);
     }
 
-    printf("Connection accepted on new socket %d!\n\n", new_fd);
+    // If we reach this point, the program has "unblocked" because a client connected!
+    // We will extract their IP address from their_addr (which was populated by accept)
+
+    char client_ip[INET6_ADDRSTRLEN];
+    void *client_addr;
+    const char *client_ipver;
+
+    // their_addr is of type sockaddr_storage. We use ss_family to determine
+    // if the client connected via IPv4 or IPv6.
+    if (their_addr.ss_family == AF_INET) { // IPv4
+        struct sockaddr_in *ipv4 = (struct sockaddr_in *)&their_addr;
+        client_addr = &(ipv4->sin_addr);
+        client_ipver = "IPv4";
+    } else { // IPv6
+        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)&their_addr;
+        client_addr = &(ipv6->sin6_addr);
+        client_ipver = "IPv6";
+    }
+
+    inet_ntop(their_addr.ss_family, client_addr, client_ip, sizeof(client_ip));
+
+    printf("CONNECTION ACCEPTED!\n");
+    printf("Client IP: %s (%s)\n", client_ip, client_ipver);
+    printf("Communication is now open on new socket: %d\n", new_fd);
+    printf("Listening socket %d is still active in the background.\n\n", sockfd);
 
     // --- RECV (Reading the client's request) ---
     char buffer[1024]; // Allocate a buffer large enough for basic messages
@@ -122,7 +148,6 @@ int main(void)
         printf("--------------------------------------\n\n");
 
         // --- SEND (Sending the response) ---
-        // Just a simple, friendly raw text message
         const char *response = "Good talking to you!\n";
 
         ssize_t bytes_sent = send(new_fd, response, strlen(response), 0);
