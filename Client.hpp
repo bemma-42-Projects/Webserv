@@ -2,21 +2,18 @@
 # define CLIENT_HPP
 
 # include <string>
-//# include <ctime>
+# include <ctime>
 //# include <sys/socket.h>
 # include <netinet/in.h>    // Pour struct sockaddr_in
 
-/*
-enum class ClientState {
-    READING_REQUEST,    // Le client est en train d'envoyer sa requête
-    PROCESSING,         // Le serveur analyse et prépare la réponse
-    WRITING_RESPONSE,   // Le serveur envoie la réponse au client
-    DISCONNECTED        // Le client a été déconnecté (Timeout ou fermeture volontaire)
-};
-*/
-
 class Client {
     public:
+        enum State {
+            READING_REQUEST,    // Le client est en train d'envoyer sa requête
+            PROCESSING,         // Le serveur analyse et prépare la réponse
+            WRITING_RESPONSE,   // Le serveur envoie la réponse au client
+            DISCONNECTED        // Le client a été déconnecté (Timeout ou fermeture volontaire)
+        };
         Client();
         Client(int socket_fd, struct sockaddr_storage addr);
         Client(const Client &copy);
@@ -24,11 +21,17 @@ class Client {
         ~Client();
 
         int getSocketFd() const;
-        
+
+        State   getState() const;
+        void    setState(State state);
+        time_t  getLastActivity() const;
+        void    updateLastActivity();
 
     private:
-        int _socket_fd;             // Le socket pour communiquer avec ce client
-        struct sockaddr_storage _addr;   // L'adresse du client (IP et port)
-};
+        int _socket_fd;                 // Le socket pour communiquer avec ce client
+        struct sockaddr_storage _addr;  // L'adresse du client (IP et port)
+        State _state;                   // L'état actuel du client
+        time_t _last_activity;          // Le timestamp de la dernière activité du client
+    };
 
 #endif
