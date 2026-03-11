@@ -191,7 +191,7 @@ int main(void)
             std::memset(buffer, 0, sizeof(buffer)); // Zero it out to prevent reading garbage memory
 
             // recv blocks until the client sends some data
-            ssize_t bytes_received = ::recv(client.getSocketFd(), buffer, sizeof(buffer) - 1, 0);
+            ssize_t bytes_received = recv(client.getSocketFd(), buffer, sizeof(buffer) - 1, 0);
 
             if (bytes_received < 0) {
                 std::cerr << "Error reading from socket." << std::endl;
@@ -203,7 +203,7 @@ int main(void)
                 // 3. close(fd)
                 // =========================================================
                 std::cout << "Client unexpectedly closed the connection." << std::endl;
-                ::close(client.getSocketFd());
+                close(client.getSocketFd());
                 clients.erase(client.getSocketFd());
             } else {
                 std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM CLIENT ---" << std::endl;
