@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-// #include "Client.hpp"
+#include "Client.hpp"
 
 #define PORT "8080" // the ports users will be connecting to
 #define BACKLOG 10  // how many pending connections queue holds
@@ -21,9 +21,9 @@ int main(void)
     char                    ipstr[INET6_ADDRSTRLEN];
     int                     sockfd;
     int                     yes = 1;    // setsockopt
-    struct sockaddr_storage their_addr; // connector's address information
+    struct sockaddr_storage client_addr; // connector's address information
     socklen_t               addr_size;
-    int                     new_fd;
+    int                     client_fd;
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;    // use IPv4 or IPv6, whichever
@@ -97,39 +97,41 @@ int main(void)
     // now accept incoming connection
     printf("⏳ Waiting for incoming connections... (Program is blocked here)\n\n");
     
-    addr_size = sizeof(their_addr);
-    new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
+    addr_size = sizeof(client_addr);
+    client_fd = accept(sockfd, (struct sockaddr *)&client_addr, &addr_size);
 
-    if (new_fd == -1) {
+    if (client_fd == -1) {
         fprintf(stderr, "Fatal error: accept() failed.\n");
         close(sockfd);
         return (4);
     }
 
     // If we reach this point, the program has "unblocked" because a client connected!
-    // We will extract their IP address from their_addr (which was populated by accept)
+    // We will extract their IP address from client_addr (which was populated by accept)
+
+    Client  client(client_fd, client_addr); // Create a Client object for this new connection
 
     char client_ip[INET6_ADDRSTRLEN];
-    void *client_addr;
+    void *raw_ip_addr;
     const char *client_ipver;
 
-    // their_addr is of type sockaddr_storage. We use ss_family to determine
+    // client_addr is of type sockaddr_storage. We use ss_family to determine
     // if the client connected via IPv4 or IPv6.
-    if (their_addr.ss_family == AF_INET) { // IPv4
-        struct sockaddr_in *ipv4 = (struct sockaddr_in *)&their_addr;
-        client_addr = &(ipv4->sin_addr);
+    if (client_addr.ss_family == AF_INET) { // IPv4
+        struct sockaddr_in *ipv4 = (struct sockaddr_in *)&client_addr;
+        raw_ip_addr = &(ipv4->sin_addr);
         client_ipver = "IPv4";
     } else { // IPv6
-        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)&their_addr;
-        client_addr = &(ipv6->sin6_addr);
+        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)&client_addr;
+        raw_ip_addr = &(ipv6->sin6_addr);
         client_ipver = "IPv6";
     }
 
-    inet_ntop(their_addr.ss_family, client_addr, client_ip, sizeof(client_ip));
+    inet_ntop(client_addr.ss_family, raw_ip_addr, client_ip, sizeof(client_ip));
 
     printf("CONNECTION ACCEPTED!\n");
     printf("Client IP: %s (%s)\n", client_ip, client_ipver);
-    printf("Communication is now open on new socket: %d\n", new_fd);
+    printf("Communication is now open on new socket: %d\n", client.getSocketFd());
     printf("Listening socket %d is still active in the background.\n\n", sockfd);
 
     // --- RECV (Reading the client's request) ---
@@ -137,7 +139,7 @@ int main(void)
     memset(buffer, 0, sizeof(buffer)); // Zero it out to prevent reading garbage memory
 
     // recv blocks until the client sends some data
-    ssize_t bytes_received = recv(new_fd, buffer, sizeof(buffer) - 1, 0);
+    ssize_t bytes_received = recv(client.getSocketFd(), buffer, sizeof(buffer) - 1, 0);
 
     if (bytes_received < 0) {
         fprintf(stderr, "Error reading from socket.\n");
@@ -156,7 +158,7 @@ int main(void)
         // --- SEND (Sending the response) ---
         const char *response = "Good talking to you!\n";
 
-        ssize_t bytes_sent = send(new_fd, response, strlen(response), 0);
+        ssize_t bytes_sent = send(client.getSocketFd(), response, strlen(response), 0);
         
         if (bytes_sent < 0) {
             fprintf(stderr, "Error sending response.\n");
@@ -166,8 +168,8 @@ int main(void)
     }
 
     // Close the connection with this specific client
-    printf("\nClosing the connection (new_fd).\n");
-    close(new_fd);
+    printf("\nClosing the connection (client_fd).\n");
+    close(client.getSocketFd());
 
     // Shut down the main listening server socket
     printf("Shutting down the server (sockfd).\n");
