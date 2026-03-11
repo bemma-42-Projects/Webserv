@@ -1,7 +1,7 @@
 // Définit le niveau de conformité POSIX pour s'assurer que les fonctions réseau sont disponibles (getaddrinfo et les sockets modernes)
 #define _POSIX_C_SOURCE 200112L
 
-#include <cstring>
+#include <string>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -28,9 +28,11 @@ int main(void)
     struct addrinfo         *res;
     struct addrinfo         *p;
     int                     status;
-    char                    ipstr[INET6_ADDRSTRLEN];
-    int                     sockfd = 1;
+    char                    ip_buffer[INET6_ADDRSTRLEN];
+    int                     sockfd = -1;
     int                     yes = 1;    // setsockopt
+
+    const std::string   port_str = PORT;
 
     try {
         std::memset(&hints, 0, sizeof hints);
@@ -38,15 +40,15 @@ int main(void)
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_flags = AI_PASSIVE;    // fill in my IP for me
 
-        if ((status = getaddrinfo(NULL, PORT, &hints, &res)) != 0) {
+        if ((status = getaddrinfo(NULL, port_str.c_str(), &hints, &res)) != 0) {
             throw GaiError("DNS/Setup Error", status);
         }
 
-        std::cout << "Booting up server on port " << PORT << "..." << std::endl;
+        std::cout << "Booting up server on port " << port_str << "..." << std::endl;
 
         for (p = res; p != NULL; p = p->ai_next) {
             void                *addr;
-            const char          *ipver;
+            std::string         ipver;
             struct sockaddr_in  *ipv4;
             struct sockaddr_in6 *ipv6;
 
@@ -60,7 +62,8 @@ int main(void)
                 ipver = "IPv6";
             }
 
-            inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
+            inet_ntop(p->ai_family, addr, ip_buffer, sizeof(ip_buffer));
+            std::string ipstr(ip_buffer);
             std::cout << "Local interface found -> " << ipver << ": " << ipstr << std::endl;
 
             // make a socket
@@ -74,13 +77,13 @@ int main(void)
             setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
             
             // bind it
-            std::cout << "Attempting to bind to port " << PORT << "..." << std::endl;
+            std::cout << "Attempting to bind to port " << port_str << "..." << std::endl;
             if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 std::cerr << "Bind failed: " << std::strerror(errno) << " Closing socket..." << std::endl;
                 close(sockfd);
                 continue ;
             }
-            std::cout << "Successfully bound to " << ipstr << " on port " << PORT << "!" << std::endl;
+            std::cout << "Successfully bound to " << ipstr << " on port " << port_str << "!" << std::endl;
             break ;
         }
 
@@ -95,7 +98,7 @@ int main(void)
         if (listen(sockfd, BACKLOG) == -1) {
             throw SystemError("Fatal error: listen() failed");
         }
-        std::cout << "Server is now actively listening on port " << PORT << "! (Backlog: 10)" << std::endl;
+        std::cout << "Server is now actively listening on port " << port_str << "! (Backlog: 10)" << std::endl;
 
         // EMMA : Décommenter cette partie pour faire du non-blocking et du poll, et gérer plusieurs clients en même temps
         /*
@@ -121,7 +124,7 @@ int main(void)
 
             for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ) {
                 Client &client = it->second;
-                if (difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
+                if (std::difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
                     std::cout << "Client on socket " << client.getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
                     client.setState(Client::DISCONNECTED);
                     close(client.getSocketFd());
@@ -134,7 +137,7 @@ int main(void)
             // EMMA : Code temporaire (bloquant) pour tester la partie accept() et recv() avant d'implémenter le poll()
 
             // now accept incoming connection
-            std::cout << "⏳ Waiting for incoming connections... (Program is blocked here)" << std::endl;
+            std::cout << "Waiting for incoming connections... (Program is blocked here)" << std::endl;
 
             struct sockaddr_storage client_addr; // connector's address information
             socklen_t               addr_size;
@@ -161,22 +164,22 @@ int main(void)
             clients[client_fd] = client;
         
             char client_ip[INET6_ADDRSTRLEN];
-            void *raw_ip_addr;
-            const char *client_ipver;
+            void *raw_client_ip_ptr;
+            std::string client_ipver;
 
             // client_addr is of type sockaddr_storage. We use ss_family to determine
             // if the client connected via IPv4 or IPv6.
             if (client_addr.ss_family == AF_INET) { // IPv4
-                struct sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(&client_addr);
-                raw_ip_addr = &(ipv4->sin_addr);
+                raw_client_ip_ptr = &(reinterpret_cast<struct sockaddr_in *>(&client_addr)->sin_addr);
                 client_ipver = "IPv4";
             } else { // IPv6
                 struct sockaddr_in6 *ipv6 = reinterpret_cast<struct sockaddr_in6 *>(&client_addr);
-                raw_ip_addr = &(ipv6->sin6_addr);
+                raw_client_ip_ptr = &(reinterpret_cast<struct sockaddr_in6 *>(&client_addr)->sin6_addr);
                 client_ipver = "IPv6";
             }
 
-            inet_ntop(client_addr.ss_family, raw_ip_addr, client_ip, sizeof(client_ip));
+            inet_ntop(client_addr.ss_family, raw_client_ip_ptr, client_ip, sizeof(client_ip));
+            std::string client_ip_str(client_ip);
 
             std::cout << "CONNECTION ACCEPTED!" << std::endl;
             std::cout << "Client IP: " << client_ip << " (" << client_ipver << ")" << std::endl;
@@ -185,10 +188,10 @@ int main(void)
 
             // --- RECV (Reading the client's request) ---
             char buffer[1024]; // Allocate a buffer large enough for basic messages
-            memset(buffer, 0, sizeof(buffer)); // Zero it out to prevent reading garbage memory
+            std::memset(buffer, 0, sizeof(buffer)); // Zero it out to prevent reading garbage memory
 
             // recv blocks until the client sends some data
-            ssize_t bytes_received = recv(client.getSocketFd(), buffer, sizeof(buffer) - 1, 0);
+            ssize_t bytes_received = ::recv(client.getSocketFd(), buffer, sizeof(buffer) - 1, 0);
 
             if (bytes_received < 0) {
                 std::cerr << "Error reading from socket." << std::endl;
@@ -200,11 +203,12 @@ int main(void)
                 // 3. close(fd)
                 // =========================================================
                 std::cout << "Client unexpectedly closed the connection." << std::endl;
-                close(client.getSocketFd());
+                ::close(client.getSocketFd());
                 clients.erase(client.getSocketFd());
             } else {
                 std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM CLIENT ---" << std::endl;
-                std::cout << buffer << std::endl;
+                std::string received_data(buffer, bytes_received);
+                std::cout << received_data << std::endl;
                 std::cout << "--------------------------------------" << std::endl;
 
                 // =========================================================
@@ -222,7 +226,7 @@ int main(void)
                 // --- SEND (Sending the response) ---
                 // ROMANE : Temporairement, on envoie une réponse statique pour tester.
                 // À terme, cette partie devra envoyer le contenu de client._write_buffer
-                const char *response = "Good talking to you!\n";
+                std::string response = "Good talking to you!\n";
 
                 // =========================================================
                 // JULIEN : STATE MACHINE ENVOI
@@ -231,7 +235,7 @@ int main(void)
                 // 2. Supprimer les octets envoyés du buffer
                 // 3. Si buffer vide -> repasser en READING_REQUEST ou FINISHED
                 // =========================================================
-                ssize_t bytes_sent = send(client.getSocketFd(), response, strlen(response), 0);
+                ssize_t bytes_sent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
                 close(client.getSocketFd());
                 clients.erase(client.getSocketFd());
 
