@@ -1,7 +1,7 @@
 #ifndef CLIENT_HPP
 # define CLIENT_HPP
 
-//# include <string>
+# include <string>
 //# include <ctime>
 //# include <sys/socket.h>
 # include <netinet/in.h>    // Pour struct sockaddr_in
@@ -24,6 +24,7 @@ class Client {
         ~Client();
 
         int getSocketFd() const;
+        
 
     private:
         int _socket_fd;             // Le socket pour communiquer avec ce client
