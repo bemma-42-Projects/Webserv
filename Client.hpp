@@ -3,8 +3,9 @@
 
 # include <string>
 # include <ctime>
-//# include <sys/socket.h>
-# include <netinet/in.h>    // Pour struct sockaddr_in
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
 
 class Client {
     public:
@@ -20,18 +21,21 @@ class Client {
         Client &operator=(const Client &src);
         ~Client();
 
-        int getSocketFd() const;
-
-        State   getState() const;
-        void    setState(State state);
-        time_t  getLastActivity() const;
-        void    updateLastActivity();
+        int             getSocketFd() const;
+        State           getState() const;
+        void            setState(State state);
+        time_t          getLastActivity() const;
+        void            updateLastActivity();
+        std::string     getIp() const;
 
     private:
         int _socket_fd;                 // Le socket pour communiquer avec ce client
         struct sockaddr_storage _addr;  // L'adresse du client (IP et port)
         State _state;                   // L'état actuel du client
         time_t _last_activity;          // Le timestamp de la dernière activité du client
+        std::string _ip_address;        // L'adresse IP du client sous forme de chaîne de caractères
+    
+        void    _initIpAddress(struct sockaddr_storage addr); // Méthode privée pour initialiser _ip_address à partir de _addr
     };
 
 #endif
