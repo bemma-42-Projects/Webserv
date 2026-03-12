@@ -1,6 +1,5 @@
 #include "Client.hpp"
-#include <cstring>
-
+#include <cstring> 
 Client::Client() : _socket_fd(-1), _state(READING_REQUEST), _last_activity(time(NULL)), _ip_address("") {
     memset(&_addr, 0, sizeof(_addr));
 }
