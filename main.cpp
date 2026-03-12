@@ -26,7 +26,7 @@ int main(void)
     char                    ip_buffer[INET6_ADDRSTRLEN];    
     int                     sockfd = -1;                    
     int                     yes = 1;                        
-    const std::string   port_str = PORT;                    
+    const std::string       port_str = PORT; 
     try {
         std::memset(&hints, 0, sizeof hints);   
         hints.ai_family = AF_UNSPEC;            
