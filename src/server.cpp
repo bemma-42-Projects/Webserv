@@ -19,7 +19,7 @@
 #include "SystemError.hpp"
 #include "GaiError.hpp"
 
-#include "http.cpp"
+#include "Request.hpp"
 
 #define PORT "8080"     // The port users will be connecting to
 #define BACKLOG 10      // How many pending connections queue holds
@@ -211,8 +211,9 @@ int main(void)
 				std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM CLIENT ---" << std::endl;
 				std::cout << buffer << std::endl;
 				std::cout << "--------------------------------------" << std::endl;
-				
-				parsingHttp(buffer);
+
+				Request file(buffer); 
+				file.parsingHttp();
 				// =========================================================
 				// ROMANE : IMPLÉMENTER LE PARSING HTTP ICI
 				// 1. Stocker le contenu de 'buffer' dans client._read_buffer

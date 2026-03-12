@@ -4,7 +4,7 @@ CXX = c++
 FLAGS = -Wall -Wextra -Werror -std=c++98
 OBJDIR = obj
 
-SOURCES = ./Client.cpp ./GaiError.cpp ./server.cpp ./SystemError.cpp ./WebservException.cpp 
+SOURCES = ./Client.cpp ./GaiError.cpp ./http.cpp ./Request.cpp ./server.cpp ./SystemError.cpp ./WebservException.cpp 
 OBJS = $(patsubst ./%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
 all: $(NAME)
