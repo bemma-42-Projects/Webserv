@@ -130,9 +130,9 @@ int main(void)
             //    comme un booléen "true" pour activer l'option.
             // 5. Taille (sizeof(int)) : La taille en octets de la variable pointée.
             setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-            
+
             std::cout << "Attempting to bind to port " << port_str << "..." << std::endl;
-            
+
             // --- Liaison (bind) du socket à l'IP et au port ---
             // Cette fonction associe (bind) le socket que nous venons de créer à une adresse IP 
             // et à un port spécifiques sur la machine locale. C'est ce qui permet au système 
