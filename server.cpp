@@ -255,7 +255,6 @@ int main(void)
                     ++it;
                 }
             }
-
             
             // =========================================================================================
             // ÉTAPE 2 : L'ACCEPTATION D'UN NOUVEAU CLIENT
@@ -387,12 +386,6 @@ int main(void)
             std::cout << "Communication is now open on new socket: " << clients[client_fd].getSocketFd() << std::endl;
             std::cout << "Listening socket " << sockfd << " is still active in the background." << std::endl;
 
-
-            // =========================================================================================
-            // A SUIVRE ...
-            // =========================================================================================
-           
-
             // =========================================================================================
             // ÉTAPE 3 : LA LECTURE DE LA REQUÊTE (RECV)
             // =========================================================================================
@@ -403,17 +396,35 @@ int main(void)
             // Si la lecture réussit, on met à jour le chronomètre d'activité et on passe l'état 
             // du client en PROCESSING (requête HTTP prête à être analysé).
 
-            // --- RECV (Reading the client's request) ---
-            char buffer[1024]; // Allocate a buffer large enough for basic messages
-            std::memset(buffer, 0, sizeof(buffer)); // Zero it out to prevent reading garbage memory
+            // 1. Préparation de l'espace de réception (Le Buffer)
+            // On crée un petit bac à sable de 1024 octets pour stocker temporairement les données reçues.
+            char buffer[1024];
+            // On nettoie la mémoire pour s'assurer qu'il n'y a pas de garbage memory
+            std::memset(buffer, 0, sizeof(buffer));
 
-            // recv blocks until the client sends some data
+            // 2. Appel à recv()
+            // recv() va copier les données depuis la carte réseau vers notre 'buffer'.
+            //
+            // Paramètres :
+            // - client_fd : L'ID du socket client
+            // - buffer : Où stocker les données.
+            // - sizeof(buffer) - 1 : On garde un octet pour le '\0' final (sécurité C-string).
+            // - 0 : Pas de flags particuliers ici.
+            //
+            // Valeur de retour (bytes_received) :
+            // > 0 : Nombre d'octets reçus.
+            // = 0 : Le client a raccroché proprement (FIN).
+            // < 0 : Erreur réseau.
             ssize_t bytes_received = recv(client.getSocketFd(), buffer, sizeof(buffer) - 1, 0);
 
+            // 3. Analyse du résultat de la lecture
             if (bytes_received < 0) {
+                // Cas d'erreur : Problème matériel ou réseau brutal.
                 std::cerr << "Error reading from socket." << std::endl;
             } else if (bytes_received == 0) {
+                // Cas de déconnexion : Le client a fermé l'onglet ou la connexion.
                 std::cout << "Client unexpectedly closed the connection." << std::endl;
+                // Nettoyage complet
                 clients[client_fd].setState(Client::DISCONNECTED);
                 close(client.getSocketFd());
                 clients.erase(client.getSocketFd());
@@ -426,15 +437,32 @@ int main(void)
                 // la fonction send() pour expédier le résultat sur le réseau (état WRITING_RESPONSE).
                 // Dans ce modèle basique, dès que la réponse est envoyée, le serveur raccroche 
                 // immédiatement (close), supprime le client (erase), et retourne au début de la boucle 
-                // pour attendre le client suivant.
+                // pour attendre le client suivant.'
+
+                // 1. Récupération de la référence (Le vrai objet dans le registre)
+                // On utilise une référence (&) pour ne pas copier l'objet. Toute modification sur 
+                // 'current_client' sera immédiatement enregistrée dans la map 'clients'.
+                Client &current_client = clients[client_fd];
+
+                // 2. Mise à jour du "Signe de Vie" (Sécurité Timeout)
+                // Le client vient d'envoyer des données, il est donc actif. On réinitialise son 
+                // chronomètre pour qu'il ne soit pas expulsé par le nettoyeur au début du prochain tour.
+                current_client.updateLastActivity();
 
                 std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM CLIENT ---" << std::endl;
-                client.updateLastActivity(); // Update the last activity timestamp since we just received data
+                
+                // 3. Conversion des données brutes en chaîne C++
+                // Le buffer est un tableau de char (C-style). On le transforme en std::string 
+                // pour faciliter le futur parsing
                 std::string received_data(buffer, bytes_received);
                 std::cout << received_data << std::endl;
                 std::cout << "--------------------------------------" << std::endl;
 
-                clients[client_fd].setState(Client::PROCESSING); // Update the client's state to PROCESSING
+                // 4. Changement d'État : Passage au mode "Réflexion"
+                // On a fini de lire (READING_REQUEST). On passe maintenant à l'analyse 
+                // de ce que le client veut (PROCESSING).
+                current_client.setState(Client::PROCESSING);
+                
                 // =========================================================
                 // ROMANE : IMPLÉMENTER LE PARSING HTTP ICI
                 // 1. Stocker le contenu de 'buffer' dans client._read_buffer
@@ -451,22 +479,42 @@ int main(void)
                 // ROMANE : Temporairement, on envoie une réponse statique pour tester.
                 // À terme, cette partie devra envoyer le contenu de client._write_buffer
                 std::string response = "Good talking to you!\n";
-                clients[client_fd].setState(Client::WRITING_RESPONSE); // Update the client's state to WRITING_RESPONSE
-                // =========================================================
-                // JULIEN : STATE MACHINE ENVOI
-                // Une fois que poll() indique POLLOUT :
-                // 1. Envoyer une partie ou la totalité de client._write_buffer
-                // 2. Supprimer les octets envoyés du buffer
-                // 3. Si buffer vide -> repasser en READING_REQUEST ou FINISHED
-                // =========================================================
-                ssize_t bytes_sent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
+
+                // 2. CHANGEMENT D'ÉTAT
+                // On informe le système que nous avons fini de réfléchir et que nous sommes 
+                // prêts à écrire sur le réseau.
+                current_client.setState(Client::WRITING_RESPONSE);
+
+                // 3. EXPÉDITION DE LA RÉPONSE (Le rôle de send)
+                // Contrairement à ce qu'on pourrait penser, send() ne garantit pas que les 
+                // données sont arrivées chez le client. Son rôle est de copier les données 
+                // de notre programme vers le "Buffer d'Envoi" du noyau (Kernel).
+                //
+                // Paramètres :
+                // - client_fd : Le canal sur lequel on écrit.
+                // - response.c_str() : Pointeur vers le début de notre chaîne de caractères.
+                // - response.size() : Le nombre total d'octets que l'on souhaite envoyer.
+                // - 0 : Pas de flags spécifiques.
+                //
+                // Comportement crucial (Blocage vs Non-Blocage) :
+                // - ACTUELLEMENT (Mode Bloquant) : Si le buffer du système est plein (connexion 
+                //   lente), send() va arrêter net le programme et attendre qu'il y ait de la 
+                //   place avant de continuer. Il renvoie généralement la totalité de la taille.
+                // - BIENTÔT (Mode Non-Bloquant avec epoll) : send() prendra ce qu'il peut 
+                //   (peut-être seulement 50% des données) et rendra la main immédiatement. 
+                //   C'est là que l'on devra gérer un "Write Buffer" pour envoyer le reste plus tard.
+                //
+                // Retour (bytes_sent) : Le nombre exact d'octets que le système a accepté de prendre en charge.
+                ssize_t bytes_sent = send(client_fd, response.c_str(), response.size(), 0);
 
                 if (bytes_sent < 0) {
-                    std::cerr << "Error sending response." << std::endl;
+                    std::cerr << "Error: sendind response to " << client_fd << std::endl;
                 } else {
-                    std::cout << "Successfully sent " << bytes_sent << " bytes back to the client." << std::endl;
-                    clients[client_fd].updateLastActivity(); // Update the last activity timestamp since we just sent data
+                    std::cout << "Successfully sent " << bytes_sent << " bytes back to the client " << client_fd << std::endl;
+                    // Même si on a envoyé une réponse, le client peut rester actif (ex: navigateur qui attend une image). On met donc à jour son "Signe de Vie" pour éviter un timeout prématuré.
+                    clients[client_fd].updateLastActivity();
                 }
+
                 // =========================================================================================
                 // FIN DE CYCLE : DÉCONNEXION DU CLIENT (Mode temporaire : HTTP/1.0)
                 // =========================================================================================
@@ -498,16 +546,32 @@ int main(void)
             }
         }
     }
+    // =========================================================================================
+    // GESTION DES ERREURS FATALES (FILET DE SÉCURITÉ)
+    // =========================================================================================
     catch (const std::exception &e) {
+        // Si une exception non gérée remonte jusqu'ici (ex: plus de mémoire, erreur système 
+        // critique), on attrape le message d'erreur pour ne pas que le serveur disparaisse 
+        // sans laisser de traces.
         std::cerr << "Fatal error: " << e.what() << std::endl;
+        // On vérifie si le socket d'écoute principal est encore ouvert.
+        // Si oui, on la ferme impérativement pour libérer le port 8080.
+        // Sans cela, le port resterait "bloqué" par l'OS et vous ne pourriez pas 
+        // redémarrer le serveur immédiatement (Erreur : Address already in use).
         if (sockfd != -1) {
             close(sockfd);
         }
         return (1);
     }
-    // Shut down the main listening server socket
+    // =========================================================================================
+    // FERMETURE PROPRE (ARRÊT NORMAL)
+    // =========================================================================================
+    // Si le programme sort un jour de sa boucle while(true) (par exemple via un signal 
+    // d'arrêt comme Ctrl+C si vous le gérez), on arrive ici.
     std::cout << "Shutting down the server (sockfd)." << std::endl;
-    close(sockfd);
-        
+    // On libère proprement le socket principal du serveur.
+    if (sockfd != -1) {
+        close(sockfd);
+    }
     return (0);
 }
