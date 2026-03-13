@@ -3,7 +3,7 @@ NAME = webservv
 CC = c++
 CFLAGS = -Wall -Wextra -Werror -std=c++98
 
-SRC = server.cpp
+SRC = ./main.cpp
 OBJ = $(SRC:.cpp=.o)
 
 all: $(NAME)
