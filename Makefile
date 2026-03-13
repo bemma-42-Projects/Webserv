@@ -1,15 +1,21 @@
-NAME = webservv
+NAME = webserv
 
 CC = c++
 CFLAGS = -Wall -Wextra -Werror -std=c++98
 
-SRC = ./main.cpp
+SRC_DIR = src
+
+SRC = $(SRC_DIR)/main.cpp \
+      $(SRC_DIR)/Client.cpp \
+      $(SRC_DIR)/GaiError.cpp \
+      $(SRC_DIR)/SystemError.cpp
+
 OBJ = $(SRC:.cpp=.o)
 
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	$(CC) $(CFLAGS) -o $(NAME) $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@

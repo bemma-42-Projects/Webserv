@@ -1,90 +1,125 @@
 #define _POSIX_C_SOURCE 200112L
-#include <string.h>           
-#include <unistd.h>         
-#include <sys/types.h>      
-#include <sys/socket.h>     
-#include <netinet/in.h>     
-#include <arpa/inet.h>      
-#include <netdb.h>          
-#include <fcntl.h>          
-#include <map>              
-#include <ctime>            
-#include <iostream>         
-#include "Client.hpp"       
-#include "SystemError.hpp"  
-#include "GaiError.hpp"
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <map>
+#include <ctime>
+#include <iostream>
 #include <sys/epoll.h>
 #include <errno.h>
+#include <cstdio>
 
-#define PORT "8080"         
+#include "Client.hpp"
+#include "SystemError.hpp"
+#include "GaiError.hpp"
+
+
+#define PORT "8080"
 #define BACKLOG 128
-#define MAX_EVENTS 64         
+#define MAX_EVENTS 64
 #define MAX_TIMEOUT 10
 
 void set_nonblocking(int fd) {
 	int flags = fcntl(fd, F_GETFL, 0);
-	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	if (flags == -1)
+		throw SystemError("fcntl(F_GETFL) failed");
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		throw SystemError("fcntl(F_SETFL) failed");
+}
+
+void init_addrinfo_parm(struct addrinfo &addrinfo_param) {
+	memset(&addrinfo_param, 0, sizeof addrinfo_param);
+	addrinfo_param.ai_family = AF_UNSPEC;
+	addrinfo_param.ai_socktype = SOCK_STREAM;
+	addrinfo_param.ai_flags = AI_PASSIVE;
+}
+
+void print_interface(struct addrinfo *p, char *ip_buffer) {
+	void				*addr;
+	std::string			ipver;
+	struct sockaddr_in	*ipv4;
+	struct sockaddr_in6	*ipv6;
+	if (p->ai_family == AF_INET)
+	{
+		ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
+		addr = &(ipv4->sin_addr);
+		ipver = "IPv4";
+	}
+	else
+	{
+		ipv6 = reinterpret_cast<struct sockaddr_in6 *>(p->ai_addr); 
+		addr = &(ipv6->sin6_addr);
+		ipver = "IPv6";
+	}
+	inet_ntop(p->ai_family, addr, ip_buffer, sizeof(ip_buffer));
+	std::string ipstr(ip_buffer);
+	std::cout << "Local interface found -> " << ipver << ": " << ipstr << std::endl;
+}
+
+int create_and_bind_socket_server(const std::string &port_str) {
+	struct addrinfo		addrinfo_param;
+	struct addrinfo		*res;
+	struct addrinfo		*p;
+	int					status;
+	char				ip_buffer[INET6_ADDRSTRLEN];
+	int					sock_fd = -1;
+	int					yes = 1;
+
+	init_addrinfo_parm(addrinfo_param);
+	if ((status = getaddrinfo(NULL, port_str.c_str(), &addrinfo_param, &res)) != 0) {
+		throw GaiError("DNS/Setup Error", status);
+	}
+	std::cout << "Booting up server on port " << port_str << "..." << std::endl;
+	
+	for (p = res; p != NULL; p = p->ai_next)
+	{
+		print_interface(p, ip_buffer);
+		sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (sock_fd == -1)
+		{
+			std::cerr << "Failed to create socket: " << strerror(errno) << ". Moving to next..." << std::endl;
+			continue ;
+		}
+		std::cout << "Socket successfully created!" << std::endl;
+		setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+		std::cout << "Attempting to bind to port " << port_str << "..." << std::endl;
+		if (bind(sock_fd, p->ai_addr, p->ai_addrlen) == -1)
+		{
+			std::cerr << "Bind failed: " << strerror(errno) << " Closing socket..." << std::endl;
+			close(sock_fd);
+			continue ;
+		}
+		std::cout << "Successfully bound to port " << port_str << "!" << std::endl;
+		break ;
+	}
+	freeaddrinfo(res);
+	if (p == NULL)
+	{
+		throw SystemError("Fatal error: Failed to bind to any of the local interfaces");
+	}
+	return (sock_fd);
 }
 
 int main(void)
 {
-	struct addrinfo         hints;                          
-	struct addrinfo         *res;                           
-	struct addrinfo         *p;                             
-	int                     status;                         
-	char                    ip_buffer[INET6_ADDRSTRLEN];    
-	int                     sock_fd = -1;                    
-	int                     yes = 1;                        
-	const std::string       port_str = PORT;
+	// struct addrinfo		addrinfo_param;
+	// struct addrinfo		*res;
+	// struct addrinfo		*p;
+	// int					status;
+	// char				ip_buffer[INET6_ADDRSTRLEN];
+	int					sock_fd = -1;
+	// int					yes = 1;
+	const std::string	port_str = PORT;
 
 	try {
-		
-		memset(&hints, 0, sizeof hints);   
-		hints.ai_family = AF_UNSPEC;            
-		hints.ai_socktype = SOCK_STREAM;        
-		hints.ai_flags = AI_PASSIVE;            
-		if ((status = getaddrinfo(NULL, port_str.c_str(), &hints, &res)) != 0) {
-			throw GaiError("DNS/Setup Error", status);
-		}
-		std::cout << "Booting up server on port " << port_str << "..." << std::endl;
-		for (p = res; p != NULL; p = p->ai_next) {
-			void                *addr;  
-			std::string         ipver;  
-			struct sockaddr_in  *ipv4;  
-			struct sockaddr_in6 *ipv6;  
-			if (p->ai_family == AF_INET) {  
-				ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);  
-				addr = &(ipv4->sin_addr);   
-				ipver = "IPv4";             
-			} else {                        
-				ipv6 = reinterpret_cast<struct sockaddr_in6 *>(p->ai_addr); 
-				addr = &(ipv6->sin6_addr);  
-				ipver = "IPv6";             
-			}
-			inet_ntop(p->ai_family, addr, ip_buffer, sizeof(ip_buffer));
-			std::string ipstr(ip_buffer);
-			std::cout << "Local interface found -> " << ipver << ": " << ipstr << std::endl;
-			sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-			if (sock_fd == -1) {
-				std::cerr << "Failed to create socket: " << strerror(errno) << ". Moving to next..." << std::endl;
-				continue ;
-			}
-			std::cout << "Socket successfully created!" << std::endl;
-			setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-			std::cout << "Attempting to bind to port " << port_str << "..." << std::endl;
-			if (bind(sock_fd, p->ai_addr, p->ai_addrlen) == -1) {
-				std::cerr << "Bind failed: " << strerror(errno) << " Closing socket..." << std::endl;
-				close(sock_fd);
-				continue ;
-			}
-			std::cout << "Successfully bound to " << ipstr << " on port " << port_str << "!" << std::endl;
-			break ;
-		}
-		freeaddrinfo(res);
-		if (p == NULL) {
-			throw SystemError("Fatal error: Failed to bind to any of the local interfaces");
-		}
+		sock_fd = create_and_bind_socket_server(port_str);
 		std::cout << "Setting up the listener..." << std::endl;
+
 		if (listen(sock_fd, BACKLOG) == -1) {
 			throw SystemError("Fatal error: listen() failed");
 		}
@@ -198,7 +233,7 @@ int main(void)
 					else {
 						Client &current_client = clients[client_fd];
 						current_client.updateLastActivity();
-						std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM CLIENT ---" << std::endl;
+						std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM CLIENT " << client_fd << " ---" << std::endl;
 						std::string received_data(buffer, bytes_received);
 						std::cout << received_data << std::endl;
 					}
