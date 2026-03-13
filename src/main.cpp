@@ -151,21 +151,22 @@ int main(void)
 
 		while (1)
 		{
-			// time_t current_time = std::time(NULL);
-			// for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ) {
-			// 	Client &client = it->second;
-			// 	if (std::difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
-			// 		std::cout << "Client on socket " << client.getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
-			// 		client.setState(Client::DISCONNECTED);
-			// 		close(client.getSocketFd());
-			// 		clients.erase(it++);
-			// 	}
-			// 	else {
-			// 		++it;
-			// 	}
-			// }
+			time_t current_time = std::time(NULL);
+			for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ) {
+				Client &client = it->second;
+				if (std::difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
+					std::cout << "Client on socket " << client.getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
+					client.setState(Client::DISCONNECTED);
+					epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client.getSocketFd(), NULL);
+					close(client.getSocketFd());
+					clients.erase(it++);
+				}
+				else {
+					++it;
+				}
+			}
 
-			int n_events = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+			int n_events = epoll_wait(epoll_fd, events, MAX_EVENTS, 1000);
 			if (n_events == -1) {
 				perror("epoll_wait");
 				return 1;
@@ -174,7 +175,14 @@ int main(void)
 			// Traiter chaque événement
 			for (int i = 0; i < n_events; i++)
 			{
-
+				// int active_fd = events[i].data.fd;
+				// if (events[i].events & (EPOLLERR | EPOLLHUP)) {
+				//     std::cerr << "Epoll error or hang up on socket " << active_fd << std::endl;
+				//     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, active_fd, NULL);
+				//     close(active_fd);
+				//     clients.erase(active_fd);
+				//     continue; 
+				// }
 				// CAS 1 : NOUVELLE CONNEXION SUR LE SERVEUR
 				if (events[i].data.fd == sock_fd)
 				{
@@ -201,7 +209,7 @@ int main(void)
 					ev.events = EPOLLIN;
 					ev.data.fd = client_fd;
 
-					if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) == 1000) {
 						perror("epoll_ctl: client_fd");
 						close(client_fd);
 						continue;
@@ -221,21 +229,73 @@ int main(void)
 					memset(buffer, 0, sizeof(buffer));
 					ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 
-					if (bytes_received < 0) {
-						std::cerr << "Error reading from socket." << std::endl;
-					} 
-					else if (bytes_received == 0) {
-						std::cout << "Client unexpectedly closed the connection." << std::endl;
-						clients[client_fd].setState(Client::DISCONNECTED);
+					if (bytes_received <= 0) {
+						if (bytes_received == 0) {
+							std::cout << "Client on socket " << client_fd << " closed the connection." << std::endl;
+						}
+						else {
+							std::cerr << "Error: recv() failed on socket " << client_fd << ": " << strerror(errno) << std::endl;
+						}
+						epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
 						close(client_fd);
 						clients.erase(client_fd);
-					} 
+						continue;
+					}
 					else {
 						Client &current_client = clients[client_fd];
 						current_client.updateLastActivity();
 						std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM CLIENT " << client_fd << " ---" << std::endl;
-						std::string received_data(buffer, bytes_received);
-						std::cout << received_data << std::endl;
+						// =========================================================================
+						// INTÉGRATION DU PARSEUR HTTP (À FAIRE PAR ROMANE)
+						// =========================================================================
+						// 1. Stocker 'received_data' dans un buffer cumulatif propre au client 
+						//    (ex: current_client.appendRequestString(received_data)).
+						// 2. Appeler le parseur pour analyser ce buffer.
+						// 3. Déterminer si la requête est complète (présence de "\r\n\r\n" ou fin du chunking).
+						
+						// Simulation du retour du parseur HTTP :
+						// - true  : La requête est entière, on peut la traiter.
+						// - false : Il manque des morceaux, on laisse epoll_wait nous réveiller au prochain tour.bool is_request_complete = true;
+						bool is_request_complete = true;
+						if (is_request_complete) {
+							current_client.setState(Client::PROCESSING);
+							// ROMANE : C'est ici qu'il faut construire la vraie réponse HTTP complète
+							// (En-têtes + Corps de la page). 
+							// Ex: "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<h1>Hello</h1>"
+							// Cette réponse devra être sauvegardée dans l'objet Client.
+							std::string response = "Good talking to you!\n";
+							// =========================================================
+							// ROMANE : BUFFERISATION DE LA RÉPONSE HTTP
+							// =========================================================
+							// La réponse HTTP (headers + body) doit impérativement être 
+							// persistée dans l'instance du client via cette méthode.
+							// 
+							// Contexte technique (I/O asynchrone) : 
+							// Nous opérons sur des sockets non-bloquants pilotés par epoll. 
+							// Un appel immédiat à send() risquerait de bloquer le thread 
+							// principal (erreur EAGAIN/EWOULDBLOCK) si le buffer d'émission 
+							// du kernel est plein.
+							// 
+							// On sauvegarde donc l'état en mémoire, on bascule le descripteur 
+							// de fichier en EPOLLOUT, et on rend la main à l'Event Loop. 
+							// L'envoi effectif sera déclenché lors du prochain événement epoll.
+
+							// A DECOMMENTER POUR STOCKER LA REPONSE DANS LE BUFFER DU CLIENT
+							// current_client.setResponseBuffer(response);
+							current_client.setState(Client::WRITING_RESPONSE);
+							struct epoll_event mod_ev;
+							mod_ev.events = EPOLLOUT;
+							mod_ev.data.fd = client_fd;
+							if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, client_fd, &mod_ev) == -1) {
+								std::cerr << "Error: epoll_ctl(MOD) failed on socket " << client_fd << ": " << strerror(errno) << std::endl;
+								epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
+								close(client_fd);
+								clients.erase(client_fd);
+								continue;
+							}
+							std::cout << "Socket " << client_fd << " successfully switched to EPOLLOUT. Waiting for network to be ready to send..." << std::endl;
+							std::cout << "Socket " << client_fd << " switched to EPOLLOUT. Waiting for network to be ready to send..." << std::endl;
+						}
 					}
 				}
 
@@ -243,24 +303,56 @@ int main(void)
 				else if (events[i].events & EPOLLOUT) 
 				{
 					int client_fd = events[i].data.fd;
+					Client &current_client = clients[client_fd];
+					// =========================================================
+					// ROMANE : LA RÉCUPÉRATION DE LA RÉPONSE (La suite logique)
+					// =========================================================
+					// C'est ici que ton travail de l'étape précédente prend tout son sens !
+					// 
+					// Comme notre serveur ne bloque jamais, on est sortis 
+					// de l'événement de lecture (EPOLLIN) pour attendre que le réseau se libère.
+					// Du coup, toutes les variables locales qu'on avait créées ont été détruites 
+					// à la fin du tour de boucle.
+					// 
+					// C'est pour ça qu'on avait sauvegardé ta réponse finale à l'intérieur 
+					// de l'objet 'Client'. Maintenant qu'on a le feu vert pour écrire (EPOLLOUT), 
+					// on fait simplement appel à getResponseBuffer() pour récupérer ta string 
+					// intacte et l'envoyer avec send().
+					std::string response_to_send;
 
-					std::cout << "--------------------------------------" << std::endl;
-					// current_client.setState(Client::PROCESSING);
-					std::string response = "Good talking to you!\n";
-					// current_client.setState(Client::WRITING_RESPONSE);
-					ssize_t bytes_sent = send(client_fd, response.c_str(), response.size(), 0);
-					if (bytes_sent == 0) {
-						std::cout << "Successfully sent " << bytes_sent << " bytes back to the client " << client_fd << std::endl;
-						clients[client_fd].updateLastActivity();
-						
-					} 
-					else {
-						std::cerr << "Error: sendind response to " << client_fd << std::endl;
+					// A DECOMMENTER POUR RECUPERER LA REPONSE GENEREE PLUS HAUT
+					//response_to_send = current_client.getResponseBuffer();
+					// A COMMENTER POUR ENVOYER LA VRAIE REPONSE AU CLIENT
+					response_to_send = "Good talking to you!\n";
+
+					ssize_t bytes_sent = send(client_fd, response_to_send.c_str(), response_to_send.size(), 0);
+					if (bytes_sent < 0) {
+						std::cerr << "Error: send() failed on socket " << client_fd << ": " << strerror(errno) << std::endl;
 					}
-					// clients[client_fd].setState(Client::DISCONNECTED); 
-					// close(client_fd);
-					// clients.erase(client_fd);
-
+					else if (bytes_sent == 0) {
+						std::cout << "Notice: 0 bytes sent to socket " << client_fd << " (Network buffer full)" << std::endl;
+						continue;
+					// Succès partiel ou total de l'envoi
+					// ROMANE : vérifier avec une condition dans ce else si la réponse a été totalement envoyée
+					// Si la réponse n'a pas été envoyée totalement, ne pas faire le noettyage final (4. NETTOYAGE FINAL)
+					} else {
+						std::cout << "Successfully sent " << bytes_sent << " bytes back to socket " << client_fd << std::endl;
+						current_client.updateLastActivity();
+					}
+					struct epoll_event listen_ev;
+					listen_ev.events = EPOLLIN;
+					listen_ev.data.fd = client_fd;
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, client_fd, &listen_ev) == 1000) {
+						epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
+						close(client_fd);
+						clients.erase(client_fd);
+					} else {
+						// ROMANE : C'est ici qu'il faudra vider les buffers (requête et réponse) 
+						// pour ne pas mélanger l'ancienne requête avec la nouvelle.
+						// current_client.clearBuffers();
+						current_client.setState(Client::READING_REQUEST);
+						std::cout << "Socket " << client_fd << " kept alive. Waiting for next request..." << std::endl;
+					}
 				}
 
 				// CAS 4 : ERREUR SUR LE SOCKET CLIENT
