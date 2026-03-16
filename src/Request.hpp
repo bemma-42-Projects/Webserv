@@ -19,7 +19,7 @@ class Request {
 		int									initFistLine();
 		int									initHeader();
 		int									initBody();
-		void								answer();
+		std::string								answer();
 
 	private:
 		std::string							request_;

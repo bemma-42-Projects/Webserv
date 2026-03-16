@@ -224,7 +224,7 @@ int	Request::parsingHttp()
 	return 0;
 }
 
-void	Request::answer()
+std::string	Request::answer()
 {
 	if (method_ == "GET")
 	{
@@ -242,6 +242,7 @@ void	Request::answer()
 	{
 		//Si l'extension correspond à un script (ex: .php), tu dois préparer l'environnement (setenv) et fork() pour exécuter le CGI.
 	}
+	//mettre le reponse dans une string et a renvoyer
 }
 
 std::string	Request::requestHttp(Request &file)
