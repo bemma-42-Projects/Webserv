@@ -1,3 +1,6 @@
+#include "Server.hpp"
+#include <exception>
+
 #define _POSIX_C_SOURCE 200112L
 
 #include <cstring>
@@ -8,7 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <fcntl.h>
+//#include <fcntl.h>
 //#include <vector>
 #include <map>
 #include <ctime>
@@ -107,10 +110,66 @@ int create_and_bind_socket_server(const std::string &port_str) {
 	return (sock_fd);
 }
 
+void    handle_timeouts(int epoll_fd, std::map<int, Client> &clients) {
+    time_t current_time = std::time(NULL);
+    
+    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ) {
+        Client &client = it->second;
+        if (std::difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
+            std::cout << "Client on socket " << client.getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
+            client.setState(Client::DISCONNECTED);
+            epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client.getSocketFd(), NULL);
+            close(client.getSocketFd());
+            clients.erase(it++);
+        }
+        else {
+            ++it;
+        }
+    }
+}
+
+void    handle_new_connection(int sock_fd, int epoll_fd, std::map<int, Client> &clients) {
+    struct sockaddr_storage client_addr;
+    socklen_t addr_size = sizeof(client_addr);
+
+
+    int client_fd = accept(sock_fd, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
+    
+    if (client_fd == -1) {
+        std::cerr << "Error: accept() failed: " << std::strerror(errno) << std::endl;
+        return ;
+    }
+    
+    set_nonblocking(client_fd);
+
+    Client  client(client_fd, client_addr);
+    client.updateLastActivity();
+    client.setState(Client::READING_REQUEST);
+    clients[client_fd] = client;
+
+    struct epoll_event client_ev;
+    client_ev.events = EPOLLIN;
+    client_ev.data.fd = client_fd;
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &client_ev) == -1) {
+        std::cerr << "Error: epoll_ctl(ADD) failed on client_fd " << client_fd << ": " << std::strerror(errno) << std::endl;
+        close(client_fd);
+        clients.erase(client_fd);
+        return ;
+    }
+
+    std::cout << "CONNECTION ACCEPTED!" << std::endl;
+    std::cout << "Client IP: " << clients[client_fd].getIp() << std::endl;
+    std::cout << "Communication is now open on new socket: " << client_fd << std::endl;
+    std::cout << "Listening socket " << sock_fd << " is still active in the background." << std::endl;
+}
+
 int main(void)
 {
-    int					sock_fd = -1;
-    const std::string	port_str = PORT;
+    int					    sock_fd = -1;
+    std::map<int, Client>   clients;
+    const std::string	    port_str = PORT;
+
     try {
         sock_fd = create_and_bind_socket_server(port_str);
 
@@ -126,6 +185,7 @@ int main(void)
         if (epoll_fd == -1) {
             throw std::runtime_error("Fatal error: epoll_create() failed");
         }
+
         struct epoll_event ev;
         ev.events = EPOLLIN;
         ev.data.fd = sock_fd;
@@ -135,22 +195,8 @@ int main(void)
         struct epoll_event events[MAX_EVENTS];
 
         std::cout << "Entering the main server loop..." << std::endl;
-        std::map<int, Client> clients;
         while (1) {
-            time_t current_time = std::time(NULL);
-            for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ) {
-                Client &client = it->second;
-                if (std::difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
-                    std::cout << "Client on socket " << client.getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
-                    client.setState(Client::DISCONNECTED);
-                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client.getSocketFd(), NULL);
-                    close(client.getSocketFd());
-                    clients.erase(it++);
-                }
-                else {
-                    ++it;
-                }
-            }
+            handle_timeouts(epoll_fd, clients);
             int n_events = epoll_wait(epoll_fd, events, MAX_EVENTS, 1000);
             if (n_events == -1) {
                 if (errno == EINTR) {
@@ -169,38 +215,8 @@ int main(void)
                     continue; 
                 }
                 if (active_fd == sock_fd) {
-                    struct sockaddr_storage client_addr;
-                    socklen_t addr_size;
-                    int client_fd;
-                    addr_size = sizeof(client_addr);
-
-                    client_fd = accept(sock_fd, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
-                    if (client_fd == -1) {
-                        std::cerr << "Error: accept() failed: " << std::strerror(errno) << std::endl;
-                        continue ;
-                    }
-                    set_nonblocking(client_fd);
-
-                    Client  client(client_fd, client_addr);
-                    client.updateLastActivity();
-                    client.setState(Client::READING_REQUEST);
-                    clients[client_fd] = client;
-
-                    struct epoll_event client_ev;
-                    client_ev.events = EPOLLIN;
-                    client_ev.data.fd = client_fd;
-
-                    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &client_ev) == -1) {
-                        std::cerr << "Error: epoll_ctl(ADD) failed on client_fd " << client_fd << ": " << std::strerror(errno) << std::endl;
-                        close(client_fd);
-                        clients.erase(client_fd);
-                        continue;
-                    }
-
-                    std::cout << "CONNECTION ACCEPTED!" << std::endl;
-                    std::cout << "Client IP: " << clients[client_fd].getIp() << std::endl;
-                    std::cout << "Communication is now open on new socket: " << client_fd << std::endl;
-                    std::cout << "Listening socket " << sock_fd << " is still active in the background." << std::endl;
+                    handle_new_connection(sock_fd, epoll_fd, clients);
+                    continue;
                 }
 
                 else if (events[i].events & EPOLLIN) {
@@ -343,6 +359,21 @@ int main(void)
     std::cout << "Shutting down the server (sockfd)." << std::endl;
     if (sock_fd != -1) {
         close(sock_fd);
+    }
+    return (0);
+}
+
+
+int main(void) {
+    Server  webServer;
+
+    try {
+        webServer.init();
+        webServer.run();
+    }
+    catch(const std::exception& e) {
+        std::cerr << "Fatal error: " << e.what() << std::endl;
+        return (1);
     }
     return (0);
 }

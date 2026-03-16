@@ -7,7 +7,7 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 
-class Client {
+class   Client {
     public:
         enum State {
             READING_REQUEST,
