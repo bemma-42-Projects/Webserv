@@ -88,7 +88,7 @@ bool	Request::complete()
 		std::cout << "Request not complete" << std::endl;
 		return false;
 	}
-	std::cout << tmp << std::endl;
+	//std::cout << tmp << std::endl;
 	return true;
 }
 
@@ -214,7 +214,7 @@ int	Request::parsingHttp()
 	else if (res == 2)
 	{
 		std::cout << "erreur ligne 1" << std::endl;
-		return;
+		return 1;
 	}
 	if (initHeader() == 1)
 		return 1 ;
@@ -224,8 +224,33 @@ int	Request::parsingHttp()
 	return 0;
 }
 
+void	Request::answer()
+{
+	if (method_ == "GET")
+	{
+		//if (file .html .jpg)
+			//lire le fichier et renvoyer son contenu
+		//if path est un repertoir egarde si autoindex est activé dans ta config. 
+		//Si oui, génère une liste HTML des fichiers. Sinon, renvoie la page par défaut (ex: index.html).
 
+	}
+	else if (method_ == "DELETE")
+	{
+		//Utilise unlink() pour supprimer le fichier
+	}
+	else if (method_ == "POST")
+	{
+		//Si l'extension correspond à un script (ex: .php), tu dois préparer l'environnement (setenv) et fork() pour exécuter le CGI.
+	}
+}
 
+std::string	Request::requestHttp(Request &file)
+{
+	if (file.parsingHttp() == 1)
+		return ("Error");
+	std::cout << file << std::endl;
+	return ("good");
+}
 
 int main()
 {
@@ -236,16 +261,18 @@ int main()
 	    "\r\n\r\n" // Ligne vide importante entre headers et body
 	    "name=Gemini&project=webserv";
 
+	
 
 	Request file((char *)buffer);
-	if (file.parsingHttp() == 1)
-	{
-		std::cerr << "Error" << std::endl;
-		return 1;
-	}
-	std::cout << file << std::endl;
+	file.requestHttp(file);
+	//if (file.parsingHttp() == 1)
+	//{
+	//	std::cerr << "Error" << std::endl;
+	//	return 1;
+	//}
+	//std::cout << file << std::endl;
 	
 }
 
 
-//header fait normalement, a verifier, verifier les caracteres avec content-length
+//faire la reponse

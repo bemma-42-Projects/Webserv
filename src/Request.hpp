@@ -13,12 +13,14 @@ class Request {
 		std::string 						getVersion() const;
 		std::map<std::string, std::string>	getHeaders() const;
 		std::string 						getBody() const;
-		bool							complete();
-		int								parsingHttp();
-		int								initFistLine();
-		int								initHeader();
-		int								initBody();
-		
+		std::string							requestHttp(Request &file);							
+		int									parsingHttp();
+		bool								complete();
+		int									initFistLine();
+		int									initHeader();
+		int									initBody();
+		void								answer();
+
 	private:
 		std::string							request_;
 		std::string							method_;
