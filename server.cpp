@@ -1,4 +1,3 @@
-// Définit le niveau de conformité POSIX pour s'assurer que les fonctions réseau sont disponibles (getaddrinfo et les sockets modernes)
 #define _POSIX_C_SOURCE 200112L
 
 #include <cstring>
@@ -18,9 +17,12 @@
 #include "SystemError.hpp"
 #include "GaiError.hpp"
 
-#define PORT "8080"     // The port users will be connecting to
-#define BACKLOG 10      // How many pending connections queue holds
-#define MAX_TIMEOUT 10  // Maximum allowed inactivity time for clients (in seconds)
+#define PORT "8080"
+#define BACKLOG 10
+#define MAX_TIMEOUT 5
+#define MAX_EVENTS 64
+
+
 
 int main(void)
 {
