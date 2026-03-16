@@ -12,11 +12,12 @@ class Request {
 		std::string 						getPath() const;
 		std::string 						getVersion() const;
 		std::map<std::string, std::string>	getHeaders() const;
-		//std::string getBody() const;
+		std::string 						getBody() const;
 		bool							complete();
-		void							parsingHttp();
-		int								fistLine();
-		int								header();
+		int								parsingHttp();
+		int								initFistLine();
+		int								initHeader();
+		int								initBody();
 
 	private:
 		std::string							request_;

@@ -4,7 +4,7 @@ CXX = c++
 FLAGS = -Wall -Wextra -Werror -std=c++98
 OBJDIR = obj
 
-SOURCES =  ./Request.cpp  
+SOURCES = ./Request.cpp 
 OBJS = $(patsubst ./%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
 all: $(NAME)

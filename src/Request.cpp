@@ -2,6 +2,7 @@
 #include <iostream>
 #include <exception>
 #include <algorithm>
+#include <sstream>
 
 Request::Request(char *buffer)
 {
@@ -25,10 +26,11 @@ std::ostream& operator<<(std::ostream& out, const Request& request)
 	std::map<std::string, std::string>::const_iterator i;
 
 	for (i = headers.begin(); i != headers.end(); ++i) {
-		out << "Header: " << i->first  // La clé (ex: "Content-Type")
+		out << "	Header: " << i->first  // La clé (ex: "Content-Type")
 				<< " | Valeur: " << i->second // La valeur (ex: "text/html")
 				<< "\n";
 	}
+	out << "Body: " << request.getBody() << "\n";
     return out;
 }
 
@@ -57,22 +59,41 @@ std::map<std::string, std::string> Request::getHeaders() const
 	return(headers_);
 }
 
-
+std::string Request::getBody() const
+{
+	return(body_);
+}
 
 //verifie qu'il y a "\r\n\r\n" cad que la requet soit complete
 bool	Request::complete()
 {
-	if (request_.find("\r\n\r\n") != std::string::npos)
+	size_t	end = request_.find("\r\n\r\n");
+	if (end == std::string::npos)
 	{
-		std::cout << "Request complete" << std::endl;
-		return true;
+		std::cerr << "Request not complete" << std::endl;
+		return false;
 	}
-	std::cerr << "Request not complete" << std::endl;
-	return false;
+	size_t it = request_.find("Content-Length:");
+	if (it == std::string::npos)
+		return true;
+	it += 16;
+	std::string	tmp = request_.substr(it, end);
+	size_t	len;
+	std::stringstream ss(tmp);
+    ss >> len;
+	while (request_[end] == '\r' || request_[end] == '\n')
+		++end;
+	if (request_.size() - end != len)
+	{
+		std::cout << "Request not complete" << std::endl;
+		return false;
+	}
+	std::cout << tmp << std::endl;
+	return true;
 }
 
 //parse la premier ligne et implemente la class (methode chemin version)
-int	Request::fistLine()
+int	Request::initFistLine()
 {
 	size_t	begin = 0;
 	size_t last = request_.find("\r\n");
@@ -102,12 +123,13 @@ int	Request::fistLine()
 		return 1;
 	version_ = request_.substr(begin, last - begin);
 
-	std::cout << method_ << "\n" << path_ << "\n" << version_ << std::endl;
+	//std::cout << method_ << "\n" << path_ << "\n" << version_ << std::endl;
 
 	return 0;
 }
 
-int	Request::header()
+//initialise la map avec le header
+int	Request::initHeader()
 {
 	size_t last = request_.find("\r\n\r\n");
 	if (last == std::string::npos)
@@ -115,10 +137,10 @@ int	Request::header()
 		std::cout << "Probleme with header" << std::endl;
 		return 1;
 	}
-	size_t tmp = 0;
-	while (tmp < last)
+	size_t end = 0;
+	while (end < last)
 	{
-		size_t	begin = request_.find("\r\n", tmp);
+		size_t	begin = request_.find("\r\n", end);
 		if (begin == std::string::npos)
 		{
 			std::cout << "Probleme with header" << std::endl;
@@ -127,7 +149,7 @@ int	Request::header()
 		if (begin == last)
 			break;
 		begin += 2;
-		tmp = begin;
+		end = begin;
 		size_t it = request_.find(":", begin);
 		if (it == std::string::npos || it >= last)
 			return 1;
@@ -138,56 +160,84 @@ int	Request::header()
 			return 1;
 		}
 		begin = it + 2;
-		std::string value = request_.substr(begin, last - begin);
+		size_t	end = request_.find("\r\n", begin);
+		std::string value = request_.substr(begin, end - begin);
 		headers_.insert(std::pair<std::string, std::string>(cle, value));
-		
 	}
-
-		// On définit le type de l'itérateur pour plus de clarté
-	//std::map<std::string, std::string>::const_iterator i;
-
-	//for (i = headers_.begin(); i != headers_.end(); ++i) {
-	//	std::cout << "Header: " << i->first  // La clé (ex: "Content-Type")
-	//			<< " | Valeur: " << i->second // La valeur (ex: "text/html")
-	//			<< std::endl;
-	//}
-
 	return 0;
-	//faire pareil pour la valeur et implementer la map ex::ages["Bob"] = 30;
-	//faire une boucle
-
 }
 
-void	Request::parsingHttp()
+//verifie que le body exist et initialise le body de la class
+int	Request::initBody()
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
+	if (it == headers_.end())
+	{
+		//std::cout << "not body" << std::endl;
+		body_ = "\0";
+		return 0;
+	}
+	std::string value = it->second;
+	size_t begin = request_.find("\r\n\r\n");
+	if (begin == std::string::npos)
+	{
+		std::cout << "Probleme with body" << std::endl;
+		return 1;
+	}
+	size_t	len;
+	std::stringstream ss(value);
+    ss >> len;
+	while (request_[begin] == '\r' || request_[begin] == '\n')
+		++begin;
+	if (request_.size() - begin != len)
+	{
+		std::cout << "the size of the body don't is good" << std::endl;
+		return 1;
+	}
+	//std::cout << "the size is good" << std::endl;
+	body_ = request_.substr(begin, len);
+	return 0;
+}
+
+int	Request::parsingHttp()
 {
 	if (complete() == false)
-		return; //continuer la lecture
-	if (fistLine() == 1) //attention a ne pas rappeler la fonction pour verifier les sortie
+		return 1; //continuer la lecture
+	int res = initFistLine();
+	if (res == 1) //attention a ne pas rappeler la fonction pour verifier les sortie
 	{
 		std::cout << "erreur 400" << std::endl;
+		return 1;
+	}
+	else if (res == 2)
+	{
+		std::cout << "erreur ligne 1" << std::endl;
 		return;
 	}
-	//else if (setFistLine() == 2)
-	//{
-	//	std::cout << "erreur ligne 1" << std::endl;
-	//	return;
-	//}
-	if (header() == 1)
-		return;
+	if (initHeader() == 1)
+		return 1 ;
+	if (initBody() == 1)
+		return 1;
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
+	return 0;
 }
 
 int main()
 {
 	const char *buffer = "POST /upload HTTP/1.1\r\n"
-        "Host: localhost:8080\r\n"
-        "Content-Type: application/x-www-form-urlencoded\r\n"
-        "Content-Length: 27\r\n"
-        "\r\n\r\n" // Ligne vide importante entre headers et body
-        "name=Gemini&project=webserv";
+	    "Host: localhost:8080\r\n"
+	    "Content-Type: application/x-www-form-urlencoded\r\n"
+	    "Content-Length: 27\r\n"
+	    "\r\n\r\n" // Ligne vide importante entre headers et body
+	    "name=Gemini&project=webserv";
+
 
 	Request file((char *)buffer);
-	file.parsingHttp();
+	if (file.parsingHttp() == 1)
+	{
+		std::cerr << "Error" << std::endl;
+		return 1;
+	}
 	std::cout << file << std::endl;
 	
 }
