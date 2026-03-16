@@ -106,9 +106,10 @@ int	Request::initFistLine()
 	if (it == std::string::npos || it >= last)
 		return 1;
 	method_ = request_.substr(begin, it);
+	//probablement a voir plus tard
 	if (method_ != "GET" && method_ != "POST" && method_ != "DELETE")
 	{
-		std::cout << "Method not valide" << std::endl;
+		std::cout << "501 Not Implemented" << std::endl;
 		return 1;
 	}
 	begin = request_.find("/", it);
@@ -187,6 +188,7 @@ int	Request::initBody()
 	size_t	len;
 	std::stringstream ss(value);
     ss >> len;
+	// attention a la limite sinon renvoir "413 Request Entity Too Large"
 	while (request_[begin] == '\r' || request_[begin] == '\n')
 		++begin;
 	if (request_.size() - begin != len)
@@ -221,6 +223,9 @@ int	Request::parsingHttp()
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 0;
 }
+
+
+
 
 int main()
 {

@@ -18,7 +18,7 @@ class Request {
 		int								initFistLine();
 		int								initHeader();
 		int								initBody();
-
+		
 	private:
 		std::string							request_;
 		std::string							method_;
