@@ -18,8 +18,8 @@ class   Server {
         void    run();
 
     private:
-        Server(const Server &copy);
-        Server &operator=(const Server &src);
+        Server(const Server &src);
+        Server &operator=(const Server &rhs);
 
         void            _setNonBlocking(int fd);
         void            _initAddrinfoParams(struct addrinfo &addrinfo_params);
