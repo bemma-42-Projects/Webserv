@@ -1,0 +1,9 @@
+listen
+server_name
+root
+index
+error_page
+location
+autoindex
+client_max_body_size
+cgi_handler
