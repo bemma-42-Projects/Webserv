@@ -2,7 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 
-int main(void) {
+int main() {
     Server  webServer;
 
     try {
