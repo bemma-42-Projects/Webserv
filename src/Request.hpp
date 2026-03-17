@@ -19,7 +19,8 @@ class Request {
 		int									initFistLine();
 		int									initHeader();
 		int									initBody();
-		std::string								answer();
+		std::string							answer();
+		std::string							methodGet();
 
 	private:
 		std::string							request_;

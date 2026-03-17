@@ -3,6 +3,11 @@
 #include <exception>
 #include <algorithm>
 #include <sstream>
+#include <fcntl.h>    // pour open
+#include <unistd.h>   // pour read, close
+#include <sys/stat.h> // pour stat
+#include "Config.hpp"
+#include <dirent.h>
 
 Request::Request(char *buffer)
 {
@@ -65,6 +70,7 @@ std::string Request::getBody() const
 }
 
 //verifie qu'il y a "\r\n\r\n" cad que la requet soit complete
+//!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
 bool	Request::complete()
 {
 	size_t	end = request_.find("\r\n\r\n");
@@ -224,25 +230,127 @@ int	Request::parsingHttp()
 	return 0;
 }
 
+std::string itoa(int nbr)
+{
+	std::stringstream ss;
+    
+    ss << nbr;
+    std::string str = ss.str();
+	return str;
+}
+
+std::string	Request::methodGet()
+{
+	struct stat info;
+	if (stat(path_.c_str(), &info) != 0)
+	{
+		std::cerr << "error 404" << std::endl;
+		return "";
+	}
+	std::string res;
+	if (S_ISREG(info.st_mode))
+		{
+			int	fd = open(path_.c_str(), O_RDONLY);
+			if (fd == -1)
+			return "";
+			char buffer[2000];
+			//std::string res;
+			ssize_t	bite_read;
+			while ((bite_read = read(fd, buffer, sizeof(buffer))) > 0)
+			{
+				res.append(buffer, bite_read);
+			}
+			close(fd);
+			//return res;
+			//return res; 
+			std::cout << res << std::endl;
+		}
+
+	else if (S_ISDIR(info.st_mode))
+		{
+			//divier la fontion
+			//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
+			if (Config::getAutoindex() == true)
+			{
+				//std::cout << "pd" << std::endl;
+				DIR* dir = opendir(path_.c_str());
+				if (!dir)
+				{
+					std::cout << "error 404" << std::endl;
+					return "";// Erreur 403 ou 404
+			 	} 
+//!!!!!!!!!!!!!!!//std::string	url_path = /!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
+				std::string body = "<html><head><title>Index of " + path_ + "</title></head><body>";
+				body += "<h1>Index of " + path_ + "</h1><hr><pre>";
+
+				struct dirent* entry;
+				while ((entry = readdir(dir)) != NULL) {
+					std::string name = entry->d_name;
+					if (name == ".") continue;
+
+					// On construit le chemin complet pour que stat puisse le trouver
+					std::string fullPath = path_ + "/" + name;
+					struct stat st;
+					
+					std::string displayName = name;
+					if (stat(fullPath.c_str(), &st) == 0) {
+						if (S_ISDIR(st.st_mode)) {
+							displayName += "/"; // On ajoute un slash visuel
+						}
+					}
+
+					// Le lien href doit être le nom, mais le texte affiché est displayName
+					body += "<a href=\"" + displayName + "\">" + displayName + "</a>\n";
+				}
+				body += "</pre><hr></body></html>";
+				closedir(dir);
+				std::string header = "HTTP/1.1 200 OK\r\n";
+				header += "Content-Type: text/html\r\n";
+				header += "Content-Length: " + itoa(body.length()) + "\r\n"; // Il faudra une petite fonction pour convertir int en string
+				header += "\r\n"; // La ligne vide cruciale !
+				res = header + body;
+				std::cout << res << std::endl;
+			}
+			//else
+			//{
+				
+			//}
+		}
+	return res;
+}
+
 std::string	Request::answer()
 {
+	//struct stat info;
+	//if (stat(path_.c_str(), &info) != 0)
+	//{
+	//	std::cerr << "error 404" << std::endl;
+	//	return "";
+	//}
+	//std::string res;
 	if (method_ == "GET")
 	{
+		return methodGet();
 		//if (file .html .jpg)
-			//lire le fichier et renvoyer son contenu
-		//if path est un repertoir egarde si autoindex est activé dans ta config. 
-		//Si oui, génère une liste HTML des fichiers. Sinon, renvoie la page par défaut (ex: index.html).
+		//if (S_ISREG(info.st_mode))
+		//lire le fichier et renvoyer son contenu
+		//if path est un repertoir egarde si autoindex est activé dans ta config.
+		//else if (S_ISDIR(info.st_mode))
+		//}
+		//Si oui, génère une liste HTML des fichiers. 
+		//Sinon, renvoie la page par défaut (ex: index.html).
 
 	}
-	else if (method_ == "DELETE")
-	{
-		//Utilise unlink() pour supprimer le fichier
-	}
-	else if (method_ == "POST")
-	{
-		//Si l'extension correspond à un script (ex: .php), tu dois préparer l'environnement (setenv) et fork() pour exécuter le CGI.
-	}
-	//mettre le reponse dans une string et a renvoyer
+	//else if (method_ == "DELETE")
+	//{
+	//	//Utilise unlink() pour supprimer le fichier
+	//}
+	//else if (method_ == "POST")
+	//{
+	//	//Si l'extension correspond à un script (ex: .php), tu dois préparer l'environnement (setenv) et fork() pour exécuter le CGI.
+	//}
+	////mettre le reponse dans une string et a renvoyer
+	return "";
 }
 
 std::string	Request::requestHttp(Request &file)
@@ -250,19 +358,19 @@ std::string	Request::requestHttp(Request &file)
 	if (file.parsingHttp() == 1)
 		return ("Error");
 	std::cout << file << std::endl;
+	return (file.answer());
 	return ("good");
 }
 
 int main()
 {
-	const char *buffer = "POST /upload HTTP/1.1\r\n"
+	const char *buffer = "GET /home/rmetge/cursus/github/webserv HTTP/1.1\r\n"
 	    "Host: localhost:8080\r\n"
 	    "Content-Type: application/x-www-form-urlencoded\r\n"
 	    "Content-Length: 27\r\n"
 	    "\r\n\r\n" // Ligne vide importante entre headers et body
 	    "name=Gemini&project=webserv";
 
-	
 
 	Request file((char *)buffer);
 	file.requestHttp(file);
@@ -276,4 +384,4 @@ int main()
 }
 
 
-//faire la reponse
+//faire la reponse html quand on a get et un dossier, comprendre le code et faire le path pour pas avoir le chemin abtalue
