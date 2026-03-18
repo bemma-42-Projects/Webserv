@@ -8,7 +8,10 @@ class Config
 		~Config();
 		static void setAutoindex(bool value);
 		static bool	getAutoindex();
+		static void setBodySize(size_t value);
+		static size_t	getBodySize();
 
 	private:
-		static bool autoindex_;
+		static bool		autoindex_;
+		static size_t	body_size_;
 };

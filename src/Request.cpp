@@ -3,11 +3,11 @@
 #include <exception>
 #include <algorithm>
 #include <sstream>
-#include <fcntl.h>    // pour open
-#include <unistd.h>   // pour read, close
-#include <sys/stat.h> // pour stat
+//#include <fcntl.h>    // pour open
+//#include <unistd.h>   // pour read, close
+//#include <sys/stat.h> // pour stat
 #include "Config.hpp"
-#include <dirent.h>
+//#include <dirent.h>
 
 Request::Request(char *buffer)
 {
@@ -106,7 +106,7 @@ int	Request::initFistLine()
 	if (last == std::string::npos)
 	{
 		std::cout << "Request not have method or path or version" << std::endl;
-		return 2;
+		return 1;
 	}
 	size_t	it = request_.find(" ", begin);
 	if (it == std::string::npos || it >= last)
@@ -116,7 +116,7 @@ int	Request::initFistLine()
 	if (method_ != "GET" && method_ != "POST" && method_ != "DELETE")
 	{
 		std::cout << "501 Not Implemented" << std::endl;
-		return 1;
+		return 2;
 	}
 	begin = request_.find("/", it);
 	if (begin == std::string::npos || begin != (it + 1))
@@ -195,6 +195,11 @@ int	Request::initBody()
 	std::stringstream ss(value);
     ss >> len;
 	// attention a la limite sinon renvoir "413 Request Entity Too Large"
+	if (len > Config::getBodySize())
+	{
+		std::cout << "413 Request Entity Too Large" << std::endl;
+		return 2;
+	}
 	while (request_[begin] == '\r' || request_[begin] == '\n')
 		++begin;
 	if (request_.size() - begin != len)
@@ -210,7 +215,7 @@ int	Request::initBody()
 int	Request::parsingHttp()
 {
 	if (complete() == false)
-		return 1; //continuer la lecture
+		return 2; //continuer la lecture
 	int res = initFistLine();
 	if (res == 1) //attention a ne pas rappeler la fonction pour verifier les sortie
 	{
@@ -219,138 +224,21 @@ int	Request::parsingHttp()
 	}
 	else if (res == 2)
 	{
-		std::cout << "erreur ligne 1" << std::endl;
+		std::cout << "erreur 501" << std::endl;
 		return 1;
 	}
 	if (initHeader() == 1)
 		return 1 ;
-	if (initBody() == 1)
+	int	body =  initBody();
+	if (body == 1)
 		return 1;
+	else if (body == 2)
+	{
+		std::cout << "erreur 413" << std::endl;
+		return 1;
+	}
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 0;
-}
-
-std::string itoa(int nbr)
-{
-	std::stringstream ss;
-    
-    ss << nbr;
-    std::string str = ss.str();
-	return str;
-}
-
-std::string	Request::methodGet()
-{
-	struct stat info;
-	if (stat(path_.c_str(), &info) != 0)
-	{
-		std::cerr << "error 404" << std::endl;
-		return "";
-	}
-	std::string res;
-	if (S_ISREG(info.st_mode))
-		{
-			int	fd = open(path_.c_str(), O_RDONLY);
-			if (fd == -1)
-			return "";
-			char buffer[2000];
-			//std::string res;
-			ssize_t	bite_read;
-			while ((bite_read = read(fd, buffer, sizeof(buffer))) > 0)
-			{
-				res.append(buffer, bite_read);
-			}
-			close(fd);
-			//return res;
-			//return res; 
-			std::cout << res << std::endl;
-		}
-
-	else if (S_ISDIR(info.st_mode))
-		{
-			//divier la fontion
-			//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
-			if (Config::getAutoindex() == true)
-			{
-				//std::cout << "pd" << std::endl;
-				DIR* dir = opendir(path_.c_str());
-				if (!dir)
-				{
-					std::cout << "error 404" << std::endl;
-					return "";// Erreur 403 ou 404
-			 	} 
-//!!!!!!!!!!!!!!!//std::string	url_path = /!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
-				std::string body = "<html><head><title>Index of " + path_ + "</title></head><body>";
-				body += "<h1>Index of " + path_ + "</h1><hr><pre>";
-
-				struct dirent* entry;
-				while ((entry = readdir(dir)) != NULL) {
-					std::string name = entry->d_name;
-					if (name == ".") continue;
-
-					// On construit le chemin complet pour que stat puisse le trouver
-					std::string fullPath = path_ + "/" + name;
-					struct stat st;
-					
-					std::string displayName = name;
-					if (stat(fullPath.c_str(), &st) == 0) {
-						if (S_ISDIR(st.st_mode)) {
-							displayName += "/"; // On ajoute un slash visuel
-						}
-					}
-
-					// Le lien href doit être le nom, mais le texte affiché est displayName
-					body += "<a href=\"" + displayName + "\">" + displayName + "</a>\n";
-				}
-				body += "</pre><hr></body></html>";
-				closedir(dir);
-				std::string header = "HTTP/1.1 200 OK\r\n";
-				header += "Content-Type: text/html\r\n";
-				header += "Content-Length: " + itoa(body.length()) + "\r\n"; // Il faudra une petite fonction pour convertir int en string
-				header += "\r\n"; // La ligne vide cruciale !
-				res = header + body;
-				std::cout << res << std::endl;
-			}
-			//else
-			//{
-				
-			//}
-		}
-	return res;
-}
-
-std::string	Request::answer()
-{
-	//struct stat info;
-	//if (stat(path_.c_str(), &info) != 0)
-	//{
-	//	std::cerr << "error 404" << std::endl;
-	//	return "";
-	//}
-	//std::string res;
-	if (method_ == "GET")
-	{
-		return methodGet();
-		//if (file .html .jpg)
-		//if (S_ISREG(info.st_mode))
-		//lire le fichier et renvoyer son contenu
-		//if path est un repertoir egarde si autoindex est activé dans ta config.
-		//else if (S_ISDIR(info.st_mode))
-		//}
-		//Si oui, génère une liste HTML des fichiers. 
-		//Sinon, renvoie la page par défaut (ex: index.html).
-
-	}
-	//else if (method_ == "DELETE")
-	//{
-	//	//Utilise unlink() pour supprimer le fichier
-	//}
-	//else if (method_ == "POST")
-	//{
-	//	//Si l'extension correspond à un script (ex: .php), tu dois préparer l'environnement (setenv) et fork() pour exécuter le CGI.
-	//}
-	////mettre le reponse dans une string et a renvoyer
-	return "";
 }
 
 std::string	Request::requestHttp(Request &file)
@@ -358,7 +246,7 @@ std::string	Request::requestHttp(Request &file)
 	if (file.parsingHttp() == 1)
 		return ("Error");
 	std::cout << file << std::endl;
-	return (file.answer());
+	//return (file.answer());
 	return ("good");
 }
 
