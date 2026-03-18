@@ -28,12 +28,9 @@ class   Server {
         bool            _setupSocket(struct addrinfo *p, const std::string &port_str);
         void            _bindSocketLoop(struct addrinfo *res, const std::string &port_str);
         void            _createAndBindSocket(const std::string &port_str);
-
         void            _startListening();
         void            _initEpoll();
-
         void            _handleTimeouts();
-/*
         void            _handleClientDisconnect(int client_fd);
         bool            _addClientToEpoll(int client_fd);
         void            _logNewConnection(int client_fd);
@@ -49,7 +46,7 @@ class   Server {
         void            _clearClientBuffers(Client &client);
         void            _setSocketToReadState(int client_fd);
         void            _handleClientWrite(int client_fd);
-*/
+
         int _server_socket;
         int _epoll_fd;
         std::map<int, Client> _clients;

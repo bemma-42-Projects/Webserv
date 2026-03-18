@@ -13,7 +13,10 @@ class   ServerConfig {
         ServerConfig    &operator=(const ServerConfig &rhs);
         ~ServerConfig();
 
-        
+        const std::vector<std::string>      &getListen() const;
+        const std::vector<std::string>      &getServerName() const;
+        const std::string                   &getRoot() const;
+        const std::vector<std::string>      &getIndex() const;
 
     private:
         // Multiple allowed : yes
