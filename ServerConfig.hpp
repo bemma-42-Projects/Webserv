@@ -13,11 +13,27 @@ class   ServerConfig {
         ServerConfig    &operator=(const ServerConfig &rhs);
         ~ServerConfig();
 
-        const std::vector<std::string>      &getListen() const;
-        const std::vector<std::string>      &getServerName() const;
-        const std::string                   &getRoot() const;
-        const std::vector<std::string>      &getIndex() const;
+        const std::vector<std::string>              &getListen() const;
+        const std::vector<std::string>              &getServerName() const;
+        const std::string                           &getRoot() const;
+        const std::vector<std::string>              &getIndex() const;
+        const std::map<int, std::string>            &getErrorPage() const;
+        const std::vector<LocationConfig>           &getLocations() const;
+        bool                                        getAutoIndex() const;
+        const std::string                           &getClientMaxBodySize() const;
+        const std::map<std::string, std::string>    &getCgiHandler() const;
 
+        void                                        setRoot(const std::string &root);
+        void                                        setAutoIndex(bool autoindex);
+        void                                        setClientMaxBodySize(const std::string &size);
+        
+        void                                        addListen(const std::string &listen);
+        void                                        addServerName(const std::string &name);
+        void                                        addIndex(const std::string &index);
+        void                                        addErrorPage(int code, const std::string &uri);
+        void                                        addLocation(const LocationConfig &location);        
+        void                                        addCgiHandler(const std::string &extension, const std::string &path);
+        
     private:
         // Multiple allowed : yes
         std::vector<std::string>            _listen;
