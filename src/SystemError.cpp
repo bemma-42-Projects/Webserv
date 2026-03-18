@@ -1,17 +1,16 @@
 #include "SystemError.hpp"
-#include <cerrno>
-#include <cstring>
 
 SystemError::SystemError(const std::string &context) {
-    if (errno != 0) {
-        _message = context + ": " + std::string(strerror(errno));
-    } else {
-        _message = context;
-    }
+	if (errno != 0) {
+		_message = context + ": " + std::string(strerror(errno));
+	}
+	else {
+		_message = context;
+	}
 }
 
 SystemError::~SystemError() throw() {}
 
-const char *SystemError::what() const throw() {
-    return _message.c_str();
+const char	*SystemError::what() const throw() {
+	return (_message.c_str());
 }

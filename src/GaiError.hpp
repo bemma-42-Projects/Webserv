@@ -3,15 +3,16 @@
 
 # include <exception>
 # include <string>
+# include <netdb.h>
 
 class GaiError : public std::exception {
-    public:
-        GaiError(const std::string &context, int errcode);
-        virtual ~GaiError() throw();
-        virtual const char *what() const throw();
+	public:
+		GaiError(const std::string &context, int errcode);
+		virtual ~GaiError() throw();
+		virtual const char	*what() const throw();
 
-    private:
-        std::string _message;
+	private:
+		std::string	_message;
 };
 
 #endif
