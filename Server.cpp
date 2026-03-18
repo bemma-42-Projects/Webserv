@@ -89,7 +89,10 @@ bool    Server::_setupSocket(struct addrinfo *p, const std::string &port_str) {
 	    return (false);
 	}
 	std::cout << "Socket successfully created!" << std::endl;
-    setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+     if (setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int) == -1)) {
+	 	std::cerr << "Failed to set socket option to SO_REUSEADDR." << std::endl;
+	    return (false);
+	}
 	std::cout << "Attempting to bind to port " << port_str << "..." << std::endl;
     if (bind(_server_socket, p->ai_addr, p->ai_addrlen) == -1) {
 		std::cerr << "Bind failed: " << strerror(errno) << " Closing socket..." << std::endl;
@@ -202,6 +205,8 @@ void    Server::_handleNewConnection() {
 	addr_size = sizeof(client_addr);
     client_fd = accept(_server_socket, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
     if (client_fd == -1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return ;
         std::cerr << "Error: accept() failed: " << std::strerror(errno) << std::endl;
         return ;
     }
@@ -264,9 +269,12 @@ void	Server::_handleClientRead(int client_fd) {
     if (bytes_received <= 0) {
         if (bytes_received == 0)
             std::cout << "Client on socket " << client_fd << " closed the connection." << std::endl;
-        else
+        else {
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				return ;
             std::cerr << "Error: recv() failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
-        _handleClientDisconnect(client_fd);
+		}
+		_handleClientDisconnect(client_fd);
 		return ;
 	}
     _clients[client_fd].updateLastActivity();
@@ -311,6 +319,8 @@ void    Server::_handleClientWrite(int client_fd) {
     std::string response_to_send = _getResponseToSend(client);
 	bytes_sent = send(client_fd, response_to_send.c_str(), response_to_send.size(), 0);
     if (bytes_sent < 0) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return ;
         std::cerr << "Error: send() failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
 		_handleClientDisconnect(client_fd);
 		return ;
@@ -336,8 +346,12 @@ void	Server::run() {
     while (1) {
         _handleTimeouts();   	
 		n_events = epoll_wait(_epoll_fd, events, MAX_EVENTS, 1000);
-		if (n_events == -1 && errno != EINTR)
-            throw std::runtime_error(std::string("Fatal error: epoll_wait() failed: ") + std::strerror(errno));
+		if (n_events == -1)
+		{
+			if (errno == EINTR)
+				return ;
+            throw SystemError("Fatal error: epoll_wait() failed.");
+		}
         for (int i = 0; i < n_events; i++) {
             int client_fd = events[i].data.fd;
             if (events[i].events & (EPOLLERR | EPOLLHUP)) {

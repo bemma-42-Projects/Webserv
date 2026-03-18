@@ -27,7 +27,7 @@ class   GlobalConfig {
         void                                addServer(const ServerConfig &server);
         void                                addIndex(const std::string &index);
         void                                addErrorPage(int code, const std::string &uri);
-        
+
     private:
         // Multiple allowed : yes
         std::vector<ServerConfig>   _servers;
