@@ -10,10 +10,10 @@
 #include "SystemError.hpp"
 #include "GaiError.hpp"
 
-# define PORT "8080"
-# define BACKLOG 128
+#define PORT "8080"
+#define BACKLOG 128
 
-# define MAX_TIMEOUT 10
+#define MAX_TIMEOUT 10
 
 Server::Server() : _server_socket(-1), _epoll_fd(-1) {
 
@@ -89,7 +89,7 @@ bool    Server::_setupSocket(struct addrinfo *p, const std::string &port_str) {
 	    return (false);
 	}
 	std::cout << "Socket successfully created!" << std::endl;
-     if (setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int) == -1)) {
+    if (setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 	 	std::cerr << "Failed to set socket option to SO_REUSEADDR." << std::endl;
 	    return (false);
 	}
@@ -174,11 +174,12 @@ void	Server::_handleClientDisconnect(int client_fd) {
 	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
     close(client_fd);
     _clients.erase(client_fd);
-}			
+}
 
 bool	Server::_addClientToEpoll(int client_fd) {
 	struct epoll_event client_ev;
 
+    memset(&client_ev, 0, sizeof(client_ev));
     client_ev.events = EPOLLIN;
     client_ev.data.fd = client_fd;
     if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &client_ev) == -1) {
@@ -355,8 +356,12 @@ void	Server::run() {
         for (int i = 0; i < n_events; i++) {
             int client_fd = events[i].data.fd;
             if (events[i].events & (EPOLLERR | EPOLLHUP)) {
-                std::cerr << "Epoll error or hang up on socket " << client_fd << std::endl;
-                 _handleClientDisconnect(client_fd);
+                if (client_fd == _server_socket) {
+                    throw SystemError("Fatal error: Server socket encountered an error or hung up.");
+                } else {
+                    std::cerr << "Epoll error or hang up on client socket " << client_fd << std::endl;
+                    _handleClientDisconnect(client_fd);
+                }
 			}
             else if (client_fd == _server_socket)
                 _handleNewConnection();
