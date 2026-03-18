@@ -265,7 +265,7 @@ void	Server::_handleClientRead(int client_fd) {
 	char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
     ssize_t bytes_received;
-    
+
 	bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (bytes_received <= 0) {
         if (bytes_received == 0)
