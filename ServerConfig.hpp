@@ -33,7 +33,7 @@ class   ServerConfig {
         void                                        addErrorPage(int code, const std::string &uri);
         void                                        addLocation(const LocationConfig &location);        
         void                                        addCgiHandler(const std::string &extension, const std::string &path);
-        
+
     private:
         // Multiple allowed : yes
         std::vector<std::string>            _listen;
