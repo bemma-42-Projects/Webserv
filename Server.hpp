@@ -9,6 +9,7 @@
 
 # define MAX_EVENTS 64
 
+extern bool g_running;
 class   Server {
     public:
         Server();

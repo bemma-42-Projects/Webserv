@@ -344,13 +344,13 @@ void	Server::run() {
 	int	n_events;
 
 	std::cout << "Entering the main server loop..." << std::endl;
-    while (1) {
+    while (g_running) {
         _handleTimeouts();   	
 		n_events = epoll_wait(_epoll_fd, events, MAX_EVENTS, 1000);
 		if (n_events == -1)
 		{
 			if (errno == EINTR)
-				return ;
+				break ;
             throw SystemError("Fatal error: epoll_wait() failed.");
 		}
         for (int i = 0; i < n_events; i++) {
