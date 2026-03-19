@@ -7,6 +7,7 @@
 //#include <unistd.h>   // pour read, close
 //#include <sys/stat.h> // pour stat
 #include "Config.hpp"
+#include "RequestAnswer.hpp"
 //#include <dirent.h>
 
 Request::Request(char *buffer)
@@ -52,6 +53,11 @@ std::string Request::getMethod() const
 std::string Request::getPath() const
 {
 	return(path_);
+}
+
+std::string Request::getUrlPath() const
+{
+	return(url_path_);
 }
 
 std::string Request::getVersion() const
@@ -124,7 +130,8 @@ int	Request::initFistLine()
 	it = request_.find(" ", begin);
 	if (it == std::string::npos || it >= last)
 		return 1;
-	path_ = request_.substr(begin, it - begin);
+	url_path_ = request_.substr(begin, it - begin);
+	path_ = Config::getRoot() + url_path_;
 	begin = request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
 		return 1;
@@ -252,7 +259,7 @@ std::string	Request::requestHttp(Request &file)
 
 int main()
 {
-	const char *buffer = "GET /home/rmetge/cursus/github/webserv HTTP/1.1\r\n"
+	const char *buffer = "GET /src HTTP/1.1\r\n"
 	    "Host: localhost:8080\r\n"
 	    "Content-Type: application/x-www-form-urlencoded\r\n"
 	    "Content-Length: 27\r\n"
@@ -262,6 +269,7 @@ int main()
 
 	Request file((char *)buffer);
 	file.requestHttp(file);
+	RequestAnswer::answer(file);
 	//if (file.parsingHttp() == 1)
 	//{
 	//	std::cerr << "Error" << std::endl;
