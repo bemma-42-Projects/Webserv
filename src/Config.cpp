@@ -5,7 +5,7 @@ Config::Config()
 Config::~Config()
 {}
 
-bool Config::autoindex_ = true;
+bool Config::autoindex_ = false;
 
 void Config::setAutoindex(bool value)
 {
@@ -42,4 +42,11 @@ void Config::setRoot(size_t value)
 std::string	Config::getRoot()
 {
 	return root_;
+}
+
+std::string Config::index_ = "/index.html"; // rejoute un / devant pour que je puis direct l'utiliser
+
+std::string	Config::getIndex()
+{
+	return index_;
 }

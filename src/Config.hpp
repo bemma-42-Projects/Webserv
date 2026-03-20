@@ -12,9 +12,11 @@ class Config
 		static size_t		getBodySize();
 		static void 		setRoot(size_t value);
 		static std::string	getRoot();
+		static std::string	getIndex();
 
 	private:
 		static bool			autoindex_;
 		static size_t		body_size_;
 		static std::string	root_;
+		static std::string	index_;
 };
