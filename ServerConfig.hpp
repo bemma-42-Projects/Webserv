@@ -26,7 +26,7 @@ class   ServerConfig {
         void                                        setRoot(const std::string &root);
         void                                        setAutoIndex(bool autoindex);
         void                                        setClientMaxBodySize(const std::string &size);
-        
+
         void                                        addListen(const std::string &listen);
         void                                        addServerName(const std::string &name);
         void                                        addIndex(const std::string &index);
