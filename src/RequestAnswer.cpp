@@ -7,11 +7,28 @@
 #include <dirent.h>
 #include <sstream>
 
-RequestAnswer::RequestAnswer()
-{}
+//initialise les variable
+RequestAnswer::RequestAnswer(Request request)
+{
+	request_ = request;
+	answer_ = "";
+	error_ = 0;
+}
 
 RequestAnswer::~RequestAnswer()
 {}
+
+//return le reponse
+std::string	RequestAnswer::getAnswer()
+{
+	return answer_;
+}
+
+//return l'error
+int	RequestAnswer::getError()
+{
+	return error_;
+}
 
 std::string itoa(int nbr)
 {
@@ -22,12 +39,14 @@ std::string itoa(int nbr)
 	return str;
 }
 
-std::string	RequestAnswer::getIfFile(std::string file)
+
+//recupere le contenue du fichier pour la methode get
+int	RequestAnswer::getIfFile(std::string file)
 {
-	std::cout << Config::getRoot() + file << std::endl;
+	//std::cout << Config::getRoot() + file << std::endl;
 	int	fd = open((Config::getRoot() + file).c_str(), O_RDONLY);
 	if (fd == -1)
-		return "";
+		return 1;
 	std::string	res;
 	char buffer[2000];//taille de la reponse ([4096])
 	ssize_t	bite_read;
@@ -37,22 +56,25 @@ std::string	RequestAnswer::getIfFile(std::string file)
 	}
 	close(fd);
 	//std::cout << res << std::endl;
-	return res; 
+	answer_ = res;
+	return 0; 
 }
 
-std::string	RequestAnswer::getIfDir(Request &request)
+//recupere le contenue du dossier pour la methode get
+int	RequestAnswer::getIfDir()
 {
 	//std::cout << "pd" << std::endl;
-	DIR* dir = opendir(request.getPath().c_str());
+	DIR* dir = opendir(request_.getPath().c_str());
 	if (!dir)
 	{
 		std::cout << "error 404" << std::endl;
-		return "";// Erreur 403 ou 404
+		error_ = 404;
+		return 1;// Erreur 403 ou 404
 	} 
 	std::string	res;
 
-	std::string body = "<html><head><title>Index of " + request.getUrlPath() + "</title></head><body>";
-	body += "<h1>Index of " + request.getUrlPath() + "</h1><hr><ul>";
+	std::string body = "<html><head><title>Index of " + request_.getUrlPath() + "</title></head><body>";
+	body += "<h1>Index of " + request_.getUrlPath() + "</h1><hr><ul>";
 	struct dirent* entry;
 	while ((entry = readdir(dir)) != NULL) // reccupere fichier par fichier
 	{
@@ -60,7 +82,7 @@ std::string	RequestAnswer::getIfDir(Request &request)
 		if (name == ".") // on ne dois pas annaliser le "." sinon on ouvre le dossier actuel et il faut qu'on le gere
 			continue;
 		// On construit le chemin complet pour que stat puisse le trouver
-		std::string fullPath = request.getPath() + "/" + name;
+		std::string fullPath = request_.getPath() + "/" + name;
 		struct stat st;
 		
 		//std::string displayName = name;
@@ -72,7 +94,8 @@ std::string	RequestAnswer::getIfDir(Request &request)
 		else
 		{
 			std::cout << "error 400" << std::endl;
-			return "";
+			error_ = 400;
+			return 1;
 		} 
 		// Le lien href doit être le nom, mais le texte affiché est displayName
 		body += "<li><a href=\"" + name + "\">" + name + "</a></li>\n";
@@ -85,75 +108,78 @@ std::string	RequestAnswer::getIfDir(Request &request)
 	header += "\r\n"; // La ligne vide cruciale !
 	res = header + body;
 	//std::cout << res << std::endl;
-	return (res);
+	answer_ = res;
+	return 0;
 }
 
 
-std::string	RequestAnswer::methodGet(Request &request)
+//envoie les fonction pour la methode get (dossier ou fichier)
+int	RequestAnswer::methodGet()
 {
 	struct stat info;
-	if (stat(request.getPath().c_str(), &info) != 0)
+	if (stat(request_.getPath().c_str(), &info) != 0)
 	{
 		std::cerr << "error 404" << std::endl;
-		return "";
+		error_ = 404;
+		return 1;
+
 	}
 	std::string res;
 	if (S_ISREG(info.st_mode))
-		return (getIfFile(request.getUrlPath()));
+		return (getIfFile(request_.getUrlPath()));
 
 	else if (S_ISDIR(info.st_mode))
 		{
 			//divier la fontion
 			//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
 			if (Config::getAutoindex() == true)
-				return (getIfDir(request));
+				return (getIfDir());
 			else
 			{
 				return (getIfFile(Config::getIndex()));	
 					//Sinon, renvoie la page par défaut (ex: index.html).
 			}
 		}
-	return res;
+	return 1;
 }
 
-std::string	RequestAnswer::answer(Request &request)
+//envoie les fonction par rapport au methode (get, post, delete)
+int	RequestAnswer::setAnswer()
 {
-	//struct stat info;
-	//if (stat(path_.c_str(), &info) != 0)
-	//{
-	//	std::cerr << "error 404" << std::endl;
-	//	return "";
-	//}
-	//std::string res;
-	if (request.getMethod() == "GET")
+	answer_.clear();
+	if (request_.getMethod() == "GET")
 	{
-		return (methodGet(request));
-		//if (file .html .jpg)
-		//if (S_ISREG(info.st_mode))
-		//lire le fichier et renvoyer son contenu
-		//if path est un repertoir regarde si autoindex est activé dans ta config.
-		//else if (S_ISDIR(info.st_mode))
-		//}
-		//Si oui, génère une liste HTML des fichiers. 
-		//Sinon, renvoie la page par défaut (ex: index.html).
-
+		if (methodGet() == 0)
+			return 1;//get
+		else
+			return 0;//error
 	}
 
-	else if (request.getMethod() == "DELETE")
+	else if (request_.getMethod() == "DELETE")
 	{
-		if (unlink(request.getPath().c_str()) == 0)
-			return "";
+		if (unlink(request_.getPath().c_str()) == 0)
+			return (2);//delete
 		else 
 		{
 			std::cout << "error 404 error supression"  << std::endl;
-			return "";
+			error_ = 404;
+			return (0);//error
 		}
 		//Utilise unlink() pour supprimer le fichier
 	}
 	//else if (method_ == "POST")
 	//{
 	//	//Si l'extension correspond à un script (ex: .php), tu dois préparer l'environnement (setenv) et fork() pour exécuter le CGI.
+	//	/cgi-bin/script.py.py✅ Oui
+	//  /cgi-bin/form.php.php✅ Oui
+
+	//Lire Content-Type dans headers_ pour savoir ce que tu reçois
+	//Vérifier l'extension de path_ pour détecter un CGI
+	//Si CGI → fork + pipe + execve avec body_ en entrée
+	//Si upload → ouvrir un fichier sur path_ et y écrire body_
+	//Si succès → construire une réponse 201 Created
+	//Si échec → remplir error_ et retourner 0 comme tu fais déjà
 	//}
 	////mettre le reponse dans une string et a renvoyer
-	return "";
+	return 1;
 }

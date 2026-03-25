@@ -5,6 +5,7 @@
 class Request {
 
 	public:
+		Request();
 		Request(char *buffer);
 		~Request();
 		std::string 						getRequest() const;
@@ -14,7 +15,8 @@ class Request {
 		std::string 						getVersion() const;
 		std::map<std::string, std::string>	getHeaders() const;
 		std::string 						getBody() const;
-		std::string							requestHttp(Request &file);							
+		int									getError() const;
+		//int									requestHttp();							
 		int									parsingHttp();
 		bool								complete();
 		int									initFistLine();
@@ -31,6 +33,7 @@ class Request {
 		std::string							version_;
 		std::map<std::string, std::string>	headers_;
 		std::string							body_;
+		int									error_;
 };
 
 std::ostream& operator<<(std::ostream& out, const Request& request);

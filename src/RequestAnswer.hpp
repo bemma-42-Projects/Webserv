@@ -5,13 +5,17 @@
 class RequestAnswer
 {
 	public:
-		RequestAnswer();
+		RequestAnswer(Request request);
 		~RequestAnswer();
-		static std::string	answer(Request &request);
-		static std::string	methodGet(Request &request);
-		static std::string	getIfFile(std::string file);
-		static std::string	getIfDir(Request &request);
-		std::string			getIndex(Request &request);
+		int			setAnswer();
+		int			methodGet();
+		int			getIfFile(std::string file);
+		int			getIfDir();
+		std::string	getAnswer();
+		int			getError();
 
 	private:
+		std::string	answer_;
+		int			error_;
+		Request		request_;
 };

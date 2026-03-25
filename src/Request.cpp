@@ -10,9 +10,14 @@
 #include "RequestAnswer.hpp"
 //#include <dirent.h>
 
+
+Request::Request()
+{}
+
 Request::Request(char *buffer)
 {
 	request_ = buffer;
+	error_ = 0;
 }
 
 Request::~Request(){}
@@ -24,7 +29,6 @@ std::ostream& operator<<(std::ostream& out, const Request& request)
 		<< "Method: " << request.getMethod() << "\n"
 		<< "Path: " << request.getPath() << "\n"
 		<< "Version: " << request.getVersion() << "\n";
-		//<< "Headers: " << request.getHeaders() << "\n"; 
 
 	out << "Headers: \n";
 	
@@ -75,16 +79,18 @@ std::string Request::getBody() const
 	return(body_);
 }
 
+int	Request::getError() const
+{
+	return error_;
+}
+
 //verifie qu'il y a "\r\n\r\n" cad que la requet soit complete
 //!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
 bool	Request::complete()
 {
 	size_t	end = request_.find("\r\n\r\n");
 	if (end == std::string::npos)
-	{
-		std::cerr << "Request not complete" << std::endl;
-		return false;
-	}
+		return false;//requette non complet
 	size_t it = request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
@@ -95,12 +101,12 @@ bool	Request::complete()
     ss >> len;
 	while (request_[end] == '\r' || request_[end] == '\n')
 		++end;
-	if (request_.size() - end != len)
+
+	if (request_.size() - end < len)
 	{
-		std::cout << "Request not complete" << std::endl;
+		//error_ = 413;
 		return false;
 	}
-	//std::cout << tmp << std::endl;
 	return true;
 }
 
@@ -110,20 +116,13 @@ int	Request::initFistLine()
 	size_t	begin = 0;
 	size_t last = request_.find("\r\n");
 	if (last == std::string::npos)
-	{
-		std::cout << "Request not have method or path or version" << std::endl;
 		return 1;
-	}
 	size_t	it = request_.find(" ", begin);
 	if (it == std::string::npos || it >= last)
 		return 1;
 	method_ = request_.substr(begin, it);
-	//probablement a voir plus tard
 	if (method_ != "GET" && method_ != "POST" && method_ != "DELETE")
-	{
-		std::cout << "501 Not Implemented" << std::endl;
-		return 2;
-	}
+		return 2; //501 Not Implemented
 	begin = request_.find("/", it);
 	if (begin == std::string::npos || begin != (it + 1))
 		return 1;
@@ -136,9 +135,6 @@ int	Request::initFistLine()
 	if (begin == std::string::npos || begin != (it + 1))
 		return 1;
 	version_ = request_.substr(begin, last - begin);
-
-	//std::cout << method_ << "\n" << path_ << "\n" << version_ << std::endl;
-
 	return 0;
 }
 
@@ -147,19 +143,13 @@ int	Request::initHeader()
 {
 	size_t last = request_.find("\r\n\r\n");
 	if (last == std::string::npos)
-	{
-		std::cout << "Probleme with header" << std::endl;
 		return 1;
-	}
 	size_t end = 0;
 	while (end < last)
 	{
 		size_t	begin = request_.find("\r\n", end);
 		if (begin == std::string::npos)
-		{
-			std::cout << "Probleme with header" << std::endl;
 			return 1;
-		}
 		if (begin == last)
 			break;
 		begin += 2;
@@ -169,15 +159,16 @@ int	Request::initHeader()
 			return 1;
 		std::string cle = request_.substr(begin, it - begin);
 		if (it +2 >= last || request_[it + 1] != ' ')
-		{
-			std::cout << "Error header" << std::endl;
 			return 1;
-		}
 		begin = it + 2;
 		size_t	end = request_.find("\r\n", begin);
 		std::string value = request_.substr(begin, end - begin);
 		headers_.insert(std::pair<std::string, std::string>(cle, value));
 	}
+	if (headers_.find("Host") == headers_.end() 
+		|| (method_ == "POST" && headers_.find("Content-Length") == headers_.end()))
+		return 1;
+	
 	return 0;
 }
 
@@ -187,34 +178,22 @@ int	Request::initBody()
 	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
 	if (it == headers_.end())
 	{
-		//std::cout << "not body" << std::endl;
 		body_ = "\0";
 		return 0;
 	}
 	std::string value = it->second;
 	size_t begin = request_.find("\r\n\r\n");
 	if (begin == std::string::npos)
-	{
-		std::cout << "Probleme with body" << std::endl;
 		return 1;
-	}
 	size_t	len;
 	std::stringstream ss(value);
     ss >> len;
-	// attention a la limite sinon renvoir "413 Request Entity Too Large"
 	if (len > Config::getBodySize())
-	{
-		std::cout << "413 Request Entity Too Large" << std::endl;
-		return 2;
-	}
+		return 1;
 	while (request_[begin] == '\r' || request_[begin] == '\n')
 		++begin;
 	if (request_.size() - begin != len)
-	{
-		std::cout << "the size of the body don't is good" << std::endl;
 		return 1;
-	}
-	//std::cout << "the size is good" << std::endl;
 	body_ = request_.substr(begin, len);
 	return 0;
 }
@@ -224,42 +203,35 @@ int	Request::parsingHttp()
 	if (complete() == false)
 		return 2; //continuer la lecture
 	int res = initFistLine();
-	if (res == 1) //attention a ne pas rappeler la fonction pour verifier les sortie
+	if (res == 1)
 	{
-		std::cout << "erreur 400" << std::endl;
-		return 1;
+		error_ = 400;
+		return 0;
 	}
 	else if (res == 2)
 	{
-		std::cout << "erreur 501" << std::endl;
-		return 1;
+		error_ = 501;
+		return 0;
 	}
 	if (initHeader() == 1)
-		return 1 ;
+	{
+		error_ = 400;
+		return 0 ;
+	}
 	int	body =  initBody();
 	if (body == 1)
-		return 1;
-	else if (body == 2)
 	{
-		std::cout << "erreur 413" << std::endl;
-		return 1;
+		error_ = 413;
+		return 0;
 	}
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
-	return 0;
+	return 1;
 }
 
-std::string	Request::requestHttp(Request &file)
-{
-	if (file.parsingHttp() == 1)
-		return ("Error");
-	std::cout << file << std::endl;
-	//return (file.answer());
-	return ("good");
-}
 
 int main()
 {
-	const char *buffer = "DELETE /test.http HTTP/1.1\r\n"
+	const char *buffer = "GET /Makefile HTTP/1.1\r\n"
 	    "Host: localhost:8080\r\n"
 	    "Content-Type: application/x-www-form-urlencoded\r\n"
 	    "Content-Length: 27\r\n"
@@ -268,16 +240,21 @@ int main()
 
 
 	Request file((char *)buffer);
-	file.requestHttp(file);
-	std::cout << RequestAnswer::answer(file) << std::endl;
-	//if (file.parsingHttp() == 1)
-	//{
-	//	std::cerr << "Error" << std::endl;
-	//	return 1;
-	//}
-	//std::cout << file << std::endl;
+	int res = file.parsingHttp();
+	if (res == 0)
+	{
+		std::cout << "error " << file.getError() << std::endl;
+		return 0;
+	}
+	else if (res == 2)
+	{
+		std::cout << "requette non complete" << std::endl;
+		return 0;
+	}
+	std::cout << file << std::endl;
+	RequestAnswer answer(file);
+	std::cout << "test " << std::endl;
+	if (answer.setAnswer() == 1)
+		std::cout << "anser =" << answer.getAnswer() << std::endl;
 	
 }
-
-
-//faire la reponse html quand on a get et un dossier, comprendre le code et faire le path pour pas avoir le chemin abtalue
