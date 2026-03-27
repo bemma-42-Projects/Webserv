@@ -167,19 +167,32 @@ int	RequestAnswer::setAnswer()
 		}
 		//Utilise unlink() pour supprimer le fichier
 	}
-	//else if (method_ == "POST")
-	//{
+	else if (request_.getMethod() == "POST")
+	{
+		std::string	url = request_.getUrlPath();
+		if ((url.size() >= 4 && url.substr(url.size() - 4) == ".php")
+			|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
+			|| url.substr(url.size() - 3) == ".pl"))
+		{
+
+			//CGI
+			//Si CGI → fork + pipe + execve avec body_ en entrée
+		}
+		else
+		{
+
+			//upload
+			//Si upload → ouvrir un fichier sur path_ et y écrire body_
+			//Si succès → construire une réponse 201 Created
+			//Si échec → remplir error_ et retourner 0 comme tu fais déjà
+		}
 	//	//Si l'extension correspond à un script (ex: .php), tu dois préparer l'environnement (setenv) et fork() pour exécuter le CGI.
 	//	/cgi-bin/script.py.py✅ Oui
-	//  /cgi-bin/form.php.php✅ Oui
+	//    /cgi-bin/form.php.php✅ Oui   (.php, .py, .pl)
 
 	//Lire Content-Type dans headers_ pour savoir ce que tu reçois
 	//Vérifier l'extension de path_ pour détecter un CGI
-	//Si CGI → fork + pipe + execve avec body_ en entrée
-	//Si upload → ouvrir un fichier sur path_ et y écrire body_
-	//Si succès → construire une réponse 201 Created
-	//Si échec → remplir error_ et retourner 0 comme tu fais déjà
-	//}
-	////mettre le reponse dans une string et a renvoyer
+	}
+	////mettre le reponse dans une answer_
 	return 1;
 }

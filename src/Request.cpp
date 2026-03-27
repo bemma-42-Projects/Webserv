@@ -168,6 +168,8 @@ int	Request::initHeader()
 	if (headers_.find("Host") == headers_.end() 
 		|| (method_ == "POST" && headers_.find("Content-Length") == headers_.end()))
 		return 1;
+	if (headers_.find("Content-Type") == headers_.end())
+		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
 	
 	return 0;
 }
@@ -205,7 +207,7 @@ int	Request::parsingHttp()
 	int res = initFistLine();
 	if (res == 1)
 	{
-		error_ = 400;
+		error_ = 4001;
 		return 0;
 	}
 	else if (res == 2)
@@ -215,7 +217,7 @@ int	Request::parsingHttp()
 	}
 	if (initHeader() == 1)
 	{
-		error_ = 400;
+		error_ = 4002;
 		return 0 ;
 	}
 	int	body =  initBody();
@@ -231,9 +233,9 @@ int	Request::parsingHttp()
 
 int main()
 {
-	const char *buffer = "GET /Makefile HTTP/1.1\r\n"
+	const char *buffer = "POST /Makefile HTTP/1.1\r\n"
 	    "Host: localhost:8080\r\n"
-	    "Content-Type: application/x-www-form-urlencoded\r\n"
+	    //"Content-Type: application/x-www-form-urlencoded\r\n"
 	    "Content-Length: 27\r\n"
 	    "\r\n\r\n" // Ligne vide importante entre headers et body
 	    "name=Gemini&project=webserv";
