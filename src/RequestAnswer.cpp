@@ -170,9 +170,9 @@ int	RequestAnswer::setAnswer()
 	else if (request_.getMethod() == "POST")
 	{
 		std::string	url = request_.getUrlPath();
-		if ((url.size() >= 4 && url.substr(url.size() - 4) == ".php")
+		if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
 			|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
-			|| url.substr(url.size() - 3) == ".pl"))
+			|| url.substr(url.size() - 3) == ".pl")*/endsWith(url, ".py"))
 		{
 
 			//CGI
@@ -192,6 +192,56 @@ int	RequestAnswer::setAnswer()
 
 	//Lire Content-Type dans headers_ pour savoir ce que tu reçois
 	//Vérifier l'extension de path_ pour détecter un CGI
+
+
+
+
+	/*if (request_.getMethod() == "POST") {
+    
+    // 1. D'ABORD : Est-ce un CGI ? 
+    // (On regarde l'extension du fichier demandé dans l'URL)
+	//!!!
+	!!
+	Comment on le reconnaît ? Grâce à l'extension dans l'URL (.php, .py, .pl). => dans le fichier de config
+    
+	if (isCgiExtension(url)) {
+        // ACTION : Lancer le CGI (fork/exec)
+        // Le body est envoyé au script via son STDIN
+        executeCGI();
+    }
+    
+    // 2. ENSUITE : Est-ce un Upload ?
+    // (On regarde si le Content-Type est multipart)
+    else if (request_.getHeader("Content-Type").find("multipart/form-data") != std::string::npos) {
+        // ACTION : Extraire le fichier du body et l'enregistrer sur le serveur
+        // (Généralement dans le dossier défini par 'upload_store' dans ta config)
+        handleUpload();
+    }
+    
+    // 3. SINON : POST classique (ex: un formulaire simple ou du texte)
+    else {
+        // Traitement par défaut
+    }
+}
+	
+
+
+Étape A : Est-ce que l'URL finit par une extension CGI ?
+
+OUI : Alors c'est un CGI. Peu importe s'il y a un fichier ou du texte dans le Body, tu donnes tout au script (.php ou .py) et c'est lui qui gère. Le CGI gagne toujours.
+
+NON : On passe à l'étape B.
+
+Étape B : Est-ce qu'on est en POST et que le Content-Type est "multipart/form-data" ?
+
+OUI : C'est un Upload de fichier classique. Ton code C++ doit lire le Body, enlever les séparateurs (boundaries) et créer un fichier sur le disque.
+
+NON : On passe à l'étape C.
+
+Étape C : Le reste
+
+C'est soit un GET classique (tu envoies une page HTML), soit un POST de formulaire simple (du texte), soit une erreur.
+*/
 	}
 	////mettre le reponse dans une answer_
 	return 1;
