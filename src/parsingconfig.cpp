@@ -53,7 +53,7 @@ std::vector<std::string> splitString(std::string str) {
 			res.push_back(str.substr(i, 1));
 			i++;
 		}
-		else if (str[i] != '{' && str[i] != '}' && str[i] != ';' && isspace(str[i]) == 0)
+		else if (str[i] != '{' && str[i] != '}' && str[i] != ';' && isspace((unsigned char)str[i]) == 0)
 		{
 			size_t word = str.find_first_of("{}; \t\n\v\f\r", i);
 			if (word == str.npos)
