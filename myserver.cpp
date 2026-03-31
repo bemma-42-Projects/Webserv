@@ -481,3 +481,8 @@ int main(void)
 	}
 	return (0);
 }
+
+//$(SRC_DIR)/main.cpp \
+    //  $(SRC_DIR)/Client.cpp \
+    //  $(SRC_DIR)/GaiError.cpp \
+      $(SRC_DIR)/SystemError.cpp

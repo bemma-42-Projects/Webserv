@@ -5,10 +5,7 @@ CFLAGS = -Wall -Wextra -Werror -std=c++98
 
 SRC_DIR = src
 
-SRC = $(SRC_DIR)/main.cpp \
-      $(SRC_DIR)/Client.cpp \
-      $(SRC_DIR)/GaiError.cpp \
-      $(SRC_DIR)/SystemError.cpp
+SRC = $(SRC_DIR)/parsingconfig.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

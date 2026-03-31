@@ -1,0 +1,46 @@
+Pour le parsing du fichier de config je dois definir:
+	-sur quel ip(interface)+Port le serveur doit ecouter
+	-quelles pages d'erreurs je dois utiliser
+	-la taille max du body
+	-du coup a voir aussi pour les plusieur serveur qui du coup devront avoir plusieurs interface+port (je crois)
+ 	(a partir de la je ne comprend pas de ouf mais bon)
+	-quelles methodes HTTP j'autorise 
+	-si la route fait une redirection
+	-quel dossier correspond a l'utiliser
+	-si le listing des dossiers est autorise
+	-quel fichier par defaut on doit renvoyer pour un dossier
+	-si l'upload est autorise et ou il est stocker (important peut etre voir avec romane pour ca)
+	-quel CGI executer 
+
+
+	donc listen c'est la ou on indique sur quel port/interface+port le serveur dois ecouter 
+	(ex pour le port listen 80; ex interface+port listen 127.0.0.1:8080;)
+	listen = pour tout le serveur donc dans ServeurConfig
+
+	error_page -> quel fichier erreur servir pour tel code erreur sauf que du coup il y a 
+	le code http et le chemin du fichier (ex error_page 404 /page_404.html;)
+	error_page = tout serveur donc ServeurConfig
+
+	client_max_body_size = taille maximale pour le body d'1 requete dans ServeurConfig
+
+	(potentiellement server_name pour differencier tous les serveurs)
+
+	root = dossier d'ou je pars (la ou je ne comprend pas c'est que je crois qu'on la pour la parti
+	et la partie location)
+
+	d'ailleur le bloc location sert a avoir des comportement different selon l'url (c'est la 
+	ou on utlise beaucoup root vu que si il faut l'url ce sera image mais que ca se situe 
+	a un endroit specifique avec un nom different )
+
+	methods sert a dire quelle methodes HTTP sont autorise sur cette route (GET, POST, DELETE)
+	a voir comment ca se fait parce que je ne comprend vraiment pas la 
+
+	ca a voir franchement mais pour les redirection -> return = au lieu de servir un fichier 
+	le serv repond par une redirectionHTTP (pige pas non plus)
+
+	autoindex = autorise ou pas l'affichage du contenu d'un dossier quand aucin fichier index 
+	est trouve (toujours pas)
+
+	index = fichier par defaut a servir quand la cible est un repertoire(capte que dalle)
+
+	bon au pire je verrais plus tard parce que je comprend rien pour l'instant 
