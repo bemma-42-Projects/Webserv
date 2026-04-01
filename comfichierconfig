@@ -44,3 +44,63 @@ Pour le parsing du fichier de config je dois definir:
 	index = fichier par defaut a servir quand la cible est un repertoire(capte que dalle)
 
 	bon au pire je verrais plus tard parce que je comprend rien pour l'instant 
+
+
+
+Vous pouvez vous inspirer de la section « server » du fichier de configuration NGINX.
+
+Dans ce fichier, vous devriez pouvoir :
+
+• Définir toutes les paires interface:port sur lesquelles votre serveur écoutera (définissant ainsi plusieurs sites web gérés par votre programme).
+
+• Configurer les pages d'erreur par défaut.
+
+• Définir la taille maximale autorisée pour le corps des requêtes client.
+
+• Spécifier des règles ou des configurations sur une URL/route (aucune expression régulière n'est requise ici), pour un site web, parmi les éléments suivants :
+
+• Liste des méthodes HTTP acceptées pour la route.
+
+• Redirection HTTP.
+
+• Répertoire où le fichier demandé doit se trouver (par exemple, si l'URL /kapouet pointe vers /tmp/www, l'URL /kapouet/pouic/toto/pouet recherchera dans /tmp/www/pouic/toto/pouet).
+
+• Activer ou désactiver l'affichage du contenu du répertoire.
+
+• Fichier par défaut à servir lorsque la ressource demandée est un répertoire. • Le téléchargement de fichiers des clients vers le serveur est autorisé et un emplacement de stockage
+est fourni.
+
+10
+Serveur Web : C’est à ce moment-là que vous comprenez enfin pourquoi les URL commencent par HTTP.
+
+• Exécution de CGI, basée sur l’extension de fichier (par exemple .php). Voici quelques
+remarques spécifiques concernant les CGI :
+
+• Vous vous demandez ce qu’est un CGI ?
+
+• Examinez attentivement les variables d’environnement impliquées dans la communication entre le serveur Web et le CGI. La requête complète et les arguments fournis par le client doivent être accessibles au CGI.
+
+• N’oubliez pas que, pour les requêtes segmentées, votre serveur doit les décomposer.
+
+Le CGI attendra EOF comme fin du corps de la requête.
+
+• Il en va de même pour la sortie du CGI. Si aucun content_length n’est renvoyé par le CGI, EOF marquera la fin des données renvoyées.
+
+• Le CGI doit être exécuté dans le répertoire approprié pour l’accès aux fichiers par chemin relatif. Votre serveur doit prendre en charge au moins un CGI (php-CGI, Python, etc.).
+
+Vous devez fournir les fichiers de configuration et les fichiers par défaut pour tester et démontrer que chaque fonctionnalité est opérationnelle pendant l'évaluation.
+
+Vous pouvez inclure d'autres règles ou informations de configuration dans votre fichier (par exemple, le nom du serveur pour un site web si vous prévoyez d'utiliser des hôtes virtuels).
+
+Si vous avez des questions concernant un comportement spécifique, vous pouvez comparer le comportement de votre programme avec celui de NGINX.
+
+Nous fournissons un petit outil de test. Son utilisation n'est pas obligatoire si tout fonctionne correctement avec votre navigateur et vos tests, mais il peut vous aider à trouver et corriger les bogues.
+
+La résilience est essentielle. Votre serveur doit rester opérationnel en permanence.
+
+Ne testez pas avec un seul programme. Écrivez vos tests dans un langage plus adapté, comme Python ou Go, voire en C ou C++ si vous préférez.
+
+
+
+*Directive SIMPLE* = instruction qui fini par ";"
+*Directive SPECIALE* = bloc (ouvre une zone) avec {...} (nginx appelle les blocs des contexts de config)

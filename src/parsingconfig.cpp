@@ -44,16 +44,21 @@ std::vector<std::string> splitString(std::string str) {
 
 	for (size_t i = 0; i < str.length(); )
 	{
-		while (i < str.length() && isspace((unsigned char)str[i]) != 0)
+		while (i < str.length() && std::isspace((unsigned char)str[i]) != 0)
 			i++;
 		if (i >= str.length())
 			break ;
-		if (str[i] == '{' || str[i] == '}' || str[i] == ';')
+		if (str[i] == '#')
+		{
+			while ( i < str.length() && str[i] != '\n')
+				i++;
+		}
+		else if (str[i] == '{' || str[i] == '}' || str[i] == ';')
 		{
 			res.push_back(str.substr(i, 1));
 			i++;
 		}
-		else if (str[i] != '{' && str[i] != '}' && str[i] != ';' && isspace((unsigned char)str[i]) == 0)
+		else if (str[i] != '{' && str[i] != '}' && str[i] != ';' && std::isspace((unsigned char)str[i]) == 0)
 		{
 			size_t word = str.find_first_of("{}; \t\n\v\f\r", i);
 			if (word == str.npos)
