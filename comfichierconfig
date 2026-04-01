@@ -104,3 +104,14 @@ Ne testez pas avec un seul programme. Écrivez vos tests dans un langage plus ad
 
 *Directive SIMPLE* = instruction qui fini par ";"
 *Directive SPECIALE* = bloc (ouvre une zone) avec {...} (nginx appelle les blocs des contexts de config)
+
+si je fais server_name pour se co il faut d abord se co au port puis si pls serveurs ecoutent sur le mm port la on regarde le name (a voir pour serveur par defaut)
+
+a voir pour alias 
+
+client_max_body_size: Définit la taille maximale autorisée du corps de la requête client.
+Si la taille d une requête dépasse la valeur configurée, l erreur 413 (Requête trop volumineuse) est renvoyée au client.
+Veuillez noter que les navigateurs ne peuvent pas afficher correctement cette erreur.
+Définir la taille à 0 désactive la vérification de la taille du corps de la requête client.
+
+a voir pour internal
