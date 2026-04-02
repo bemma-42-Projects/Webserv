@@ -15,16 +15,16 @@
 
 #define MAX_TIMEOUT 10
 
-Server::Server() : _server_socket(-1), _epoll_fd(-1) {
+Server::Server() : server_socket_(-1), epoll_fd_(-1) {
 
 }
 
 Server::~Server()
 {
-    if (_server_socket != -1)
-        close(_server_socket);
-    if (_epoll_fd != -1)
-        close(_epoll_fd);
+    if (server_socket_ != -1)
+        close(server_socket_);
+    if (epoll_fd_ != -1)
+        close(epoll_fd_);
 }
 
 void    Server::_setNonBlocking(int fd) {
@@ -83,21 +83,21 @@ void    Server::_printInterface(struct addrinfo *p, char *ip_buffer) {
 
 bool    Server::_setupSocket(struct addrinfo *p, const std::string &port_str) {
     int yes = 1;
-    _server_socket = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-	if (_server_socket == -1) {
+    server_socket_ = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+	if (server_socket_ == -1) {
 	    std::cerr << "Failed to create socket: " << strerror(errno) << ". Moving to next..." << std::endl;
 	    return (false);
 	}
 	std::cout << "Socket successfully created!" << std::endl;
-    if (setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+    if (setsockopt(server_socket_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 	 	std::cerr << "Failed to set socket option to SO_REUSEADDR." << std::endl;
 	    return (false);
 	}
 	std::cout << "Attempting to bind to port " << port_str << "..." << std::endl;
-    if (bind(_server_socket, p->ai_addr, p->ai_addrlen) == -1) {
+    if (bind(server_socket_, p->ai_addr, p->ai_addrlen) == -1) {
 		std::cerr << "Bind failed: " << strerror(errno) << " Closing socket..." << std::endl;
-		close(_server_socket);
-        _server_socket = -1;
+		close(server_socket_);
+        server_socket_ = -1;
 		return (false) ;
 	}
 	std::cout << "Successfully bound to port " << port_str << "!" << std::endl;
@@ -128,28 +128,28 @@ void    Server::_createAndBindSocket(const std::string &port_str) {
 
 void	Server::_startListening() {
 	std::cout << "Setting up the listener..." << std::endl;
-    if (listen(_server_socket, BACKLOG) == -1)
+    if (listen(server_socket_, BACKLOG) == -1)
         throw SystemError("Fatal error: listen() failed");
     std::cout << "Server is now actively listening on port " << PORT << "! (Backlog: " << BACKLOG << ")" << std::endl;
 }
 
 void	Server::_initEpoll() {
-	_epoll_fd = epoll_create(MAX_EVENTS);
-    if (_epoll_fd == -1) {
+	epoll_fd_ = epoll_create(MAX_EVENTS);
+    if (epoll_fd_ == -1) {
         throw SystemError("Fatal error: epoll_create() failed");
     }
 	struct epoll_event ev;
 	memset(&ev, 0, sizeof(ev));
     ev.events = EPOLLIN;
-    ev.data.fd = _server_socket;
-    if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _server_socket, &ev) == -1)
-        throw SystemError("Fatal error: epoll_ctl() failed on _server_socket");
+    ev.data.fd = server_socket_;
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, server_socket_, &ev) == -1)
+        throw SystemError("Fatal error: epoll_ctl() failed on server_socket_");
 }
 
 void    Server::init() {
     _createAndBindSocket(PORT);
 	_startListening();
-	_setNonBlocking(_server_socket);
+	_setNonBlocking(server_socket_);
 	_initEpoll();
 }
 
@@ -160,7 +160,7 @@ void    Server::_handleTimeouts() {
         if (std::difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
             std::cout << "Client on socket " << client.getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
             client.setState(Client::DISCONNECTED);
-            epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client.getSocketFd(), NULL);
+            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client.getSocketFd(), NULL);
             close(client.getSocketFd());
             _clients.erase(it++);
         }
@@ -171,7 +171,7 @@ void    Server::_handleTimeouts() {
 }
 
 void	Server::_handleClientDisconnect(int client_fd) {
-	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
+	epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL);
     close(client_fd);
     _clients.erase(client_fd);
 }
@@ -182,7 +182,7 @@ bool	Server::_addClientToEpoll(int client_fd) {
     memset(&client_ev, 0, sizeof(client_ev));
     client_ev.events = EPOLLIN;
     client_ev.data.fd = client_fd;
-    if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &client_ev) == -1) {
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &client_ev) == -1) {
         std::cerr << "Error: epoll_ctl(ADD) failed on client_fd " << client_fd << ": " << std::strerror(errno) << std::endl;
         close(client_fd);
         _clients.erase(client_fd);
@@ -195,7 +195,7 @@ void	Server::_logNewConnection(int client_fd) {
 	std::cout << "CONNECTION ACCEPTED!" << std::endl;
     std::cout << "Client IP: " << _clients[client_fd].getIp() << std::endl;
     std::cout << "Communication is now open on new socket: " << client_fd << std::endl;
-    std::cout << "Listening socket " << _server_socket << " is still active in the background." << std::endl;
+    std::cout << "Listening socket " << server_socket_ << " is still active in the background." << std::endl;
 }
 
 void    Server::_handleNewConnection() {
@@ -204,7 +204,7 @@ void    Server::_handleNewConnection() {
 	int client_fd;
 
 	addr_size = sizeof(client_addr);
-    client_fd = accept(_server_socket, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
+    client_fd = accept(server_socket_, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
     if (client_fd == -1) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
@@ -226,7 +226,7 @@ void	Server::_setSocketToWriteState(int client_fd) {
     
 	mod_ev.events = EPOLLIN | EPOLLOUT;
     mod_ev.data.fd = client_fd;
-    if (epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, client_fd, &mod_ev) == -1) {
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, client_fd, &mod_ev) == -1) {
         std::cerr << "Error: epoll_ctl(MOD) failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
         _handleClientDisconnect(client_fd);
 		return ;
@@ -305,7 +305,7 @@ void	Server::_setSocketToReadState(int client_fd) {
 
     listen_ev.events = EPOLLIN;
     listen_ev.data.fd = client_fd;
-	if (epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, client_fd, &listen_ev) == -1) {
+	if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, client_fd, &listen_ev) == -1) {
         std::cerr << "Error: epoll_ctl(MOD) failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
         _handleClientDisconnect(client_fd);
 		return ;
@@ -346,7 +346,7 @@ void	Server::run() {
 	std::cout << "Entering the main server loop..." << std::endl;
     while (g_running) {
         _handleTimeouts();   	
-		n_events = epoll_wait(_epoll_fd, events, MAX_EVENTS, 1000);
+		n_events = epoll_wait(epoll_fd_, events, MAX_EVENTS, 1000);
 		if (n_events == -1)
 		{
 			if (errno == EINTR)
@@ -356,14 +356,14 @@ void	Server::run() {
         for (int i = 0; i < n_events; i++) {
             int client_fd = events[i].data.fd;
             if (events[i].events & (EPOLLERR | EPOLLHUP)) {
-                if (client_fd == _server_socket) {
+                if (client_fd == server_socket_) {
                     throw SystemError("Fatal error: Server socket encountered an error or hung up.");
                 } else {
                     std::cerr << "Epoll error or hang up on client socket " << client_fd << std::endl;
                     _handleClientDisconnect(client_fd);
                 }
 			}
-            else if (client_fd == _server_socket)
+            else if (client_fd == server_socket_)
                 _handleNewConnection();
 			else if (events[i].events & EPOLLIN)
 				_handleClientRead(client_fd);
