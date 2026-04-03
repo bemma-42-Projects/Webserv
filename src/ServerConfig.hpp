@@ -5,6 +5,8 @@
 #include <iostream>
 #include <map>
 
+#include "LocationConfig.hpp"
+
 class ServerConfig {
 
 	std::vector<std::string> listen;
@@ -13,6 +15,7 @@ class ServerConfig {
 	std::string root;
 	size_t client_max_body_size;
 	std::vector<std::string> index;
-	std::vector<std::string> return_;
+	std::map<int, std::string> return_;
+	std::vector<LocationConfig> locations;
 	bool autoindex;
 };
