@@ -9,7 +9,7 @@
 
 class ServerConfig {
 
-	std::vector<std::string> listen;
+	std::map<std::string, size_t> listen;
 	std::vector<std::string> server_name;
 	std::map<int, std::string> error_page;
 	std::string root;

@@ -38,7 +38,7 @@ std::string readFile(const char *path) {
 }
 
 //cette fonction sert a separer chacun de mes mots et separateur (separe avant token)
-std::vector<std::string> splitString(std::string str) {
+std::vector<std::string> tokenizeConfig(std::string str) {
 
 	std::vector<std::string> res;
 
@@ -72,14 +72,44 @@ std::vector<std::string> splitString(std::string str) {
 	return (res);
 }
 
+bool validateStructure(std::vector<std::string> tokens) {
+	int count_brace = 0;
+
+	for (size_t i = 0; i < tokens.size() ; i++)
+	{
+		// if (count_brace < 0)
+		// 	return (false);
+		if (tokens[i] == "server")
+		{
+			if (tokens[i + 1] != "{")
+				return (false);
+		}
+		else if (tokens[i] == "location")
+		{
+			if (tokens[i + 1].find_first_of("{}") != std::string::npos|| tokens[i + 2] != "{")
+				return (false); 
+		}
+		if (tokens[i] == "{")
+			count_brace++;
+		else if (tokens[i] == "}")
+			count_brace--;
+	}
+	if (count_brace != 0)
+		return (false);
+	return (true);
+}
+
 int main(int argc, char **argv) {
 	(void)argc;
 	std::string text = readFile(argv[1]);
-	std::cout << text << std::endl << std::endl;
-	std::vector<std::string> res = splitString(text);
-	for (size_t len = 0; len < res.size(); len++)
-	{
+	// std::cout << text << std::endl << std::endl;
+	std::vector<std::string> res = tokenizeConfig(text);
+	for (size_t len = 0; len < res.size(); len++) {
 		std::cout << "|" << res[len] << "|" << std::endl; 
 	}
+	if (validateStructure(res) == false)
+		std::cout << "Erreur bad configuration" << std::endl;
+	else 
+		std::cout << "Everything's good!" << std::endl; 
 }
 

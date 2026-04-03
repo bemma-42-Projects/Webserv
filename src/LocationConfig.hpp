@@ -16,6 +16,7 @@ class LocationConfig {
 	std::vector<std::string> allowed_methods;
 	bool allowed_upload;
 	std::string upload_path;
+	std::map<std::string, std::string> cgi;
 };
 
 //il manquerait config cgi
