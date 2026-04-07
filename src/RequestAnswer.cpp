@@ -172,7 +172,7 @@ int	RequestAnswer::setAnswer()
 		std::string	url = request_.getUrlPath();
 		if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
 			|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
-			|| url.substr(url.size() - 3) == ".pl")*/endsWith(url, ".py"))
+			|| url.substr(url.size() - 3) == ".pl")*/)
 		{
 
 			//CGI
@@ -246,3 +246,70 @@ C'est soit un GET classique (tu envoies une page HTML), soit un POST de formulai
 	////mettre le reponse dans une answer_
 	return 1;
 }
+
+/*Gemini a dit
+
+C’est une excellente question qui touche au cœur de ton architecture. Le serveur ne le "sait" pas par magie : il le sait parce que tu as parsé ton fichier de configuration au démarrage.
+
+Voici comment cette information circule dans ton programme :
+1. La Phase de Parsing (Au lancement du serveur)
+
+Quand tu lances ./webserv config.conf, ton programme lit le fichier texte. S'il voit upload_store ./www/uploads, il doit stocker cette chaîne de caractères dans un objet.
+
+Typiquement, tu as une structure qui ressemble à ça :
+C++
+
+struct Location {
+    std::string _path;          // ex: "/uploads"
+    std::string _root;          // ex: "./www"
+    std::string _upload_store;  // ex: "./www/storage" <--- C'est ICI !
+    bool _allow_post;           // ex: true
+    // ...
+};
+
+Si dans ton fichier .conf, la ligne upload_store n'existe pas pour cette location, alors ta variable _upload_store sera vide.
+2. La Phase de Décision (Pendant la requête)
+
+Quand une requête POST /uploads/image.jpg arrive, ton serveur fait une recherche :
+
+    Trouver la bonne Location : Il cherche dans sa liste de locations celle qui correspond au début de l'URL (/uploads).
+
+    Vérifier la directive :
+
+        Il regarde : if (!currentLocation.getUploadStore().empty())
+
+        Si c'est vide : Ce n'est pas un upload géré par le serveur. (C'est peut-être un CGI ou une erreur 405).
+
+        Si ce n'est PAS vide : Le serveur se dit : "OK, j'ai l'ordre d'enregistrer ce fichier dans ce dossier précis".
+
+3. Exemple concret dans ton code
+
+Voici à quoi ressemble le test logique dans ta fonction qui gère le POST :
+C++
+
+// 1. On récupère la config de l'endroit demandé
+Location& loc = config.getLocationForPath(request.getPath());
+
+// 2. On vérifie si l'upload est configuré
+if (request.getMethod() == "POST" && !loc.getUploadStore().empty()) {
+    
+    // C'EST UN UPLOAD !
+    std::string fileName = extractFileName(request); 
+    std::string savePath = loc.getUploadStore() + "/" + fileName;
+    
+    saveToFile(savePath, request.getBody());
+    return Response(201); // Created
+}
+
+En résumé :
+
+    Dans le fichier .conf : Tu écris le chemin où stocker les fichiers.
+
+    Dans ton code : Tu vérifies si ce chemin a été rempli lors du parsing.
+
+    Si le chemin existe : C'est un upload.
+
+    Si le chemin n'existe pas : Tu traites la requête comme un POST normal (souvent envoyé vers un CGI).
+
+Est-ce que dans ton code actuel, tu as déjà une classe ou une structure pour stocker les paramètres de tes "locations" (comme le root, les méthodes autorisées, etc.) ?
+*/
