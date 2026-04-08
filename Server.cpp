@@ -216,8 +216,9 @@ void    Server::_handleNewConnection() {
     client.updateLastActivity();
     client.setState(Client::READING_REQUEST);
     _clients[client_fd] = client;
-    if (!_addClientToEpoll(client_fd))
+    if (!_addClientToEpoll(client_fd)) {
         return ;
+    }
 	_logNewConnection(client_fd);
 }
 
@@ -235,6 +236,7 @@ void	Server::_setSocketToWriteState(int client_fd) {
 }
 
 bool	Server::_isRequestComplete(Client &client) {
+    (void)client;
     return true;
 }
 
@@ -244,10 +246,12 @@ std::string	Server::_buildHttpResponse(Client &client) {
 }
 
 void    Server::_bufferizeResponse(Client& client, const std::string& response) {
+    (void)client;
     (void)response;
 }
 
 void	Server::_processClientRequest(int client_fd, const std::string& received_data) {
+    (void)received_data;
 	Client	&client = _clients[client_fd];
 
     if (_isRequestComplete(client)) {
