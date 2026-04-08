@@ -137,6 +137,7 @@ int	Request::initFistLine()
 	if (it == std::string::npos || it >= last)
 		return 1;
 	url_path_ = request_.substr(begin, it - begin);
+	std::cout << url_path_ << std::endl;
 	path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
 	begin = request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
@@ -233,9 +234,11 @@ int	Request::parsingHttp()
 		error_ = 413;
 		return 0;
 	}
-	Location* loc = Config::matchLocation(path_);
+	std::cout << "test " << url_path_ << std::endl;
+	Location* loc = Config::matchLocation(url_path_);
 	if (loc == NULL)
 	{
+		std::cout << " test" << std::endl;
 		error_ = 404;
 		return 0;
 	}
@@ -252,6 +255,7 @@ int	Request::parsingHttp()
 int main()
 {
 	//try{
+		Config::location();
 		const char *buffer = "POST /Makefile HTTP/1.1\r\n"
 			"Host: localhost:8080\r\n"
 			//"Content-Type: application/x-www-form-urlencoded\r\n"

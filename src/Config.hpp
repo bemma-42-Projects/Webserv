@@ -16,6 +16,7 @@ class Config
 		static std::string	getRoot();
 		//static std::string	getIndex();
 		static Location* 	matchLocation(std::string requestPath);
+		static void	location();
 
 	private:
 		//static bool			autoindex_;

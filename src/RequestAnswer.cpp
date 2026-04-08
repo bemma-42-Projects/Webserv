@@ -134,7 +134,7 @@ int	RequestAnswer::methodGet()
 	struct stat info;
 	if (stat(request_.getPath().c_str(), &info) != 0)
 	{
-		std::cerr << "error 404" << std::endl;
+		std::cerr << "error  404" << std::endl;
 		error_ = 404;
 		return 1;
 
