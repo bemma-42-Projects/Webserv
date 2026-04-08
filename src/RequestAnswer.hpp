@@ -13,6 +13,7 @@ class RequestAnswer
 		int			getIfDir();
 		std::string	getAnswer();
 		int			getError();
+		std::string findIndex(Location loc);
 
 	private:
 		std::string	answer_;

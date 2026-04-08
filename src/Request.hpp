@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <map>
+#include "Config.hpp"
+#include "Location.hpp"
 
 class Request {
 
@@ -16,12 +18,15 @@ class Request {
 		std::map<std::string, std::string>	getHeaders() const;
 		std::string 						getBody() const;
 		int									getError() const;
+		Location							getLocation() const;
 		//int									requestHttp();							
 		int									parsingHttp();
 		bool								complete();
 		int									initFistLine();
 		int									initHeader();
 		int									initBody();
+		//void								setError(int error);
+
 		//std::string							answer();
 		//std::string							methodGet();
 
@@ -34,6 +39,7 @@ class Request {
 		std::map<std::string, std::string>	headers_;
 		std::string							body_;
 		int									error_;
+		Location							location_;
 };
 
 std::ostream& operator<<(std::ostream& out, const Request& request);

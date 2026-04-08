@@ -44,7 +44,7 @@ std::string itoa(int nbr)
 int	RequestAnswer::getIfFile(std::string file)
 {
 	//std::cout << Config::getRoot() + file << std::endl;
-	int	fd = open((Config::getRoot() + file).c_str(), O_RDONLY);
+	int	fd = open((Config::getRoot() + '/' + file).c_str(), O_RDONLY);
 	if (fd == -1)
 		return 1;
 	std::string	res;
@@ -112,6 +112,21 @@ int	RequestAnswer::getIfDir()
 	return 0;
 }
 
+//cherche un index qui existe et est lisible et on le renvoi
+std::string RequestAnswer::findIndex(Location loc)
+{
+    std::vector<std::string>::iterator it;
+    
+    for (it = loc.getIndex().begin(); it != loc.getIndex().end(); ++it) {
+        std::string fullPath = loc.getRoot() + "/" + *it;
+        
+        // On utilise la fonction access() de <unistd.h> 
+        // pour vérifier si le fichier existe et est lisible
+        if (access(fullPath.c_str(), R_OK) == 0)
+            return *it; // On a trouvé le premier index valide !
+    }
+    return ""; // Aucun index trouvé
+}
 
 //envoie les fonction pour la methode get (dossier ou fichier)
 int	RequestAnswer::methodGet()
@@ -130,15 +145,22 @@ int	RequestAnswer::methodGet()
 
 	else if (S_ISDIR(info.st_mode))
 		{
+			Location	loc = request_.getLocation();
 			//divier la fontion
 			//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
-			if (Config::getAutoindex() == true)
+			std::string index = findIndex(loc);
+			//if
+			if (!index.empty())
+			{
+				//return (index);
+				
+				return (getIfFile(request_.getPath() + '/' + index));	
+				//Sinon, renvoie la page par défaut (ex: index.html).
+			}
+			else if (loc.getAutoindex() == true)
 				return (getIfDir());
 			else
-			{
-				return (getIfFile(Config::getIndex()));	
-					//Sinon, renvoie la page par défaut (ex: index.html).
-			}
+				error_ = 403;
 		}
 	return 1;
 }
@@ -167,25 +189,33 @@ int	RequestAnswer::setAnswer()
 		}
 		//Utilise unlink() pour supprimer le fichier
 	}
-	else if (request_.getMethod() == "POST")
-	{
-		std::string	url = request_.getUrlPath();
-		if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
-			|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
-			|| url.substr(url.size() - 3) == ".pl")*/)
-		{
+	//else if (request_.getMethod() == "POST")
+	//{
+	//	std::string	url = request_.getUrlPath();
+	//	if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
+	//		|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
+	//		|| url.substr(url.size() - 3) == ".pl")*/)
+	//	{
 
-			//CGI
-			//Si CGI → fork + pipe + execve avec body_ en entrée
-		}
-		else
-		{
+	//		//CGI
+	//		//Si CGI → fork + pipe + execve avec body_ en entrée
+	//	}
+	//	else
+	//	{
+			
+	//		//upload
+	//		//Si upload → ouvrir un fichier sur path_ et y écrire body_
+	//		//Si succès → construire une réponse 201 Created
+	//		//Si échec → remplir error_ et retourner 0 comme tu fais déjà
+	//	}
+//}
+////mettre le reponse dans une answer_
+return 1;
+}
 
-			//upload
-			//Si upload → ouvrir un fichier sur path_ et y écrire body_
-			//Si succès → construire une réponse 201 Created
-			//Si échec → remplir error_ et retourner 0 comme tu fais déjà
-		}
+
+
+
 	//	//Si l'extension correspond à un script (ex: .php), tu dois préparer l'environnement (setenv) et fork() pour exécuter le CGI.
 	//	/cgi-bin/script.py.py✅ Oui
 	//    /cgi-bin/form.php.php✅ Oui   (.php, .py, .pl)
@@ -242,10 +272,6 @@ NON : On passe à l'étape C.
 
 C'est soit un GET classique (tu envoies une page HTML), soit un POST de formulaire simple (du texte), soit une erreur.
 */
-	}
-	////mettre le reponse dans une answer_
-	return 1;
-}
 
 /*Gemini a dit
 

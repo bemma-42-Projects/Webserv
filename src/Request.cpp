@@ -8,6 +8,7 @@
 //#include <sys/stat.h> // pour stat
 #include "Config.hpp"
 #include "RequestAnswer.hpp"
+#include "Error.hpp"
 //#include <dirent.h>
 
 
@@ -83,6 +84,12 @@ int	Request::getError() const
 {
 	return error_;
 }
+
+Location	Request::getLocation() const
+{
+	return location_;
+}
+
 
 //verifie qu'il y a "\r\n\r\n" cad que la requet soit complete
 //!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
@@ -207,7 +214,7 @@ int	Request::parsingHttp()
 	int res = initFistLine();
 	if (res == 1)
 	{
-		error_ = 4001;
+		error_ = 401;
 		return 0;
 	}
 	else if (res == 2)
@@ -217,7 +224,7 @@ int	Request::parsingHttp()
 	}
 	if (initHeader() == 1)
 	{
-		error_ = 4002;
+		error_ = 402;
 		return 0 ;
 	}
 	int	body =  initBody();
@@ -226,37 +233,55 @@ int	Request::parsingHttp()
 		error_ = 413;
 		return 0;
 	}
+	Location* loc = Config::matchLocation(path_);
+	if (loc == NULL)
+	{
+		error_ = 404;
+		return 0;
+	}
+	location_ = *loc;
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
 }
 
+//void	Request::setError(int error)
+//{
+//	error_ = error;
+//}
 
 int main()
 {
-	const char *buffer = "POST /Makefile HTTP/1.1\r\n"
-	    "Host: localhost:8080\r\n"
-	    //"Content-Type: application/x-www-form-urlencoded\r\n"
-	    "Content-Length: 27\r\n"
-	    "\r\n\r\n" // Ligne vide importante entre headers et body
-	    "name=Gemini&project=webserv";
-
-
-	Request file((char *)buffer);
-	int res = file.parsingHttp();
-	if (res == 0)
-	{
-		std::cout << "error " << file.getError() << std::endl;
-		return 0;
-	}
-	else if (res == 2)
-	{
-		std::cout << "requette non complete" << std::endl;
-		return 0;
-	}
-	std::cout << file << std::endl;
-	RequestAnswer answer(file);
-	std::cout << "test " << std::endl;
-	if (answer.setAnswer() == 1)
-		std::cout << "anser =" << answer.getAnswer() << std::endl;
+	//try{
+		const char *buffer = "POST /Makefile HTTP/1.1\r\n"
+			"Host: localhost:8080\r\n"
+			//"Content-Type: application/x-www-form-urlencoded\r\n"
+			"Content-Length: 27\r\n"
+			"\r\n\r\n" // Ligne vide importante entre headers et body
+			"name=Gemini&project=webserv";
 	
+	
+		Request file((char *)buffer);
+		int res = file.parsingHttp();
+		if (res == 0)
+		{
+			std::cout << "error " << file.getError() << std::endl;
+			return 0;
+		}
+		else if (res == 2)
+		{
+			std::cout << "requette non complete" << std::endl;
+			return 0;
+		}
+		std::cout << file << std::endl;
+		RequestAnswer answer(file);
+		std::cout << "test " << std::endl;
+		if (answer.setAnswer() == 1)
+			std::cout << "anser =" << answer.getAnswer() << std::endl;
+		
+	//}
+	//catch(std::exception &e)
+	//{
+	//	std::cerr << "error : " << e.what() << std::endl;
+	//	//Error::setError(e.what());
+	//}
 }
