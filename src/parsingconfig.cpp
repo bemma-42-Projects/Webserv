@@ -8,6 +8,15 @@
 #include <unistd.h>
 #include <vector>
 #include <cctype>
+#include <stack>
+
+// permet de savoir dans quel bloc je suis je ne l'utilise que pour validate pour l'instant
+enum State {
+	OUTSIDE,
+	IN_SERVER,
+	IN_LOCATION
+};
+
 
 //cette fonction sert juste a lire un fichier et a le stocker dans une string
 std::string readFile(const char *path) {
@@ -72,31 +81,66 @@ std::vector<std::string> tokenizeConfig(std::string str) {
 	return (res);
 }
 
-bool validateStructure(std::vector<std::string> tokens) {
-	int count_brace = 0;
+int isSimpleDirective(std::string name) {
+	if (name == "listen" || name == "root" || name == "client_max_body_size" || name == "server_name"
+			|| name == "error_page" || name == "index" || name == "return" || name == "autoindex"
+			|| name == "allowed_methods" || name == "upload_path" || name == "allowed_upload")
+		return (1);
+	return (0);
+}
 
+// fonction qui valide la structure du fichier de config (pour l'instant elle check si le 
+// nb d'accolade est bon, si les blocs sont bien fait qu'il n'y a pas de location dans location
+// etc, je ne check pas pour l'instant les directives et les ;)
+bool validateStructure(std::vector<std::string> tokens) {
+
+	State state = OUTSIDE;
+	std::stack<std::string> context;
 	for (size_t i = 0; i < tokens.size() ; i++)
 	{
-		// if (count_brace < 0)
-		// 	return (false);
+		
 		if (tokens[i] == "server")
 		{
-			if (tokens[i + 1] != "{")
+			if (state != OUTSIDE)
 				return (false);
+			else if (i + 1 >= tokens.size() || tokens[i + 1] != "{")
+				return (false);
+			context.push("server");
+			state = IN_SERVER;
+			i++;
 		}
 		else if (tokens[i] == "location")
 		{
-			if (tokens[i + 1].find_first_of("{}") != std::string::npos|| tokens[i + 2] != "{")
-				return (false); 
+			if (state != IN_SERVER)
+				return (false);
+			if (i + 1 >= tokens.size() || tokens[i + 1].find_first_of("{}") != std::string::npos)
+				return (false);
+			if (i + 2 >= tokens.size() || tokens[i + 2] != "{")
+				return (false);
+			context.push("location");
+			state = IN_LOCATION;
+			i += 2;
 		}
-		if (tokens[i] == "{")
-			count_brace++;
+		else if (tokens[i] == "{")
+			return (false);
 		else if (tokens[i] == "}")
-			count_brace--;
+		{
+			if (context.empty())
+				return (false);
+			context.pop();
+			if (context.empty())
+				state = OUTSIDE;
+			else if (context.top() == "server")
+				state = IN_SERVER;
+			else if (context.top() == "location")
+				state = IN_LOCATION;
+			
+		}
+		
 	}
-	if (count_brace != 0)
-		return (false);
-	return (true);
+	if (state == OUTSIDE && context.empty())
+		return (true);
+	return (false);
 }
 
 int main(int argc, char **argv) {
