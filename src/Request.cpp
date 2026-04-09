@@ -138,7 +138,7 @@ int	Request::initFistLine()
 		return 1;
 	url_path_ = request_.substr(begin, it - begin);
 	std::cout << url_path_ << std::endl;
-	path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
+	//path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
 	begin = request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
 		return 1;
@@ -208,6 +208,20 @@ int	Request::initBody()
 	return 0;
 }
 
+int	Request::checkOfLocation()
+{
+	Location* loc = Config::matchLocation(url_path_);
+	if (loc == NULL)
+		return 1;
+	location_ = *loc;
+	std::vector<std::string> allowedMethods = location_.getAllowedMethods();
+	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
+			== allowedMethods.end())
+		return 2;
+	return 0;
+}
+
+
 int	Request::parsingHttp()
 {
 	if (complete() == false)
@@ -234,15 +248,18 @@ int	Request::parsingHttp()
 		error_ = 413;
 		return 0;
 	}
-	std::cout << "test " << url_path_ << std::endl;
-	Location* loc = Config::matchLocation(url_path_);
-	if (loc == NULL)
+	int checkLoc = checkOfLocation();
+	if (checkLoc == 1)
 	{
-		std::cout << " test" << std::endl;
 		error_ = 404;
 		return 0;
 	}
-	location_ = *loc;
+	else if (checkLoc == 2)
+	{
+		error_ = 405;
+		return 0;
+	}
+	path_ = location_.getRoot() + '/' + url_path_;
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
 }
@@ -256,7 +273,8 @@ int main()
 {
 	//try{
 		Config::location();
-		const char *buffer = "POST /Makefile HTTP/1.1\r\n"
+
+		const char *buffer = "GET /src HTTP/1.1\r\n"
 			"Host: localhost:8080\r\n"
 			//"Content-Type: application/x-www-form-urlencoded\r\n"
 			"Content-Length: 27\r\n"
@@ -276,7 +294,8 @@ int main()
 			std::cout << "requette non complete" << std::endl;
 			return 0;
 		}
-		std::cout << file << std::endl;
+		std::cout << file.getLocation().getRoot() << std::endl;
+		//std::cout << file << std::endl;
 		RequestAnswer answer(file);
 		std::cout << "test " << std::endl;
 		if (answer.setAnswer() == 1)

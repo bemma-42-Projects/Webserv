@@ -1,7 +1,7 @@
 NAME = webserv
 
 CXX = c++
-FLAGS = -Wall -Wextra -Werror -std=c++98
+FLAGS = -Wall -Wextra -Werror -std=c++98 -g 	
 OBJDIR = obj
 
 SOURCES = ./Request.cpp ./Config.cpp ./RequestAnswer.cpp ./Location.cpp

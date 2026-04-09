@@ -25,6 +25,7 @@ class Request {
 		int									initFistLine();
 		int									initHeader();
 		int									initBody();
+		int									checkOfLocation();
 		//void								setError(int error);
 
 		//std::string							answer();

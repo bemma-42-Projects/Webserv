@@ -43,3 +43,8 @@ std::string	Location::getPath()
 {
 	return path_;
 }
+
+std::vector<std::string>	Location::getAllowedMethods()
+{
+	return allowed_methods_;
+}
