@@ -115,3 +115,18 @@ Veuillez noter que les navigateurs ne peuvent pas afficher correctement cette er
 Définir la taille à 0 désactive la vérification de la taille du corps de la requête client.
 
 a voir pour internal
+
+
+regle;
+ -pas le droit aux locations dans des location
+ -pas le droit a d autre bloc que server et location
+ -pas le droit au location hors server 
+ -pas le droit au server dans serveur
+ -pas le droit au location sans path (c est a dire ex; location {...}) (minimum location / {...})
+ -droit de mettre des commentaires 
+ -droit de coller les accolade (ex server{ ) 
+ -pareil pour ; (listen 8080; et listen 8080 ;) sont autorises
+ -pas le droit de mettre de virgule ou de ; dans les path 
+ -droit de mettre des tab ou tout wsp entre mots directive etc (c est a dire pas de droit de separe une directive en deux)
+ -pas le droit aux fautes dans les nom des directive (ex serveur ne passe pas par contre server oui)
+ -

@@ -81,13 +81,92 @@ std::vector<std::string> tokenizeConfig(std::string str) {
 	return (res);
 }
 
-int isSimpleDirective(std::string name) {
+bool isSimpleDirective(std::string name) {
 	if (name == "listen" || name == "root" || name == "client_max_body_size" || name == "server_name"
 			|| name == "error_page" || name == "index" || name == "return" || name == "autoindex"
 			|| name == "allowed_methods" || name == "upload_path" || name == "allowed_upload")
-		return (1);
-	return (0);
+		return (true);
+	return (false);
 }
+
+bool directiveIsAllowed(std::string name, State state) {
+	if (state == IN_SERVER && (name == "listen" || name == "root" || name == "client_max_body_size"
+			|| name == "server_name" || name == "error_page" || name == "index" || name == "return"
+			|| name == "autoindex"))
+		return (true);
+	else if (state == IN_LOCATION && (name == "root" || name == "index" || name == "autoindex"
+			|| name == "return" || name == "allowed_methods" || name == "upload_path"
+			|| name == "allowed_upload" || name == "client_max_body_size" || name == "error_page"))
+		return (true);
+	return (false);
+}
+
+bool validateListen(std::vector<std::string> args) {
+	for (size_t i = 0, nb_pv = 0; i < args.size() ; i++ )
+	{
+		nb_pv = 0;
+		for (size_t y = 0; y < args[i].size() ;y++)
+		{
+			if (isdigit(args[i][y]) == 0 && args[i][y] != ':')
+			{
+				std::cout << "je ne suis pas un digit n'y un :" << std::endl;
+				return (false);
+
+			}
+			else if (args[i][y] == ':')
+			{
+				if (nb_pv == 1)
+					return (false);
+				nb_pv++;
+			}
+		}
+		// if (nb_pv != 2 && nb_pv != 0)
+		// {
+			
+		// 	return (false);
+		// }
+	}
+	return (true);
+}
+
+bool validateSpecificDirective(std::string name, std::vector<std::string> args) {
+	if (name == "listen")
+	{
+		std::cout << "Je suis un listen" << std::endl;
+		return (validateListen(args));
+	}
+	return (false);
+	
+}
+
+
+bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State state) {
+	std::vector<std::string> args;
+	std::string name = tokens[i];
+
+	if (directiveIsAllowed(name, state) == false)
+	{
+		std::cout << "Pas dans le bon bloc..." << std::endl; 
+		return (false);
+	}
+	i++;
+	for ( ;i < tokens.size() && tokens[i] != ";" ;i++)
+	{
+		if (tokens[i] == "}" || tokens[i] == "{")
+			return (false);
+		if (isSimpleDirective(tokens[i]) == true)
+			return (false);
+		args.push_back(tokens[i]);
+	}
+	if (args.size() == 0)
+		return (false);
+	if (i >= tokens.size())
+		return (false);
+	if (validateSpecificDirective(name, args) == false)
+		return (false);
+	return (true);
+}
+
 
 // fonction qui valide la structure du fichier de config (pour l'instant elle check si le 
 // nb d'accolade est bon, si les blocs sont bien fait qu'il n'y a pas de location dans location
@@ -136,6 +215,13 @@ bool validateStructure(std::vector<std::string> tokens) {
 				state = IN_LOCATION;
 			
 		}
+		else if (isSimpleDirective(tokens[i]) == true)
+		{
+
+			std::cout << "         Je suis sur une directive!" << std::endl;
+			if (validateOneDirective(tokens, i, state) == false)
+				return (false);
+		}
 		
 	}
 	if (state == OUTSIDE && context.empty())
@@ -148,9 +234,9 @@ int main(int argc, char **argv) {
 	std::string text = readFile(argv[1]);
 	// std::cout << text << std::endl << std::endl;
 	std::vector<std::string> res = tokenizeConfig(text);
-	for (size_t len = 0; len < res.size(); len++) {
-		std::cout << "|" << res[len] << "|" << std::endl; 
-	}
+	// for (size_t len = 0; len < res.size(); len++) {
+	// 	std::cout << "|" << res[len] << "|" << std::endl; 
+	// }
 	if (validateStructure(res) == false)
 		std::cout << "Erreur bad configuration" << std::endl;
 	else 

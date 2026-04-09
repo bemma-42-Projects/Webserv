@@ -17,6 +17,8 @@ class LocationConfig {
 	bool allowed_upload;
 	std::string upload_path;
 	std::map<std::string, std::string> cgi;
+	size_t client_max_body_size;
+	std::map<int, std::string> error_page;
 };
 
 //il manquerait config cgi
