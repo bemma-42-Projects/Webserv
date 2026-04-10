@@ -119,12 +119,17 @@ int	RequestAnswer::getIfDir()
 std::string RequestAnswer::findIndex(Location loc)
 {
     std::vector<std::string>::iterator it;
-    for (it = loc.getIndex().begin(); it != loc.getIndex().end(); ++it) {
+	std::vector<std::string> index = loc.getIndex();
+    for (it = index.begin(); it != index.end(); ++it)
+	{
 		const std::string root = loc.getRoot();
 		std::cout << "test1" << std::endl;
 		std::cout << root << std::endl;
+
 		std::cout << "it = " << *it << std::endl;
+
 		std::string fullPath = root + '/' + *it;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		
 		std::cout << "test2" << std::endl;
         
         // On utilise la fonction access() de <unistd.h> 
@@ -157,20 +162,22 @@ int	RequestAnswer::methodGet()
 		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
 		std::cout << "dir" << std::endl;
 		std::string index = findIndex(loc);
-		//if
 		std::cout << "dir" << std::endl;
-		if (loc.getAutoindex() == true)
-			return (getIfDir());
-		else if (!index.empty())
+		if (!index.empty())
 		{
-			//return (index);
-			
 			return (getIfFile(Config::getRoot() + '/' + index));	
 			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
+		else if (loc.getAutoindex() == true)
+			return (getIfDir());
 		else
 			error_ = 403;
 	}
+	return 1;
+}
+
+int	RequestAnswer::methodDelete()
+{
 	return 1;
 }
 

@@ -214,6 +214,7 @@ int	Request::checkOfLocation()
 	if (loc == NULL)
 		return 1;
 	location_ = *loc;
+	std::cout << location_.getPath() << std::endl;
 	std::vector<std::string> allowedMethods = location_.getAllowedMethods();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
 			== allowedMethods.end())
@@ -274,7 +275,7 @@ int main()
 	//try{
 		Config::location();
 
-		const char *buffer = "GET /src HTTP/1.1\r\n"
+		const char *buffer = "GET /Makefile HTTP/1.1\r\n"
 			"Host: localhost:8080\r\n"
 			//"Content-Type: application/x-www-form-urlencoded\r\n"
 			"Content-Length: 27\r\n"

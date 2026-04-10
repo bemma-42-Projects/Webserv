@@ -9,6 +9,7 @@ class RequestAnswer
 		~RequestAnswer();
 		int			setAnswer();
 		int			methodGet();
+		int			methodDelete();
 		int			getIfFile(std::string file);
 		int			getIfDir();
 		std::string	getAnswer();

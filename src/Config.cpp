@@ -86,7 +86,7 @@ void	Config::location()
     methods.push_back("POST");
 	std::vector<std::string> index;
 	index.push_back("index.html");
-	Location loc1("/src", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, true, methods);
+	Location loc1("/src", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methods);
     location_.push_back(loc1);
 	std::vector<std::string> method;
     method.push_back("DELETE");
@@ -94,6 +94,21 @@ void	Config::location()
 	index2.push_back("test.html");
 	Location loc2("/upload", "./src", "./src/tmp", index2, false, method);
 	location_.push_back(loc2);
+	std::vector<std::string> methode;
+    methode.push_back("GET");
+    methode.push_back("POST");
+	//std::vector<std::string> index3;
+	index.push_back("index.html");
+	Location loc3("/Makefile", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methode);
+    location_.push_back(loc3);
+
+	std::vector<std::string> methode2;
+    methode2.push_back("DELETE");
+    methode2.push_back("POST");
+	//std::vector<std::string> index4;
+	index.push_back("index.html");
+	Location loc4("/obj", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methode2);
+    location_.push_back(loc4);
 }
 
 
