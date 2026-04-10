@@ -62,6 +62,30 @@ std::string Client::getIp() const {
     return (this->ip_address_);
 }
 
+void    Client::appendRequestData(const std::string &data)
+{
+    this->request_buffer_ += data;
+}
+
+const std::string    &Client::getRequestData() const {
+    return (this->request_buffer_);
+}
+
+void    Client::setResponseData(const std::string &data)
+{
+    this->response_buffer_ = data;
+}
+
+void    Client::eraseSentResponseData(ssize_t bytes_sent) {
+    this->response_buffer_.erase(0, bytes_sent);
+}
+
+void    Client::clearBuffers() {
+    this->request_buffer_.clear();
+    this->response_buffer_.clear();
+    setState(READING_REQUEST);
+}
+
 Client::~Client() {
 
 }
