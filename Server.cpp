@@ -224,8 +224,6 @@ void    Server::handleNewConnection_() {
 	addr_size = sizeof(client_addr);
     client_fd = accept(server_socket_, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
     if (client_fd == -1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return ;
         std::cerr << "Error: accept() failed: " << std::strerror(errno) << std::endl;
         return ;
     }
@@ -299,8 +297,6 @@ void	Server::handleClientRead_(int client_fd) {
         if (bytes_received == 0)
             std::cout << "Client on socket " << client_fd << " closed the connection." << std::endl;
         else {
-			if (errno == EAGAIN || errno == EWOULDBLOCK)
-				return ;
             std::cerr << "Error: recv() failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
 		}
 		handleClientDisconnect_(client_fd);
@@ -353,8 +349,6 @@ void    Server::handleClientWrite_(int client_fd) {
     std::string response_to_send = getResponseToSend_(client);
 	bytes_sent = send(client_fd, response_to_send.c_str(), response_to_send.size(), 0);
     if (bytes_sent < 0) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return ;
         std::cerr << "Error: send() failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
 		handleClientDisconnect_(client_fd);
 		return ;
@@ -382,11 +376,7 @@ void	Server::run() {
         handleTimeouts_();   	
 		n_events = epoll_wait(epoll_fd_, events, MAX_EVENTS, 1000);
 		if (n_events == -1)
-		{
-			if (errno == EINTR)
-				break ;
             throw std::runtime_error("Fatal error: epoll_wait() failed.");
-		}
         for (int i = 0; i < n_events; i++) {
             int client_fd = events[i].data.fd;
             if (events[i].events & (EPOLLERR | EPOLLHUP)) {
