@@ -176,7 +176,7 @@ void    Server::handleTimeouts_() {
             client.setState(Client::DISCONNECTED);
             epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client.getSocketFd(), NULL);
             close(client.getSocketFd());
-            _clients.erase(it++);
+            clients_.erase(it++);
         }
         else {
             ++it;

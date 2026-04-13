@@ -4,10 +4,12 @@ CFLAGS = -Wall -Wextra -Werror -std=c++98
 
 SRCS_FILES = \
 			Client.cpp \
-			GaiError.cpp \
 			Server.cpp \
-			SystemError.cpp \
-			WebservException.cpp \
+			Error.cpp \
+			Location.cpp \
+			Request.cpp \
+			RequestAnswer.cpp \
+			Config.cpp \
 			main.cpp \
 
 OBJS = $(SRCS_FILES:.cpp=.o)
