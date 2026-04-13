@@ -24,7 +24,7 @@ class   Server {
         void            setNonBlocking_(int fd);
         void            initAddrinfoParams_(struct addrinfo &addrinfo_params);
         struct addrinfo *getAddrInfo_(const std::string &port_str);
-        void            printInterface(struct addrinfo *p, char *ip_buffer);
+        void            printInterface_(struct addrinfo *p, char *ip_buffer);
         bool            setupSocket_(struct addrinfo *p, const std::string &port_str);
         void            bindSocketLoop_(struct addrinfo *res, const std::string &port_str);
         void            createAndBindSocket_(const std::string &port_str);

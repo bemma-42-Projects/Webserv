@@ -169,7 +169,7 @@ void    Server::init() {
 // déconnecte les clients inactifs
 void    Server::handleTimeouts_() {
     time_t current_time = std::time(NULL);
-    for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); ) {
+    for (std::map<int, Client>::iterator it = clients_.begin(); it != _clients.end(); ) {
         Client &client = it->second;
         if (std::difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
             std::cout << "Client on socket " << client.getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
@@ -210,7 +210,7 @@ bool	Server::addClientToEpoll_(int client_fd) {
 // log une nouvelle connection
 void	Server::logNewConnection_(int client_fd) {
 	std::cout << "CONNECTION ACCEPTED!" << std::endl;
-    std::cout << "Client IP: " << _clients[client_fd].getIp() << std::endl;
+    std::cout << "Client IP: " << clients_[client_fd].getIp() << std::endl;
     std::cout << "Communication is now open on new socket: " << client_fd << std::endl;
     std::cout << "Listening socket " << server_socket_ << " is still active in the background." << std::endl;
 }
