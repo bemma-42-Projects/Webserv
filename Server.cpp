@@ -169,7 +169,7 @@ void    Server::init() {
 // déconnecte les clients inactifs
 void    Server::handleTimeouts_() {
     time_t current_time = std::time(NULL);
-    for (std::map<int, Client>::iterator it = clients_.begin(); it != _clients.end(); ) {
+    for (std::map<int, Client>::iterator it = clients_.begin(); it != clients_.end(); ) {
         Client &client = it->second;
         if (std::difftime(current_time, client.getLastActivity()) > MAX_TIMEOUT) {
             std::cout << "Client on socket " << client.getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
