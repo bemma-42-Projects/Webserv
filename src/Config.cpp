@@ -85,7 +85,7 @@ void	Config::location()
     methods.push_back("GET");
     methods.push_back("POST");
 	std::vector<std::string> index;
-	index.push_back("index.html");
+	index.push_back("indexj.html");
 	Location loc1("/src", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methods);
     location_.push_back(loc1);
 	std::vector<std::string> method;

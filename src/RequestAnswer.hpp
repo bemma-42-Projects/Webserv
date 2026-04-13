@@ -9,15 +9,19 @@ class RequestAnswer
 		~RequestAnswer();
 		int			setAnswer();
 		int			methodGet();
-		int			methodDelete();
+		void			fullAnswer();
 		int			getIfFile(std::string file);
 		int			getIfDir();
 		std::string	getAnswer();
 		int			getError();
 		std::string findIndex(Location loc);
+		std::string getMimeType(const std::string& path);
 
 	private:
-		std::string	answer_;
+		int			code_;//code de sorti ou error
+		std::string	content_type_;//type de retour (image txt...)
+		std::string	body_;
 		int			error_;
 		Request		request_;
+		std::string	answer_;//ne pas oublier la ligne vide
 };

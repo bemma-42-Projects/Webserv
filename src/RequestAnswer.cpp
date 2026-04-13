@@ -39,6 +39,48 @@ std::string itoa(int nbr)
 	return str;
 }
 
+std::string RequestAnswer::getMimeType(const std::string& path) 
+{
+    static std::map<std::string, std::string> mimeTypes;
+
+    // Initialisation au premier appel (static)
+    if (mimeTypes.empty()) {
+        // TEXTE
+        mimeTypes[".html"] = "text/html";
+        mimeTypes[".htm"]  = "text/html";
+        mimeTypes[".css"]  = "text/css";
+        mimeTypes[".txt"]  = "text/plain";
+        mimeTypes[".cpp"]  = "text/plain"; // Pour tes fichiers source
+        mimeTypes[".hpp"]  = "text/plain";
+
+        // IMAGES
+        mimeTypes[".png"]  = "image/png";
+        mimeTypes[".jpg"]  = "image/jpeg";
+        mimeTypes[".jpeg"] = "image/jpeg";
+        mimeTypes[".gif"]  = "image/gif";
+        mimeTypes[".ico"]  = "image/x-icon";
+
+        // APPLICATION / BINAIRE
+        mimeTypes[".js"]   = "application/javascript";
+        mimeTypes[".json"] = "application/json";
+        mimeTypes[".pdf"]  = "application/pdf";
+        mimeTypes[".zip"]  = "application/zip";
+    }
+
+    // Trouver l'extension (tout ce qui est après le dernier point)
+    size_t dotPos = path.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        std::string ext = path.substr(dotPos);
+        if (mimeTypes.count(ext)) {
+            return mimeTypes[ext];
+        }
+    }
+
+    // Type par défaut si l'extension est inconnue ou absente
+    return "application/octet-stream";
+}
+
+
 
 //recupere le contenue du fichier pour la methode get
 //int	RequestAnswer::getMethode()
@@ -59,7 +101,9 @@ int	RequestAnswer::getIfFile(std::string file)
 	}
 	close(fd);
 	//std::cout << res << std::endl;
-	answer_ = res;
+	body_ = res;
+	code_ = 200;
+	content_type_ = getMimeType(file);
 	return 0; 
 }
 
@@ -72,6 +116,7 @@ int	RequestAnswer::getIfDir()
 	{
 		std::cout << "error 404" << std::endl;
 		error_ = 404;
+		code_ = 404;
 		return 1;// Erreur 403 ou 404
 	} 
 	std::string	res;
@@ -98,6 +143,7 @@ int	RequestAnswer::getIfDir()
 		{
 			std::cout << "error 400" << std::endl;
 			error_ = 400;
+			code_ = 400;
 			return 1;
 		} 
 		// Le lien href doit être le nom, mais le texte affiché est displayName
@@ -105,13 +151,17 @@ int	RequestAnswer::getIfDir()
 	}
 	body += "</ul><hr></body></html>";
 	closedir(dir);
-	std::string header = "HTTP/1.1 200 OK\r\n";
-	header += "Content-Type: text/html\r\n";
-	header += "Content-Length: " + itoa(body.length()) + "\r\n"; // Il faudra une petite fonction pour convertir int en string
-	header += "\r\n"; // La ligne vide cruciale !
-	res = header + body;
+	//std::string header = "HTTP/1.1 200 OK\r\n";
+	//header += "Content-Type: text/html\r\n";
+	//header += "Content-Length: " + itoa(body.length()) + "\r\n"; // Il faudra une petite fonction pour convertir int en string
+	//header += "\r\n"; // La ligne vide cruciale !
+	//res = header + body;
 	//std::cout << res << std::endl;
-	answer_ = res;
+
+	//answer_ = res;
+	body_ = body;
+	code_ = 200;
+	content_type_ = "text/html";
 	return 0;
 }
 
@@ -148,8 +198,8 @@ int	RequestAnswer::methodGet()
 	{
 		std::cerr << "error  404" << std::endl;
 		error_ = 404;
+		code_ = 404;
 		return 1;
-
 	}
 	std::string res;
 	if (S_ISREG(info.st_mode))
@@ -171,14 +221,36 @@ int	RequestAnswer::methodGet()
 		else if (loc.getAutoindex() == true)
 			return (getIfDir());
 		else
+		{
 			error_ = 403;
+			code_ = 403;
+		}
 	}
 	return 1;
 }
 
-int	RequestAnswer::methodDelete()
+//faire la reponse avec le header
+void	RequestAnswer::fullAnswer()
 {
-	return 1;
+	std::string header = request_.getVersion() + ' ' + itoa(code_);
+	if (code_ == 200)
+		header += " OK\r\n";
+	else if (code_ == 201)
+		header += " Created\r\n";
+	else if (code_ == 301)
+		header += " Moved\r\n";
+	else
+	{
+		header += " Not Found\r\n";
+		content_type_ = "text/html";
+	}
+	header += "Content-Type: " + content_type_ + "\r\n";
+	header += "Content-Length: " + itoa(body_.length()) + "\r\n";
+	header += "\r\n\r\n";
+
+	//std::cout << "header = " << header << std::endl;
+
+	answer_ = header + body_;
 }
 
 //envoie les fonction par rapport au methode (get, post, delete)
@@ -187,22 +259,24 @@ int	RequestAnswer::setAnswer()
 	answer_.clear();
 	if (request_.getMethod() == "GET")
 	{
-		if (methodGet() == 0)
-			return 1;//get
-		else
-			return 0;//error
+		methodGet();
+		//if (methodGet() != 0)
+			//return 0;//error
+		//else
+		//	return 1;//get
 	}
 
 	else if (request_.getMethod() == "DELETE")
 	{
-		if (unlink(request_.getPath().c_str()) == 0)
-			return (2);//delete
-		else 
+		if (unlink(request_.getPath().c_str()) != 0)
 		{
 			std::cout << "error 404 error supression"  << std::endl;
 			error_ = 404;
-			return (0);//error
+			code_ = 404;
+			//return (0);//error
 		}
+		//else 
+		//	return (2);//delete
 		//Utilise unlink() pour supprimer le fichier
 	}
 	//else if (request_.getMethod() == "POST")
@@ -226,7 +300,8 @@ int	RequestAnswer::setAnswer()
 	//	}
 //}
 ////mettre le reponse dans une answer_
-return 1;
+	fullAnswer();
+	//std::cout << body_ << std::endl;
+	return 1;
 }
 
-//big probleme avec dir // ligne 127 pb => *it il veut pas donner la sting
