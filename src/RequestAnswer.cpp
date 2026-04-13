@@ -39,7 +39,8 @@ std::string itoa(int nbr)
 	return str;
 }
 
-std::string RequestAnswer::getMimeType(const std::string& path) 
+//trouve le content_type_
+std::string RequestAnswer::findContentType(const std::string& path) 
 {
     static std::map<std::string, std::string> mimeTypes;
 
@@ -69,15 +70,16 @@ std::string RequestAnswer::getMimeType(const std::string& path)
 
     // Trouver l'extension (tout ce qui est après le dernier point)
     size_t dotPos = path.find_last_of('.');
-    if (dotPos != std::string::npos) {
-        std::string ext = path.substr(dotPos);
-        if (mimeTypes.count(ext)) {
-            return mimeTypes[ext];
-        }
-    }
+    if (dotPos == std::string::npos) 
+		return "application/octet-stream";
+	std::string ext = path.substr(dotPos);
+	for (size_t i = 0; i < ext.length(); ++i) 
+		ext[i] = std::tolower(ext[i]);
+	if (mimeTypes.count(ext))
+		return mimeTypes[ext];
+	return "application/octet-stream";
 
     // Type par défaut si l'extension est inconnue ou absente
-    return "application/octet-stream";
 }
 
 
@@ -103,7 +105,7 @@ int	RequestAnswer::getIfFile(std::string file)
 	//std::cout << res << std::endl;
 	body_ = res;
 	code_ = 200;
-	content_type_ = getMimeType(file);
+	content_type_ = findContentType(file);
 	return 0; 
 }
 
@@ -191,6 +193,7 @@ std::string RequestAnswer::findIndex(Location loc)
 }
 
 //envoie les fonction pour la methode get (dossier ou fichier)
+//int	RequestAnswer::setAnswer()
 int	RequestAnswer::methodGet()
 {
 	struct stat info;
@@ -229,7 +232,23 @@ int	RequestAnswer::methodGet()
 	return 1;
 }
 
+//upload les fichier
+//int	RequestAnswer::setAnswer()
+int	RequestAnswer::methodPost()
+{
+	struct stat s;
+	if (stat(request_.getPath().c_str(), &s) != 0)
+	{
+		//trouve le nom du fichier
+		int	id = request_.getBody().find("filename=");
+		int end = request_.getBody().find("filename=");
+		std::string	filename = 
+	}
+	
+}
+
 //faire la reponse avec le header
+//int	RequestAnswer::setAnswer()
 void	RequestAnswer::fullAnswer()
 {
 	std::string header = request_.getVersion() + ' ' + itoa(code_);
@@ -279,8 +298,8 @@ int	RequestAnswer::setAnswer()
 		//	return (2);//delete
 		//Utilise unlink() pour supprimer le fichier
 	}
-	//else if (request_.getMethod() == "POST")
-	//{
+	else if (request_.getMethod() == "POST")
+	{
 	//	std::string	url = request_.getUrlPath();
 	//	if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
 	//		|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
@@ -293,15 +312,17 @@ int	RequestAnswer::setAnswer()
 	//	else
 	//	{
 			
+
 	//		//upload
 	//		//Si upload → ouvrir un fichier sur path_ et y écrire body_
 	//		//Si succès → construire une réponse 201 Created
 	//		//Si échec → remplir error_ et retourner 0 comme tu fais déjà
-	//	}
-//}
+		//}
+	}
 ////mettre le reponse dans une answer_
 	fullAnswer();
 	//std::cout << body_ << std::endl;
 	return 1;
 }
 
+//upload 244 recuper le nom du fichier dans le body
