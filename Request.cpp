@@ -269,7 +269,7 @@ int	Request::parsingHttp()
 //{
 //	error_ = error;
 //}
-
+/*
 int main()
 {
 	//try{
@@ -309,3 +309,4 @@ int main()
 	//	//Error::setError(e.what());
 	//}
 }
+	*/
