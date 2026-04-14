@@ -11,12 +11,15 @@ class RequestAnswer
 		int			methodGet();
 		int			methodDelete();
 		int			methodCGI();
-		bool		isCgi();
 		int			getIfFile(std::string file);
 		int			getIfDir();
 		std::string	getAnswer();
 		int			getError();
 		std::string findIndex(Location loc);
+
+		bool		isCgi();
+		char		**getEnvp();
+		void		addHeadersToEnv(std::vector<std::string>& env_vector);
 
 	private:
 		std::string	answer_;

@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <sstream>
 #include <map>
+#include <cstring>	// pour strcpy
 
 //initialise les variable
 RequestAnswer::RequestAnswer(Request request)
@@ -304,9 +305,72 @@ bool	RequestAnswer::isCgi()
 	// pas trouvé
 	return (false);
 }
+
 // fonction pour exécuter le CGI
 // on est ici si c'est un CGI
 int	RequestAnswer::methodCGI()
 {
 	return (1);
+}
+
+// en CGI, le seul moyen de communication entre le serveur
+// et le script PHP (avant son exécution)
+// sont les variables d'environnement
+char		**RequestAnswer::getEnvp()
+{
+	// il faut fournir :
+	// REQUEST_METHOD : la méthode HTTP (GET ou POST)
+	// SCRIPT_FILENAME : le chemin absolu (full path) du fichier à exécuter
+	// SERVER_PROTOCOL : la version du protocole HTTP (HTTP/1.1)
+	// GATEWAY_INTERFACE : la version de CGI (CGI/1.1)
+	// REDIRECT_STATUS : 200
+
+	// ATTENTION :
+	// execve est une fonction C !
+	// elle doit donc prendre un tableau de pointeurs (char **)
+	// pour éviter des leaks, on utilisera donc un std::vector<std::string>
+	// puis on convertira en char ** juste avant de lancer l'exécution
+
+	std::vector<std::string>	env;
+
+	// ajout des variables d'environnement CGI
+	env.push_back("REQUEST_METHOD=" + request_.getMethod());
+	env.push_back("SCRIPT_FILENAME=" + request_.getPath());
+	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
+	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
+	env.push_back("REDIRECT_STATUS=200");
+
+	// traduction des headers HTTP envoyés par le client
+	// en vqriqbles d'environnement pour le CGI
+	this->addHeadersToEnv(env);
+
+	// transformation de vector en chaines de caractères
+	char	**envp = new char*[env.size() + 1];
+	int		i = 0;
+
+	while (i < env.size())
+	{
+		envp[i] = new char[env[i].length() + 1];
+		strcpy(envp[i], env[i].c_str());
+		i++;
+	}
+	envp[env.size()] = NULL;
+	return (envp);
+}
+
+// cette fonction convertit les headers envoyés par le client
+// en variables d'environnement
+// pour le CGI
+	// ajoute le préfixe HTTP_
+	// convertit le nom en majuscules
+	// remplace "-" par "_"
+void	RequestAnswer::addHeadersToEnv(std::vector<std::string>& env_vector)
+{
+	// on récupère les headers HTTP
+	std::map<std::string, std::string>	headers = request_.getHeaders();
+
+	// on initialise l'iterator
+	std::map<std::string, std::string>::iterator	it;
+
+	
 }
