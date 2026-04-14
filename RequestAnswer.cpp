@@ -6,6 +6,7 @@
 #include "Config.hpp"
 #include <dirent.h>
 #include <sstream>
+#include <map>
 
 //initialise les variable
 RequestAnswer::RequestAnswer(Request request)
@@ -143,18 +144,32 @@ std::string RequestAnswer::findIndex(Location loc)
 //envoie les fonction pour la methode get (dossier ou fichier)
 int	RequestAnswer::methodGet()
 {
+	// structure pour stocker la "carte d'identité" complète
+	// d'un fichier ou d'un dossier
+	// (taille, type, permissions, date de dernière modification...)
 	struct stat info;
+
+	// on remplit info qvec les infos du chemin demandé
+	// si non trouvé, erreur 404
 	if (stat(request_.getPath().c_str(), &info) != 0)
 	{
-		std::cerr << "error  404" << std::endl;
+		std::cerr << "error 404" << std::endl;
 		error_ = 404;
 		return 1;
 
 	}
 	std::string res;
+	// si c'est un REGULQR FILE
 	if (S_ISREG(info.st_mode))
+	{
+		// si c'est un CGI
+		if (this->isCgi())
+			// on exécute la méthode CGI
+			return (this->methodCGI());
 		return (getIfFile(request_.getPath()));
-
+	}
+	// si c'est un DIRECTORY
+	// ...
 	else if (S_ISDIR(info.st_mode))
 	{
 		Location	loc = request_.getLocation();
@@ -230,3 +245,68 @@ return 1;
 }
 
 //big probleme avec dir // ligne 127 pb => *it il veut pas donner la sting
+
+
+// fonction pour déterminer si c'est un cgi
+// et pour stocker l'interpreter correspondant
+
+// pour que ce soit un CGI :
+	// il faut que l'url demandée se termine par une extension
+	// se trouvant dans cgi_handler de Location
+	// il faudra alors utiliser l'interpreter correspondant
+	// pour exécuter ce fichier
+	// ici, on ne fait que stocker l'interpreter
+bool	RequestAnswer::isCgi()
+{
+	// on récupère les extensions CGI configurées pour cette location
+	std::map<std::string, std::string>	cgi_handlers = request_.getLocation().getCgiHandlers();
+
+	// url demandée
+	// par exemple : /cgi-bin/test.php
+	// ne pas confondre avec le path
+	// par exemple : /home/julien/Webserv/cgi-bin/test.php
+	std::string	url = request_.getUrlPath();
+
+	// on vérifie si l'url a une extension
+	// puis on extrait l'extension du fichier demandé
+
+	// on extrait la position du dernier ".
+	size_t	last_point_position = url.find_last_of(".");
+	// si pas de "." dans l'url
+	// std::string::npos signifie : no position
+	// c'est la valeur retournée par les méthodes find
+	// lorsqu'elle ne retrouve pas ce qu'elle cherche
+	if (last_point_position == std::string::npos)
+	{
+		// on retourne false (ce n'est pas un CGI, car pas de ".")
+		return (false);
+	}
+	// on extrait l'extension
+	std::string	extension = url.substr(last_point_position);
+
+	// on vérifie si l'extension est dans la liste
+
+	// on cherche l'extension dans la map
+	std::map<std::string, std::string>::iterator it = cgi_handlers.find(extension);
+
+	// si l'itérateur n'est pas arrivé à la fin
+	// il a trouvé la key (l'extension)
+	if (it != cgi_handlers.end())
+	{
+		// DEBUG
+		std::cout << "extension : " << it->first << std::endl;
+		std::cout << "interpreter : " << it->second << std::endl;
+		//
+		this->cgi_interpreter_ = it->second;
+		// trouvé !
+		return (true);
+	}
+	// pas trouvé
+	return (false);
+}
+// fonction pour exécuter le CGI
+// on est ici si c'est un CGI
+int	RequestAnswer::methodCGI()
+{
+	return (1);
+}

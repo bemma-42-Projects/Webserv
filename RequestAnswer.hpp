@@ -10,6 +10,8 @@ class RequestAnswer
 		int			setAnswer();
 		int			methodGet();
 		int			methodDelete();
+		int			methodCGI();
+		bool		isCgi();
 		int			getIfFile(std::string file);
 		int			getIfDir();
 		std::string	getAnswer();
@@ -20,4 +22,5 @@ class RequestAnswer
 		std::string	answer_;
 		int			error_;
 		Request		request_;
+		std::string	cgi_interpreter_;
 };

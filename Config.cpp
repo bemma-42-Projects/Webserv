@@ -134,6 +134,8 @@ void	Config::location()
 	// matchLocation ira fouiller dans ce tableau
 	Location	locCgi("/cgi-bin", "/home/julien/Webserv", "./data/tmp", cgi_index, false, cgi_methods);
 
+	locCgi.addCgiHandler(".php", "/usr/bin/php-cgi");
+
 	location_.push_back(locCgi);
 }
 

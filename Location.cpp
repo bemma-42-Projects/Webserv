@@ -48,3 +48,13 @@ std::vector<std::string>	Location::getAllowedMethods()
 {
 	return allowed_methods_;
 }
+
+void	Location::addCgiHandler(std::string ext, std::string interpreter)
+{
+	cgi_handlers_[ext] = interpreter;
+}
+
+std::map<std::string, std::string>	Location::getCgiHandlers() const
+{
+	return cgi_handlers_;
+}
