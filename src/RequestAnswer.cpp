@@ -6,6 +6,7 @@
 #include "Config.hpp"
 #include <dirent.h>
 #include <sstream>
+#include <fstream>
 
 //initialise les variable
 RequestAnswer::RequestAnswer(Request request)
@@ -232,19 +233,132 @@ int	RequestAnswer::methodGet()
 	return 1;
 }
 
-//upload les fichier
-//int	RequestAnswer::setAnswer()
-int	RequestAnswer::methodPost()
+//recupere le path du file name pour upload les fichier
+//int	RequestAnswer::methodPost()
+int	RequestAnswer::fileName()
 {
 	struct stat s;
-	if (stat(request_.getPath().c_str(), &s) != 0)
+	if (stat(request_.getPath().c_str(), &s) == 0)
+	{
+		post_file_name_ =  request_.getPath();
+		return 0;
+	}
+	else
 	{
 		//trouve le nom du fichier
-		int	id = request_.getBody().find("filename=");
-		int end = request_.getBody().find("filename=");
-		std::string	filename = 
+		bool	quote = false;
+		std::string body = request_.getBody();
+		size_t	id = body.find("Content-Disposition:");
+		if (id == std::string::npos)
+			return 1;
+		size_t start = body.find("filename=", id);
+		if (start == std::string::npos)
+			return 1;
+		start += 9;
+		while (body[start] == ' ')
+			++start;
+		if (body[start] == '\"')
+		{
+			++start;
+			quote = true;
+		}
+		size_t end = body.find("\r\n", start);
+		if (end == std::string::npos)
+			return 1;
+		while (quote == true)
+		{
+			if (body[end - 1] == '\"')
+				quote = false;
+			--end;
+		}
+
+		size_t	s = body.find_last_of('/', end);
+		if (s != std::string::npos)
+			start = s + 1;
+		std::string file_name = body.substr(start, end - start);
+		std::cout << "file name = " << file_name << std::endl;
+		struct stat f;
+		if (stat((request_.getPath() + '/' + file_name).c_str(), &f) == 0)
+		{
+			post_file_name_ =  (request_.getPath() + '/' + file_name);
+			return 0;
+		}
 	}
-	
+
+	return 1;
+}
+
+
+//upload les fichier
+//int	RequestAnswer::setAnswer()
+//int	RequestAnswer::methodPost()
+//{
+//	int	path_file = fileName();
+//	if (path_file == 1)
+//	{
+//		error_ = 400;
+//		code_ = 400;
+//		return 0;
+//	}
+//	std::cout << "goog " << std::endl;
+//	std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
+
+//	if (outfile.is_open()) {
+//		std::string	requet_body = request_.getBody();
+//		outfile.write(&request_.getBody()[0], requet_body.size()); // On écrit les données binaires
+//		outfile.close();
+//	}
+//	return 1;
+//}
+
+
+
+int RequestAnswer::methodPost()
+{
+    if (fileName() == 1) 
+    {
+        error_ = 400;
+        code_ = 400;
+        return 1;
+    }
+
+    // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
+    std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
+
+    std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
+
+    if (!outfile.is_open()) {
+        std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
+        error_ = 500;
+        return 1;
+    }
+
+    const std::string& body = request_.getBody();
+    size_t startPos = body.find("\r\n\r\n");
+
+    // Correction de la condition : on veut entrer ici si on A TROUVÉ \r\n\r\n
+    if (startPos != std::string::npos) {
+        startPos += 4; // On saute les deux \r\n\r\n
+        
+        size_t endPos = body.find("\r\n--", startPos); 
+        size_t fileSize;
+
+        if (endPos == std::string::npos) {
+            fileSize = body.size() - startPos;
+        } else {
+            fileSize = endPos - startPos;
+        }
+
+        outfile.write(&body[startPos], fileSize);
+    } 
+    else {
+        // Cas où ce n'est pas du multipart (données brutes)
+        outfile.write(body.c_str(), body.size());
+    }
+    
+    outfile.close();
+    code_ = 201; 
+    return 0;
 }
 
 //faire la reponse avec le header
@@ -300,6 +414,8 @@ int	RequestAnswer::setAnswer()
 	}
 	else if (request_.getMethod() == "POST")
 	{
+		methodPost();
+
 	//	std::string	url = request_.getUrlPath();
 	//	if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
 	//		|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
@@ -326,3 +442,4 @@ int	RequestAnswer::setAnswer()
 }
 
 //upload 244 recuper le nom du fichier dans le body
+//post cree le fichier ligen 238

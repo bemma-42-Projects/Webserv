@@ -98,24 +98,33 @@ bool	Request::complete()
 	size_t	end = request_.find("\r\n\r\n");
 	if (end == std::string::npos)
 		return false;//requette non complet
+	std::cout << "test" <<std::endl;
 	size_t it = request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
-	it += 16;
+	it += 15;
 	std::string	tmp = request_.substr(it, end);
 	size_t	len;
 	std::stringstream ss(tmp);
     ss >> len;
-	while (request_[end] == '\r' || request_[end] == '\n')
-		++end;
+	//while (request_[end] == '\r' || request_[end] == '\n')
+	//	++end;
+	end += 4;
+	//std::cout << "test" <<std::endl;
 
+	//std::cout << request_.substr(end) << std::endl;
+	std::cout << request_.size() - end << " < " << len << std::endl;
 	if (request_.size() - end < len)
 	{
 		//error_ = 413;
 		return false;
 	}
+	std::cout << "test" <<std::endl;
 	return true;
 }
+
+
+
 
 //parse la premier ligne et implemente la class (methode chemin version)
 int	Request::initFistLine()
@@ -260,7 +269,7 @@ int	Request::parsingHttp()
 		error_ = 405;
 		return 0;
 	}
-	path_ = location_.getRoot() + '/' + url_path_;
+	path_ = location_.getRoot() + url_path_;
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
 }
@@ -275,13 +284,18 @@ int main()
 	//try{
 		Config::location();
 
-		const char *buffer = "GET /Makefile HTTP/1.1\r\n"
-			"Host: localhost:8080\r\n"
-			//"Content-Type: application/x-www-form-urlencoded\r\n"
-			"Content-Length: 27\r\n"
-			"\r\n\r\n" // Ligne vide importante entre headers et body
-			"name=Gemini&project=webserv";
-	
+		const char *buffer = 
+		"POST /uploads HTTP/1.1\r\n"
+		"Host: localhost:8080\r\n"
+		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
+		"Content-Length: 162\r\n"
+		"\r\n"
+		"--boundary123\r\n"
+		"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
+		"Content-Type: text/plain\r\n"
+		"\r\n"
+		"Ceci est le contenu de mon fichier !\r\n"
+		"--boundary123--";
 	
 		Request file((char *)buffer);
 		int res = file.parsingHttp();
@@ -295,8 +309,8 @@ int main()
 			std::cout << "requette non complete" << std::endl;
 			return 0;
 		}
-		std::cout << file.getLocation().getRoot() << std::endl;
-		//std::cout << file << std::endl;
+		std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
+		std::cout << file << std::endl;
 		RequestAnswer answer(file);
 		std::cout << "test " << std::endl;
 		if (answer.setAnswer() == 1)

@@ -17,6 +17,7 @@ class RequestAnswer
 		int			getError();
 		std::string findIndex(Location loc);
 		std::string findContentType(const std::string& path);
+		int			fileName();
 
 
 	private:
@@ -26,4 +27,5 @@ class RequestAnswer
 		int			error_;
 		Request		request_;
 		std::string	answer_;//ne pas oublier la ligne vide
+		std::string	post_file_name_;
 };

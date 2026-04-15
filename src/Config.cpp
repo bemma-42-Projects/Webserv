@@ -41,11 +41,11 @@ Config::~Config()
 //}
 
 //bool	Config::getAutoindex()
-//{
+//{r); // O
 //	return autoindex_;
 //}
 
-size_t Config::body_size_ = 400;
+size_t Config::body_size_ = 450;
 
 void Config::setBodySize(size_t value)
 {
@@ -89,10 +89,10 @@ void	Config::location()
 	Location loc1("/src", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methods);
     location_.push_back(loc1);
 	std::vector<std::string> method;
-    method.push_back("DELETE");
+    method.push_back("POST");
 	std::vector<std::string> index2;
 	index2.push_back("test.html");
-	Location loc2("/upload", "./src", "./src/tmp", index2, false, method);
+	Location loc2("/uploads", "/home/rmetge/cursus/github/webserv", "/uploads", index2, false, method);
 	location_.push_back(loc2);
 	std::vector<std::string> methode;
     methode.push_back("GET");
