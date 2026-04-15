@@ -11,6 +11,8 @@
 #include <stack>
 #include <sys/stat.h>
 
+#include "ServerConfig.hpp"
+
 // permet de savoir dans quel bloc je suis je ne l'utilise que pour validate pour l'instant
 enum State {
 	OUTSIDE,
@@ -102,13 +104,44 @@ bool directiveIsAllowed(std::string name, State state) {
 	return (false);
 }
 
+bool parsePort(std::string port_str) {
+	if (port_str.empty())
+		return (false);
+
+	for (size_t i = 0; i < port_str.size(); i++) {
+		if (!isdigit(port_str[i]))
+			return (false);
+	}
+
+	long port = stol(port_str, 0, 10 );
+	if (port >= 0 && port <= 65535)
+		return (true);
+	return (false);
+}
+
+bool parseIp(std::string ip) {
+	if (ip.empty())
+		return (false);
+	return (true);
+}
+
 bool validateListen(std::vector<std::string> args) {
+
 	for (size_t i = 0, nb_pv = 0; i < args.size() ; i++ )
 	{
 		nb_pv = 0;
 		for (size_t y = 0; y < args[i].size() ;y++)
 		{
-			if (isdigit(args[i][y]) == 0 && args[i][y] != ':')
+			size_t pos_colon = args[i].find(':'); //colon = : en anglais
+
+			if (pos_colon == std::string::npos)
+			{
+				if (parsePort(args[i]) == 0)
+					return (false);
+				if (parseIp(args[i]) == 0)
+					return (false);
+			}
+			if (isdigit(args[i][y]) == 0 && args[i][y] != ':' && args[i][y] != '.')
 			{
 				std::cout << "je ne suis pas un digit n'y un :" << std::endl;
 				return (false);
@@ -128,33 +161,33 @@ bool validateListen(std::vector<std::string> args) {
 bool validateRoot(std::vector<std::string> args) {
 	if (args.size() != 1)
 	{
-		std::cout << "pas bon nb d'argument" << std::endl;
+		// std::cout << "pas bon nb d'argument" << std::endl;
 		return (false);
 	}
 	if (args[0].empty())
 		return (false);
 	if (access(args[0].c_str(), F_OK) == -1)
 	{
-		std::cout << "le dossier n'existe pas" << std::endl;
+		// std::cout << "le dossier n'existe pas" << std::endl;
 		return (false);
 	}
 	if (access(args[0].c_str(), R_OK) == -1)
 	{
-		std::cout << "je n'arrive pas a lire " << std::endl;
+		// std::cout << "je n'arrive pas a lire " << std::endl;
 		return (false);
 	}
 	struct stat sb;
 	if (stat(args[0].c_str(), &sb) == -1)
 	{
-		std::cout << "stat pas bon" << std::endl;
+		// std::cout << "stat pas bon" << std::endl;
 		return (false);
 	}
 	if (!S_ISDIR(sb.st_mode))
 	{
-		std::cout << "C'est pas un dossier" << std::endl;
+		// std::cout << "C'est pas un dossier" << std::endl;
 		return (false);
 	}
-	std::cout << "--le path est bon!" << std::endl;
+	// std::cout << "--le path est bon!" << std::endl;
 	return (true);
 }
 
@@ -171,15 +204,62 @@ bool validateClientMaxBodySize(std::vector<std::string> args) {
 	return (true);
 }
 
+bool isErrorCode(std::string code) {
+	if (code == "400" || code == "403" || code == "404" || code == "405" || code == "413" || code == "500"
+			|| code == "501" || code == "502" || code == "503" || code == "504" || code == "413" || code == "414" || code == "408")
+		return (true);
+	return (false);
+}
+
+bool validateErrorPage(std::vector<std::string> args) {
+	if (args.size() < 2)
+	{
+		std::cout << "pas bon nombre d'argument" << std::endl;
+		return (false);
+	}
+
+	for (size_t i = 0; i < args.size() - 1; i++) {
+		if (isErrorCode(args[i]) == false) {
+			std::cout << "mauvais code" << std::endl;
+			return (false);
+		}
+	}
+	if (args.back().empty())
+	{
+		std::cout << "emplacement vide" << std::endl;
+		return (false);
+	}
+	if (access(args.back().c_str(), F_OK) == -1) {
+		std::cout << "je ne trouve pas" << std::endl;
+		return (false);
+	} 
+	std::cout << "GOOD!" << std::endl;
+	return (true);
+}
+
 bool validateSpecificDirective(std::string name, std::vector<std::string> args) {
 	if (name == "listen")
+	{
+		// std::cout << "LISTEN:" << std::endl;
 		return (validateListen(args));
+	}
 	else if (name == "root")
+	{
+		// std::cout << "ROOT:" << std::endl;
 		return (validateRoot(args));
-	else if (name == "server_name")
+	}
+	else if (name == "server_name") {
+		// std::cout << "SERVER_NAME:" << std::endl;
 		return (true);
-	else if (name == "client_max_body_size")
+	}
+	else if (name == "client_max_body_size") {
+		// std::cout << "CLIENT_MAX_BODY_SIZE:" << std::endl;
 		return (validateClientMaxBodySize(args));
+	}
+	else if (name == "error_page") {
+		std::cout << "ERROR_PAGE:" << std::endl;
+		return (validateErrorPage(args));
+	}
 	return (false);
 	
 }
@@ -276,6 +356,8 @@ bool validateStructure(std::vector<std::string> tokens) {
 
 int main(int argc, char **argv) {
 	(void)argc;
+
+	std::vector<ServerConfig> all_configs;
 	std::string text = readFile(argv[1]);
 	// std::cout << text << std::endl << std::endl;
 	std::vector<std::string> res = tokenizeConfig(text);
