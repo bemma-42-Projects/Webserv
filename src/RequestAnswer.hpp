@@ -18,6 +18,10 @@ class RequestAnswer
 		std::string findIndex(Location loc);
 		std::string findContentType(const std::string& path);
 
+		bool		isCgi();
+		char		**getEnvp();
+		void		addHeadersToEnv(std::vector<std::string>& env_vector);
+		int			methodCGI();
 
 	private:
 		int			code_;//code de sorti ou error
@@ -26,4 +30,6 @@ class RequestAnswer
 		int			error_;
 		Request		request_;
 		std::string	answer_;//ne pas oublier la ligne vide
+		std::string	cgi_interpreter_;
+
 };

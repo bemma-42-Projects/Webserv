@@ -2,9 +2,13 @@
 #include <iostream>
 
 std::vector<Location> Config::location_;
+size_t Config::body_size_ = 400;
+std::string	Config::root_ = "/home/julien/Webserv";
+//std::string Config::root_ = "/home/rmetge/cursus/github/webserv";
 
 Config::Config()
 {
+	/*
 	//"/downloads", "./data", "./data/tmp", "secret_list.html", true
 
     // C'est ici que le push_back est autorisé
@@ -27,8 +31,9 @@ Config::Config()
 	//index3.push_back("test.html");
 	//Location defaultLoc("/", "./www", "", index3, false, methodsDef);
 	//defaultLocation_ = defaultLoc;
-
+	*/
 }
+
 Config::~Config()
 {}
 
@@ -45,8 +50,6 @@ Config::~Config()
 //	return autoindex_;
 //}
 
-size_t Config::body_size_ = 400;
-
 void Config::setBodySize(size_t value)
 {
 	(void)value;
@@ -57,8 +60,6 @@ size_t	Config::getBodySize()
 {
 	return body_size_;
 }
-
-std::string Config::root_ = "/home/rmetge/cursus/github/webserv";
 
 void Config::setRoot(size_t value)
 {
@@ -81,6 +82,7 @@ std::string	Config::getRoot()
 //implemente des location, (test)
 void	Config::location()
 {
+	/*
 	std::vector<std::string> methods;
     methods.push_back("GET");
     methods.push_back("POST");
@@ -109,6 +111,34 @@ void	Config::location()
 	index.push_back("index.html");
 	Location loc4("/obj", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methode2);
     location_.push_back(loc4);
+	*/
+
+	// on crée un vecteur pour lister les méthodes HTTP acceptées sur cette route
+	std::vector<std::string> cgi_methods;
+	// on autorise uniquement les requêtes GET (pour l'instant)
+	cgi_methods.push_back("GET");
+
+	// on crée un vecteur pour les fichiers à chercher si l'utilisateur demande le dossier cgi-bin
+	std::vector<std::string> cgi_index;
+	// si le client demande "http://localhost/cgi-bin/", le serveur cherchera le fichier test.php pour l'exécuter
+	cgi_index.push_back("test.php");
+
+	// on crée l'objet Location
+	// Paramètres :
+		// path : "/cgi-bin" : l'url tapée par le client (traduit en http://localhost/cgi-bin/)
+		// root : "/home/julien/Webserv/cgi-bin" : le chemin absolu du dossier cgi-bin sur le PC
+		// upload_path : "./data/tmp" : le dossier où stocker les uploads ou les fichiers temporaires
+		// index : "cgi_index" (voir plus haut) la liste de fichiers index par défaut (index.php)
+		// autoindex : "false" : l'auto-index est désactiver (indispensable pour un dossier CGI)
+		// allowed_methods : "cgi_methods" (voir plus haut) : liste des méthodes autorisées (GET)
+	
+	// on ajoute cette route à la liste des locations gérées par la classe Config
+	// matchLocation ira fouiller dans ce tableau
+	Location	locCgi("/cgi-bin", "/home/julien/Webserv", "./data/tmp", cgi_index, false, cgi_methods);
+
+	locCgi.addCgiHandler(".php", "/usr/bin/php-cgi");
+
+	location_.push_back(locCgi);
 }
 
 

@@ -327,7 +327,7 @@ void	Server::clearClientBuffers_(Client &client)
 	client.setState(Client::READING_REQUEST);
 }
 
-// bascule la surveillance epoll dùun client en mode lecture
+// bascule la surveillance epoll d'un client en mode lecture
 void	Server::setSocketToReadState_(int client_fd) {
 	struct epoll_event listen_ev;
 

@@ -6,6 +6,8 @@
 #include "Config.hpp"
 #include <dirent.h>
 #include <sstream>
+#include <map>
+#include <cstring>	// pour strcpy
 
 //initialise les variable
 RequestAnswer::RequestAnswer(Request request)
@@ -205,9 +207,17 @@ int	RequestAnswer::methodGet()
 		return 1;
 	}
 	std::string res;
+	// si c'est un REGULAR FILE
 	if (S_ISREG(info.st_mode))
+	{
+		// si c'est un CGI
+		if (this->isCgi())
+			// on exécute la méthode CGI
+			return (this->methodCGI());
 		return (getIfFile(request_.getPath()));
-
+	}
+	// si c'est un DIRECTORY
+	// ...
 	else if (S_ISDIR(info.st_mode))
 	{
 		Location	loc = request_.getLocation();
@@ -234,6 +244,7 @@ int	RequestAnswer::methodGet()
 
 //upload les fichier
 //int	RequestAnswer::setAnswer()
+/*
 int	RequestAnswer::methodPost()
 {
 	struct stat s;
@@ -246,6 +257,7 @@ int	RequestAnswer::methodPost()
 	}
 	
 }
+*/
 
 //faire la reponse avec le header
 //int	RequestAnswer::setAnswer()
@@ -326,3 +338,85 @@ int	RequestAnswer::setAnswer()
 }
 
 //upload 244 recuper le nom du fichier dans le body
+
+// fonction pour déterminer si c'est un cgi
+// et pour stocker l'interpreter correspondant
+
+
+bool	RequestAnswer::isCgi()
+{
+	std::map<std::string, std::string>	cgi_handlers = request_.getLocation().getCgiHandlers();
+
+	std::string	url = request_.getUrlPath();
+
+	size_t	last_point_position = url.find_last_of(".");
+	
+	if (last_point_position == std::string::npos)
+		return (false);
+
+	std::string	extension = url.substr(last_point_position);
+
+	std::map<std::string, std::string>::iterator it = cgi_handlers.find(extension);
+
+	if (it != cgi_handlers.end())
+	{
+		// DEBUG
+		std::cout << "extension : " << it->first << std::endl;
+		std::cout << "interpreter : " << it->second << std::endl;
+		//
+		this->cgi_interpreter_ = it->second;
+		return (true);
+	}
+	return (false);
+}
+
+// fonction pour exécuter le CGI
+// on est ici si c'est un CGI
+int	RequestAnswer::methodCGI()
+{
+	return (1);
+}
+
+// en CGI, le seul moyen de communication entre le serveur
+// et le script PHP (avant son exécution)
+// sont les variables d'environnement
+char		**RequestAnswer::getEnvp()
+{
+	std::vector<std::string>	env;
+
+	env.push_back("REQUEST_METHOD=" + request_.getMethod());
+	env.push_back("SCRIPT_FILENAME=" + request_.getPath());
+	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
+	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
+	env.push_back("REDIRECT_STATUS=200");
+
+	this->addHeadersToEnv(env);
+
+	char			**envp = new char*[env.size() + 1];
+	std::size_t		i = 0;
+
+	while (i < env.size())
+	{
+		envp[i] = new char[env[i].length() + 1];
+		strcpy(envp[i], env[i].c_str());
+		i++;
+	}
+	envp[env.size()] = NULL;
+	return (envp);
+}
+
+// cette fonction convertit les headers envoyés par le client
+// en variables d'environnement
+// pour le CGI
+	// ajoute le préfixe HTTP_
+	// convertit le nom en majuscules
+	// remplace "-" par "_"
+void	RequestAnswer::addHeadersToEnv(std::vector<std::string>& env_vector)
+{
+	std::map<std::string, std::string>	headers = request_.getHeaders();
+
+	std::map<std::string, std::string>::iterator	it;
+
+	// TODO
+	(void)env_vector;
+}

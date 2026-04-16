@@ -31,6 +31,7 @@ int main() {
 }
 */
 
+// MAIN JULIEN CGI
 int main()
 {
 	Config::location();
@@ -78,3 +79,46 @@ int main()
 	//	//Error::setError(e.what());
 	//}
 }
+
+// MAIN ROMANE
+/*
+int main()
+{
+	//try{
+		Config::location();
+
+		const char *buffer = "GET /Makefile HTTP/1.1\r\n"
+			"Host: localhost:8080\r\n"
+			//"Content-Type: application/x-www-form-urlencoded\r\n"
+			"Content-Length: 27\r\n"
+			"\r\n\r\n" // Ligne vide importante entre headers et body
+			"name=Gemini&project=webserv";
+	
+	
+		Request file((char *)buffer);
+		int res = file.parsingHttp();
+		if (res == 0)
+		{
+			std::cout << "error " << file.getError() << std::endl;
+			return 0;
+		}
+		else if (res == 2)
+		{
+			std::cout << "requette non complete" << std::endl;
+			return 0;
+		}
+		std::cout << file.getLocation().getRoot() << std::endl;
+		//std::cout << file << std::endl;
+		RequestAnswer answer(file);
+		std::cout << "test " << std::endl;
+		if (answer.setAnswer() == 1)
+			std::cout << "anser =" << answer.getAnswer() << std::endl;
+		
+	//}
+	//catch(std::exception &e)
+	//{
+	//	std::cerr << "error : " << e.what() << std::endl;
+	//	//Error::setError(e.what());
+	//}
+}
+*/
