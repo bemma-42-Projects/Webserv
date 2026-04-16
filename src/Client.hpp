@@ -22,22 +22,29 @@ class Client {
         Client  &operator=(const Client &rhs);
         ~Client();
 
-        int             getSocketFd() const;
-        State           getState() const;
-        void            setState(State state);
-        time_t          getLastActivity() const;
-        void            updateLastActivity();
-        std::string     getIp() const;
+        int                     getSocketFd() const;
+        State                   getState() const;
+        void                    setState(State state);
+        time_t                  getLastActivity() const;
+        void                    updateLastActivity();
+        std::string             getIp() const;
 
     private:
+        void                    initIpAddress_(struct sockaddr_storage addr);
+        void                    appendRequestData_(const std::string &data);
+        const std::string       &getRequestData_();
+        void                    setResponseData_(const std::string &data);
+        void                    eraseSentResponseData_(ssize_t bytes_sent);
+        void                    clearBuffers_();
+
         int                     socket_fd_;
         struct sockaddr_storage addr_;
         State                   state_;
         time_t                  last_activity_;
         std::string             ip_address_;
         std::string		        answer_;
-
-        void    _initIpAddress(struct sockaddr_storage addr);
-    };
+        std::string             request_buffer_;
+        std::string             response_buffer_;
+};
 
 #endif

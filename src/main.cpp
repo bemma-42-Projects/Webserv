@@ -122,3 +122,23 @@ int main()
 	//}
 }
 */
+
+// MAIN EMMA
+/*
+int main(int argc, char **argv) {
+	(void)argc;
+
+	std::vector<ServerConfig> all_configs;
+	std::string text = readFile(argv[1]);
+	// std::cout << text << std::endl << std::endl;
+	std::vector<std::string> res = tokenizeConfig(text);
+	// for (size_t len = 0; len < res.size(); len++) {
+	// 	std::cout << "|" << res[len] << "|" << std::endl; 
+	// }
+	if (validateStructure(res) == false)
+		std::cout << "Erreur bad configuration" << std::endl;
+	else 
+		std::cout << "Everything's good!" << std::endl; 
+}
+
+*/

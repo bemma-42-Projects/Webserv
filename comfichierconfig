@@ -115,3 +115,42 @@ Veuillez noter que les navigateurs ne peuvent pas afficher correctement cette er
 Définir la taille à 0 désactive la vérification de la taille du corps de la requête client.
 
 a voir pour internal
+
+
+regle;
+ -pas le droit aux locations dans des location
+ -pas le droit a d autre bloc que server et location
+ -pas le droit au location hors server 
+ -pas le droit au server dans serveur
+ -pas le droit au location sans path (c est a dire ex; location {...}) (minimum location / {...})
+ -droit de mettre des commentaires 
+ -droit de coller les accolade (ex server{ ) 
+ -pareil pour ; (listen 8080; et listen 8080 ;) sont autorises
+ -pas le droit de mettre de virgule ou de ; dans les path 
+ -droit de mettre des tab ou tout wsp entre mots directive etc (c est a dire pas de droit de separe une directive en deux)
+ -pas le droit aux fautes dans les nom des directive (ex serveur ne passe pas par contre server oui)
+ -
+
+
+ Stat renvoit des informations à propos d un fichier. stat() avoir la permission d exécution (parcours) 
+ pour tous les répertoires de path qui mènent au fichier.
+
+stat() récupère l état du fichier pointé par path et remplit le tampon buf.
+Retourne une structure stat contenant les champs suivants :
+
+
+struct stat {
+    dev_t     st_dev;      /* ID du périphérique contenant le fichier */
+    ino_t     st_ino;      /* Numéro inœud */
+    mode_t    st_mode;     /* Protection */
+    nlink_t   st_nlink;    /* Nb liens matériels */
+    uid_t     st_uid;      /* UID propriétaire */
+    gid_t     st_gid;      /* GID propriétaire */
+    dev_t     st_rdev;     /* ID périphérique (si fichier spécial) */
+    off_t     st_size;     /* Taille totale en octets */
+    blksize_t st_blksize;  /* Taille de bloc pour E/S */
+    blkcnt_t  st_blocks;   /* Nombre de blocs alloués */
+    time_t    st_atime;    /* Heure dernier accès */
+    time_t    st_mtime;    /* Heure dernière modification */
+    time_t    st_ctime;    /* Heure dernier changement état */
+};
