@@ -98,7 +98,7 @@ bool	Request::complete()
 	size_t	end = request_.find("\r\n\r\n");
 	if (end == std::string::npos)
 		return false;//requette non complet
-	std::cout << "test" <<std::endl;
+	// std::cout << "test" <<std::endl;
 	size_t it = request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
@@ -119,7 +119,7 @@ bool	Request::complete()
 		//error_ = 413;
 		return false;
 	}
-	std::cout << "test" <<std::endl;
+	// std::cout << "test" <<std::endl;
 	return true;
 }
 
@@ -146,7 +146,7 @@ int	Request::initFistLine()
 	if (it == std::string::npos || it >= last)
 		return 1;
 	url_path_ = request_.substr(begin, it - begin);
-	std::cout << url_path_ << std::endl;
+	// std::cout << url_path_ << std::endl;
 	//path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
 	begin = request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
@@ -223,7 +223,7 @@ int	Request::checkOfLocation()
 	if (loc == NULL)
 		return 1;
 	location_ = *loc;
-	std::cout << location_.getPath() << std::endl;
+	// std::cout << location_.getPath() << std::endl;
 	std::vector<std::string> allowedMethods = location_.getAllowedMethods();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
 			== allowedMethods.end())
@@ -285,7 +285,7 @@ int main()
 		Config::location();
 
 		const char *buffer = 
-		"POST /uploads HTTP/1.1\r\n"
+		"POST /uploads/teste.txt HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
 		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
 		"Content-Length: 162\r\n"
@@ -309,10 +309,10 @@ int main()
 			std::cout << "requette non complete" << std::endl;
 			return 0;
 		}
-		std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
-		std::cout << file << std::endl;
+		// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
+		// std::cout << file << std::endl;
 		RequestAnswer answer(file);
-		std::cout << "test " << std::endl;
+		// std::cout << "test " << std::endl;
 		if (answer.setAnswer() == 1)
 			std::cout << "anser =" << answer.getAnswer() << std::endl;
 		

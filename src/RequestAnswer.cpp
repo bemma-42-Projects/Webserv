@@ -113,7 +113,7 @@ int	RequestAnswer::getIfFile(std::string file)
 //recupere le contenue du dossier pour la methode get
 int	RequestAnswer::getIfDir()
 {
-	std::cout << "pd" << std::endl;
+	// std::cout << "pd" << std::endl;
 	DIR* dir = opendir(request_.getPath().c_str());
 	if (!dir)
 	{
@@ -176,14 +176,14 @@ std::string RequestAnswer::findIndex(Location loc)
     for (it = index.begin(); it != index.end(); ++it)
 	{
 		const std::string root = loc.getRoot();
-		std::cout << "test1" << std::endl;
-		std::cout << root << std::endl;
+		// std::cout << "test1" << std::endl;
+		// std::cout << root << std::endl;
 
-		std::cout << "it = " << *it << std::endl;
+		// std::cout << "it = " << *it << std::endl;
 
 		std::string fullPath = root + '/' + *it;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		
-		std::cout << "test2" << std::endl;
+		// std::cout << "test2" << std::endl;
         
         // On utilise la fonction access() de <unistd.h> 
         // pour vérifier si le fichier existe et est lisible
@@ -214,9 +214,9 @@ int	RequestAnswer::methodGet()
 		Location	loc = request_.getLocation();
 		//divier la fontion
 		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
-		std::cout << "dir" << std::endl;
+		// std::cout << "dir" << std::endl;
 		std::string index = findIndex(loc);
-		std::cout << "dir" << std::endl;
+		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
 			return (getIfFile(Config::getRoot() + '/' + index));	
@@ -234,60 +234,121 @@ int	RequestAnswer::methodGet()
 }
 
 //recupere le path du file name pour upload les fichier
-//int	RequestAnswer::methodPost()
-int	RequestAnswer::fileName()
+// //int	RequestAnswer::methodPost()
+// int	RequestAnswer::fileName()
+// {
+// 	struct stat s;
+// 	if (stat(request_.getPath().c_str(), &s) == 0 && s.st_mode & S_IFREG)
+// 	{
+// 		post_file_name_ =  request_.getPath();
+// 		std::cout << post_file_name_ << std::endl;
+// 		return 0;
+// 	}
+// 	else
+// 	{
+// 		//trouve le nom du fichier
+// 		bool	quote = false;
+// 		std::string body = request_.getBody();
+// 		size_t	id = body.find("Content-Disposition:");
+// 		if (id == std::string::npos)
+// 			return 1;
+// 		size_t start = body.find("filename=", id);
+// 		if (start == std::string::npos)
+// 			return 1;
+// 		start += 9;
+// 		while (body[start] == ' ')
+// 			++start;
+// 		if (body[start] == '\"')
+// 		{
+// 			++start;
+// 			quote = true;
+// 		}
+// 		size_t end = body.find("\r\n", start);
+// 		if (end == std::string::npos)
+// 			return 1;
+// 		while (quote == true)
+// 		{
+// 			if (body[end - 1] == '\"')
+// 				quote = false;
+// 			--end;
+// 		}
+
+// 		size_t	s = body.find_last_of('/', end);
+// 		if (s != std::string::npos)
+// 			start = s + 1;
+// 		std::string file_name = body.substr(start, end - start);
+// 		std::cout << "file name = " << file_name << std::endl;
+// 		struct stat f;
+// 		std::string test = request_.getPath() + '/' + file_name;
+// 		std::cout << "test = " << test << std::endl;
+// 		if (stat(test.c_str(), &f) == 0)
+// 		{
+// 			post_file_name_ =  (request_.getPath() + '/' + file_name);
+// 			std::cout << " file name = " << post_file_name_ << std::endl;
+// 			return 0;
+// 		}
+// 	}
+
+// 	return 1;
+// }
+
+
+int RequestAnswer::fileName()
 {
-	struct stat s;
-	if (stat(request_.getPath().c_str(), &s) == 0)
-	{
-		post_file_name_ =  request_.getPath();
-		return 0;
-	}
-	else
-	{
-		//trouve le nom du fichier
-		bool	quote = false;
-		std::string body = request_.getBody();
-		size_t	id = body.find("Content-Disposition:");
-		if (id == std::string::npos)
-			return 1;
-		size_t start = body.find("filename=", id);
-		if (start == std::string::npos)
-			return 1;
-		start += 9;
-		while (body[start] == ' ')
-			++start;
-		if (body[start] == '\"')
-		{
-			++start;
-			quote = true;
-		}
-		size_t end = body.find("\r\n", start);
-		if (end == std::string::npos)
-			return 1;
-		while (quote == true)
-		{
-			if (body[end - 1] == '\"')
-				quote = false;
-			--end;
-		}
+    struct stat s;
+    std::string path = request_.getPath();
 
-		size_t	s = body.find_last_of('/', end);
-		if (s != std::string::npos)
-			start = s + 1;
-		std::string file_name = body.substr(start, end - start);
-		std::cout << "file name = " << file_name << std::endl;
-		struct stat f;
-		if (stat((request_.getPath() + '/' + file_name).c_str(), &f) == 0)
-		{
-			post_file_name_ =  (request_.getPath() + '/' + file_name);
-			return 0;
-		}
-	}
+    // 1. Si le chemin est déjà un fichier régulier, on le prend directement
+    if (stat(path.c_str(), &s) == 0 && S_ISREG(s.st_mode))
+    {
+        post_file_name_ = path;
+        return 0;
+    }
 
-	return 1;
+    // 2. Sinon, on cherche le nom dans le body (Multipart)
+    std::string body = request_.getBody();
+    size_t id = body.find("Content-Disposition:");
+    if (id == std::string::npos)
+        return 1;
+
+    size_t start = body.find("filename=", id);
+    if (start == std::string::npos)
+        return 1;
+
+    start += 9; // On saute "filename="
+    
+    // Gestion des guillemets
+    if (body[start] == '\"')
+        start++;
+    
+    size_t end = body.find('\"', start); // On cherche le guillemet fermant
+    if (end == std::string::npos)
+        end = body.find("\r\n", start); // Backup si pas de guillemet
+
+    std::string file_name = body.substr(start, end - start);
+
+    // Nettoyage : On ne garde que le nom, pas le chemin complet envoyé par le client
+    size_t last_slash = file_name.find_last_of("\\/");
+    if (last_slash != std::string::npos)
+        file_name = file_name.substr(last_slash + 1);
+
+    // 3. Construction du chemin final
+    std::string final_path = path;
+    if (!final_path.empty() && final_path[final_path.size() - 1] != '/')
+        final_path += '/';
+    final_path += file_name;
+
+    // 4. On vérifie si le DOSSIER existe avant de valider
+    if (stat(path.c_str(), &s) == 0 && S_ISDIR(s.st_mode))
+    {
+        post_file_name_ = final_path;
+        std::cout << "Target file path: " << post_file_name_ << std::endl;
+        return 0;
+    }
+
+    std::cerr << "Erreur : Le dossier de destination n'existe pas (" << path << ")" << std::endl;
+    return 1;
 }
-
 
 //upload les fichier
 //int	RequestAnswer::setAnswer()
@@ -330,6 +391,7 @@ int RequestAnswer::methodPost()
     if (!outfile.is_open()) {
         std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
         error_ = 500;
+		code_ = 500;
         return 1;
     }
 
@@ -441,5 +503,6 @@ int	RequestAnswer::setAnswer()
 	return 1;
 }
 
-//upload 244 recuper le nom du fichier dans le body
-//post cree le fichier ligen 238
+//le fichier n'existe pas, je dois verifier le dossier
+//full ia, a comprendre
+//mais ne marche pas a chaque fois , differentier le dossier du fichier
