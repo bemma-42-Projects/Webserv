@@ -1,33 +1,30 @@
 NAME = webserv
-CC = c++
-CFLAGS = -Wall -Wextra -Werror -std=c++98
 
-SRCS_FILES = \
-			Client.cpp \
-			Server.cpp \
-			Error.cpp \
-			Location.cpp \
-			Request.cpp \
-			RequestAnswer.cpp \
-			Config.cpp \
-			main.cpp \
+CXX = c++
+FLAGS = -Wall -Wextra -Werror -std=c++98 -g 	
+OBJDIR = obj
 
-OBJS = $(SRCS_FILES:.cpp=.o)
+SOURCES = ./Request.cpp ./Config.cpp ./RequestAnswer.cpp ./Location.cpp
+OBJS = $(patsubst ./%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CC) $(CFLAGS) -o $(NAME) $(OBJS)
+	@echo "Compilationn...."
+	@$(CXX) $(FLAGS) $(OBJS) -o $(NAME)
+	@echo "Compilation finished." 
 
-%.o: %.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJDIR)/%.o: src/%.cpp
+	@mkdir -p $(OBJDIR)
+	@$(CXX) $(FLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS)
+	rm -rf $(OBJDIR)
 
 fclean: clean
 	rm -f $(NAME)
+	@echo "clean"
 
-re: fclean all
+re: fclean $(NAME)
 
 .PHONY: all clean fclean re

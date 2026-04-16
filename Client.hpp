@@ -7,7 +7,7 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 
-class   Client {
+class Client {
     public:
         enum State {
             READING_REQUEST,
@@ -30,20 +30,13 @@ class   Client {
         std::string     getIp() const;
 
     private:
-        int socket_fd_;
+        int                     socket_fd_;
         struct sockaddr_storage addr_;
-        State state_;
-        time_t last_activity_;
-        std::string ip_address_;
-        std::string request_buffer_;
-        std::string response_buffer_;
-
-        void                initIpAddress_(struct sockaddr_storage addr);
-        void                appendRequestData_(const std::string &data);
-        const std::string   &getRequestData_() const;
-        void                setResponseData_(const std::string &data);
-        void                eraseSentResponseData_(ssize_t bytes_sent);
-        void                clearBuffers_();
+        State                   state_;
+        time_t                  last_activity_;
+        std::string             ip_address_;
+    
+        void    _initIpAddress(struct sockaddr_storage addr);
     };
 
 #endif
