@@ -269,7 +269,7 @@ int	Request::parsingHttp()
 		error_ = 405;
 		return 0;
 	}
-	path_ = location_.getRoot() + url_path_;
+	path_ = location_.getRoot() + url_path_;//attention si / a la fin
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
 }
@@ -285,7 +285,7 @@ int main()
 		Config::location();
 
 		const char *buffer = 
-		"POST /uploads/teste.txt HTTP/1.1\r\n"
+		"POST /uploads HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
 		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
 		"Content-Length: 162\r\n"

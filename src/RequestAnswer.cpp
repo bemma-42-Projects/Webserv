@@ -235,144 +235,149 @@ int	RequestAnswer::methodGet()
 
 //recupere le path du file name pour upload les fichier
 // //int	RequestAnswer::methodPost()
-// int	RequestAnswer::fileName()
-// {
-// 	struct stat s;
-// 	if (stat(request_.getPath().c_str(), &s) == 0 && s.st_mode & S_IFREG)
-// 	{
-// 		post_file_name_ =  request_.getPath();
-// 		std::cout << post_file_name_ << std::endl;
-// 		return 0;
-// 	}
-// 	else
-// 	{
-// 		//trouve le nom du fichier
-// 		bool	quote = false;
-// 		std::string body = request_.getBody();
-// 		size_t	id = body.find("Content-Disposition:");
-// 		if (id == std::string::npos)
-// 			return 1;
-// 		size_t start = body.find("filename=", id);
-// 		if (start == std::string::npos)
-// 			return 1;
-// 		start += 9;
-// 		while (body[start] == ' ')
-// 			++start;
-// 		if (body[start] == '\"')
-// 		{
-// 			++start;
-// 			quote = true;
-// 		}
-// 		size_t end = body.find("\r\n", start);
-// 		if (end == std::string::npos)
-// 			return 1;
-// 		while (quote == true)
-// 		{
-// 			if (body[end - 1] == '\"')
-// 				quote = false;
-// 			--end;
-// 		}
+/*int	RequestAnswer::fileName()
+{
+	Location	loc = request_.getLocation();
+	std::string root = loc.getRoot() + loc.getPath();
+	struct stat s;
+	if (stat(root.c_str(), &s) == 0 && S_ISDIR(s.st_mode))
+	{
+		std::cout << "deb" << std::endl;
+		struct stat p;
+		stat(request_.getPath().c_str(), &p);
+		if (p.st_mode & S_IFREG)
+		{
+			post_file_name_ =  request_.getPath();
+			std::cout << post_file_name_ << std::endl;
+			return 0;
+		}
+		bool	quote = false;
+		std::string body = request_.getBody();
+		size_t	id = body.find("Content-Disposition:");
+		if (id == std::string::npos)
+			return 1;
+		size_t start = body.find("filename=", id);
+		if (start == std::string::npos)
+			return 1;
+		start += 9;
+		while (body[start] == ' ')
+			++start;
+		if (body[start] == '\"')
+		{
+			++start;
+			quote = true;
+		}
+		size_t end = body.find("\r\n", start);
+		if (end == std::string::npos)
+			return 1;
+		while (quote == true)
+		{
+			if (body[end - 1] == '\"')
+				quote = false;
+			--end;
+		}
 
-// 		size_t	s = body.find_last_of('/', end);
-// 		if (s != std::string::npos)
-// 			start = s + 1;
-// 		std::string file_name = body.substr(start, end - start);
-// 		std::cout << "file name = " << file_name << std::endl;
-// 		struct stat f;
-// 		std::string test = request_.getPath() + '/' + file_name;
-// 		std::cout << "test = " << test << std::endl;
-// 		if (stat(test.c_str(), &f) == 0)
-// 		{
-// 			post_file_name_ =  (request_.getPath() + '/' + file_name);
-// 			std::cout << " file name = " << post_file_name_ << std::endl;
-// 			return 0;
-// 		}
-// 	}
+		size_t	s = body.find_last_of('/', end);
+		if (s != std::string::npos)
+			start = s + 1;
+		std::string file_name = body.substr(start, end - start);
+		std::cout << "file name = " << file_name << std::endl;
+		// struct stat f;
+		std::string test = root + '/' + file_name;
+		std::cout << "test = " << test << std::endl;
 
-// 	return 1;
-// }
+		struct stat b;
+		stat(test.c_str(), &b);
+		if (b.st_mode & S_IFREG)
+		{
+			post_file_name_ =  test;
+			std::cout << " file name = " << post_file_name_ << std::endl;
+			return 0;
+		}
+	}
+	std::cout << "error" << std::endl;
+	return 1;
+}*/
 
 
 int RequestAnswer::fileName()
 {
+    Location    loc = request_.getLocation();
+    std::string root_path = loc.getRoot() + loc.getPath(); // Chemin dossier sur disque
+    std::string url_path = request_.getPath();           // Chemin demandé dans l'URL
+
     struct stat s;
-    std::string path = request_.getPath();
+    bool is_directory = false;
 
-    // 1. Si le chemin est déjà un fichier régulier, on le prend directement
-    if (stat(path.c_str(), &s) == 0 && S_ISREG(s.st_mode))
-    {
-        post_file_name_ = path;
-        return 0;
+    // ÉTAPE 1 : On vérifie si l'URL pointe vers un dossier existant
+    if (stat(url_path.c_str(), &s) == 0) {
+        if (S_ISDIR(s.st_mode)) {
+            is_directory = true;
+        }
+    } 
+    // Si le dossier finit par '/', on le force en is_directory même si stat échoue
+    // else if (!url_path.empty() && url_path[url_path.size() - 1] == '/') {
+    //     is_directory = true;
+    // }
+
+    // ÉTAPE 2 : Si c'est un dossier, on cherche obligatoirement dans le Body
+    if (is_directory) {
+        std::string body = request_.getBody();
+        size_t id = body.find("Content-Disposition:");
+        if (id == std::string::npos) return 1;
+
+
+
+		size_t start = body.find("filename=", id);
+		if (start == std::string::npos)
+			return 1;
+		start += 9;
+		while (body[start] == ' ')
+			++start;
+		bool	quote = false;
+		if (body[start] == '\"')
+		{
+			++start;
+			quote = true;
+		}
+		size_t end = body.find("\r\n", start);
+		if (end == std::string::npos)
+			return 1;
+		while (quote == true)
+		{
+			if (body[end - 1] == '\"')
+				quote = false;
+			--end;
+		}
+		size_t	s = body.find_last_of('/', end);
+		if (s != std::string::npos)
+			start = s + 1;
+		std::string file_name = body.substr(start, end - start);
+
+        // On construit le chemin final : Dossier + / + Nom
+        post_file_name_ = url_path;
+        if (post_file_name_[post_file_name_.size() - 1] != '/')
+            post_file_name_ += '/';
+        post_file_name_ += file_name;
+    } 
+    // ÉTAPE 3 : Si ce n'est pas un dossier, le nom est déjà dans l'URL
+    else {
+        post_file_name_ = url_path;
     }
 
-    // 2. Sinon, on cherche le nom dans le body (Multipart)
-    std::string body = request_.getBody();
-    size_t id = body.find("Content-Disposition:");
-    if (id == std::string::npos)
-        return 1;
-
-    size_t start = body.find("filename=", id);
-    if (start == std::string::npos)
-        return 1;
-
-    start += 9; // On saute "filename="
-    
-    // Gestion des guillemets
-    if (body[start] == '\"')
-        start++;
-    
-    size_t end = body.find('\"', start); // On cherche le guillemet fermant
-    if (end == std::string::npos)
-        end = body.find("\r\n", start); // Backup si pas de guillemet
-
-    std::string file_name = body.substr(start, end - start);
-
-    // Nettoyage : On ne garde que le nom, pas le chemin complet envoyé par le client
-    size_t last_slash = file_name.find_last_of("\\/");
-    if (last_slash != std::string::npos)
-        file_name = file_name.substr(last_slash + 1);
-
-    // 3. Construction du chemin final
-    std::string final_path = path;
-    if (!final_path.empty() && final_path[final_path.size() - 1] != '/')
-        final_path += '/';
-    final_path += file_name;
-
-    // 4. On vérifie si le DOSSIER existe avant de valider
-    if (stat(path.c_str(), &s) == 0 && S_ISDIR(s.st_mode))
-    {
-        post_file_name_ = final_path;
-        std::cout << "Target file path: " << post_file_name_ << std::endl;
-        return 0;
+    // ÉTAPE 4 : Vérification finale - Est-ce que le dossier parent existe ?
+    size_t last_slash = post_file_name_.find_last_of('/');
+    if (last_slash != std::string::npos) {
+        std::string dir_to_check = post_file_name_.substr(0, last_slash);
+        if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) {
+            std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
+            return 1;
+        }
     }
 
-    std::cerr << "Erreur : Le dossier de destination n'existe pas (" << path << ")" << std::endl;
-    return 1;
+    std::cout << "Fichier final retenu : " << post_file_name_ << std::endl;
+    return 0;
 }
-
-//upload les fichier
-//int	RequestAnswer::setAnswer()
-//int	RequestAnswer::methodPost()
-//{
-//	int	path_file = fileName();
-//	if (path_file == 1)
-//	{
-//		error_ = 400;
-//		code_ = 400;
-//		return 0;
-//	}
-//	std::cout << "goog " << std::endl;
-//	std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
-
-//	if (outfile.is_open()) {
-//		std::string	requet_body = request_.getBody();
-//		outfile.write(&request_.getBody()[0], requet_body.size()); // On écrit les données binaires
-//		outfile.close();
-//	}
-//	return 1;
-//}
-
-
 
 int RequestAnswer::methodPost()
 {
