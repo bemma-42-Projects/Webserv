@@ -10,10 +10,10 @@
 class Client {
     public:
         enum State {
-            READING_REQUEST,
-            PROCESSING,
-            WRITING_RESPONSE,
-            DISCONNECTED
+            READING_REQUEST,    // Le client est en train d'envoyer sa requête
+            PROCESSING,         // Le serveur analyse et prépare la réponse
+            WRITING_RESPONSE,   // Le serveur envoie la réponse au client
+            DISCONNECTED        // Le client a été déconnecté (timeout ou fermeture volontaire)
         };
 
         Client();
