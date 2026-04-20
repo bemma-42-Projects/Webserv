@@ -20,7 +20,6 @@ enum State {
 	IN_LOCATION
 };
 
-
 //cette fonction sert juste a lire un fichier et a le stocker dans une string
 std::string readFile(const char *path) {
 

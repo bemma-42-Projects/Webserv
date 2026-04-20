@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 10:14:43 by julien            #+#    #+#             */
-/*   Updated: 2026/04/20 15:35:03 by julien           ###   ########.fr       */
+/*   Updated: 2026/04/20 15:46:15 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,6 @@
 #include <sys/wait.h>   // Pour waitpid
 #include <string>
 #include <iostream>
-
 
 CGISubprocess::CGISubprocess()
 {
