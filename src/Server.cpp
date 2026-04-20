@@ -368,19 +368,11 @@ void	Server::run() {
             throw std::runtime_error("Fatal error: epoll_wait() failed.");
         for (int i = 0; i < n_events; i++) {
             int client_fd = events[i].data.fd;
-            if (events[i].events & (EPOLLERR | EPOLLHUP)) {
-                if (client_fd == server_socket_) {
-                    throw std::runtime_error("Fatal error: Server socket encountered an error or hung up.");
-                } else {
-                    std::cerr << "Epoll error or hang up on client socket " << client_fd << std::endl;
-                    handleClientDisconnect_(client_fd);
-                }
-			}
-            else if (client_fd == server_socket_)
+            if (client_fd == server_socket_)
                 handleNewConnection_();
-			else if (events[i].events & EPOLLIN)
+			if (events[i].events & EPOLLIN)
 				handleClientRead_(client_fd);
-			else if (events[i].events & EPOLLOUT)
+			if (events[i].events & EPOLLOUT)
 				handleClientWrite_(client_fd);
 		}
 	}
