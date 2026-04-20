@@ -36,12 +36,14 @@ int main()
 {
 	Config::location();
 
-		const char *buffer = "GET /cgi-bin/test.php HTTP/1.1\r\n"
+		const char *buffer = "GET /cgi-bin/test.php?name=julien&project=webserv HTTP/1.1\r\n"
 			"Host: localhost:8080\r\n"
 			"Connection: close\r\n"
 			"\r\n";
 	
 		Request file((char *)buffer);
+		file.setClientIP("127.0.0.1");
+
 		int res = file.parsingHttp();
 
 		if (res == 0)
@@ -66,7 +68,7 @@ int main()
         {
             std::cout << "Réponse du serveur : " << std::endl;
 			std::cout << answer.getAnswer() << std::endl;
-        }
+		}
         else
         {
             std::cout << "Erreur lors de la génération de la réponse : " << answer.getError() << std::endl;

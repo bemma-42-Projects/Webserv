@@ -9,10 +9,11 @@ Client::Client() : socket_fd_(-1), state_(READING_REQUEST), last_activity_(time(
 // constructeur paramétrique
 Client::Client(int socket_fd, struct sockaddr_storage addr) : socket_fd_(socket_fd), addr_(addr), state_(READING_REQUEST), last_activity_(time(NULL)) {
     initIpAddress_(addr);
+    this->request_.setClientIP(this->ip_address_);
 }
 
 // constructeur par copie
-Client::Client(const Client &src) : socket_fd_(src.socket_fd_), addr_(src.addr_), state_(src.state_), last_activity_(src.last_activity_), ip_address_(src.ip_address_) {
+Client::Client(const Client &src) : socket_fd_(src.socket_fd_), addr_(src.addr_), state_(src.state_), last_activity_(src.last_activity_), ip_address_(src.ip_address_), request_(src.request_) {
 
 }
 
@@ -24,6 +25,7 @@ Client &Client::operator=(const Client &rhs) {
         state_ = rhs.state_;
         last_activity_ = rhs.last_activity_;
         ip_address_ = rhs.ip_address_;
+        request_ = rhs.request_;
     }
     return (*this);
 }
@@ -108,3 +110,4 @@ void    Client::clearBuffers_() {
     this->response_buffer_.clear();
     setState(READING_REQUEST);
 }
+

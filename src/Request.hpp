@@ -30,6 +30,16 @@ class Request {
 
 		//std::string							answer();
 		//std::string							methodGet();
+		void								splitUri_();
+		std::string							getRequestUri() const;
+		std::string							getQueryString() const;
+		std::string							getContentType() const;
+		std::string							getContentLength() const;
+		std::string							getHost() const;
+		std::string							getPort() const;
+		void								setClientIP(const std::string &ip);
+		std::string							getClientIP() const;
+
 
 	private:
 		std::string							request_;
@@ -41,6 +51,9 @@ class Request {
 		std::string							body_;
 		int									error_;
 		Location							location_;
+		std::string							raw_uri_;
+		std::string							query_string_;
+		std::string							client_ip_;
 };
 
 std::ostream& operator<<(std::ostream& out, const Request& request);

@@ -7,6 +7,8 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 
+# include "Request.hpp"
+
 class Client {
     public:
         enum State {
@@ -33,7 +35,7 @@ class Client {
     private:
         void                    initIpAddress_(struct sockaddr_storage addr);
         void                    appendRequestData_(const std::string &data);
-        const std::string       &getRequestData_();
+        const std::string       &getRequestData_() const;
         void                    setResponseData_(const std::string &data);
         void                    eraseSentResponseData_(ssize_t bytes_sent);
         void                    clearBuffers_();
@@ -46,6 +48,7 @@ class Client {
         std::string		        answer_;
         std::string             request_buffer_;
         std::string             response_buffer_;
+        Request                 request_;
 };
 
 #endif

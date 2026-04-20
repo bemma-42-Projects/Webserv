@@ -117,6 +117,20 @@ bool	Request::complete()
 	return true;
 }
 
+
+void	Request::splitUri_()
+{
+	size_t	question_mark_position = this->raw_uri_.find('?');
+
+	if (question_mark_position != std::string::npos)
+	{
+		this->url_path_ = this->raw_uri_.substr(0, question_mark_position);
+		this->query_string_ = this->raw_uri_.substr(question_mark_position + 1);
+	}
+	else
+		this->query_string_ = "";
+}
+
 //parse la premier ligne et implemente la class (methode chemin version)
 int	Request::initFistLine()
 {
@@ -124,21 +138,33 @@ int	Request::initFistLine()
 	size_t last = request_.find("\r\n");
 	if (last == std::string::npos)
 		return 1;
+
 	size_t	it = request_.find(" ", begin);
 	if (it == std::string::npos || it >= last)
 		return 1;
+
 	method_ = request_.substr(begin, it);
 	if (method_ != "GET" && method_ != "POST" && method_ != "DELETE")
 		return 2; //501 Not Implemented
+
+	
 	begin = request_.find("/", it);
 	if (begin == std::string::npos || begin != (it + 1))
 		return 1;
+
 	it = request_.find(" ", begin);
 	if (it == std::string::npos || it >= last)
 		return 1;
+
 	url_path_ = request_.substr(begin, it - begin);
 	std::cout << url_path_ << std::endl;
+
+	this->raw_uri_ = url_path_;
+	this->splitUri_();
+
 	//path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
+	
+	
 	begin = request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
 		return 1;
@@ -263,6 +289,76 @@ int	Request::parsingHttp()
 	path_ = location_.getRoot() + '/' + url_path_;
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
+}
+
+std::string	Request::getRequestUri() const
+{
+	return (this->raw_uri_);
+}
+
+std::string	Request::getQueryString() const
+{
+	return (this->query_string_);
+}
+
+std::string	Request::getContentType() const
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Type");
+
+	if (it != headers_.end())
+		return (it->second);
+	return ("");
+}
+
+std::string	Request::getContentLength() const
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
+
+	if (it != headers_.end())
+		return (it->second);
+	return ("0");
+}
+
+std::string	Request::getHost() const
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Host");
+
+	if (it != headers_.end())
+	{
+		std::string	host_raw = it->second;
+		size_t		pos = host_raw.find(':');
+
+		if (pos != std::string::npos)
+			return (host_raw.substr(0, pos));
+		return (host_raw);
+	}
+	return ("localhost");
+}
+
+std::string Request::getPort() const
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Host");
+
+	if (it != headers_.end())
+	{
+		std::string	host_raw = it->second;
+		size_t		pos = host_raw.find(':');
+
+		if (pos != std::string::npos)
+			return (host_raw.substr(pos + 1));
+		return ("80");
+	}
+	return ("80");
+}
+
+void	Request::setClientIP(const std::string &ip)
+{
+	this->client_ip_ = ip;
+}
+
+std::string	Request::getClientIP() const
+{
+	return (this->client_ip_);
 }
 
 //void	Request::setError(int error)

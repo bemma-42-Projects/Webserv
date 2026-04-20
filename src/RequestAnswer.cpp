@@ -14,9 +14,9 @@
 #include <cstring>	// pour strcpy
 
 //initialise les variable
-RequestAnswer::RequestAnswer(Request request)
+RequestAnswer::RequestAnswer(Request &request) : request_(request)
 {
-	request_ = request;
+	//request_ = request;
 	answer_ = "";
 	error_ = 0;
 	this->cgi_process_ = NULL;
@@ -431,9 +431,10 @@ char		**RequestAnswer::getEnvp()
 	// exemples : GET ou POST ou DELETE
 	env.push_back("REQUEST_METHOD=" + request_.getMethod());
 	
+
 	// l'URL complète demandée par le client (path + paramètres)
 	// exemple : /cgi-bin/script.php?user=test
-	//env.push_back("REQUEST_URI=" + request_.getRequestUri());
+	env.push_back("REQUEST_URI=" + request_.getRequestUri());
 	
 	// le chemin absolu vers le script
 	// exemple : /home/julien/Webserv/cgi-bin/script.php
@@ -442,37 +443,37 @@ char		**RequestAnswer::getEnvp()
 	// le chemin virtuel vers le script (l'URI sans la query string)
 	// exemple : /cgi-bin/script.php
 	env.push_back("SCRIPT_NAME=" + request_.getUrlPath());
-	
+
 	// tout ce qui se trouve après le "?" dans l'URL (query string)
 	// exemple : user=test&age=25 
-	//env.push_back("QUERY_STRING=" + request_.getQueryString());
+	env.push_back("QUERY_STRING=" + request_.getQueryString());
 	
 	// le type de contenu envoyé dans le body
 	// indispensable pour les formulaires POST
 	// exemple : application/x-www-form-urlencoded
-	//env.push_back("CONTENT_TYPE=" + request_.getContentType());
+	env.push_back("CONTENT_TYPE=" + request_.getContentType());
 	
 	// la taille en octets des données du body
 	// indispensable pour que PHP lise le POST
 	// exemple : 15
-	//std::stringstream	ss_len;
-	//ss_len << request_.getContentLength();
-	//env.push_back("CONTENT_LENGTH=" + ss_len.str());
+	std::stringstream	ss_len;
+	ss_len << request_.getContentLength();
+	env.push_back("CONTENT_LENGTH=" + ss_len.str());
 	
 	// le nom de domaine du serveur
 	// ou l'adresse IP utilisée pour l'atteindre
 	// exemples : localhost ou 127.0.0.1
-	//env.push_back("SERVER_NAME=" + request_.getHost());
+	env.push_back("SERVER_NAME=" + request_.getHost());
 	
 	// le port sur lequel le serveur écoute
 	// exemple : 8080
-	//std::stringstream	ss_port;
-	//ss_port << request_.getPort();
-	//env.push_back("SERVER_PORT=" + ss_port.str());
+	std::stringstream	ss_port;
+	ss_port << request_.getPort();
+	env.push_back("SERVER_PORT=" + ss_port.str());
 	
 	// l'adresse IP du client qui a fait la requête
 	// exemple : 192.168.1.10
-	//env.push_back("REMOTE_ADDR=" + request_.getClientIP());
+	env.push_back("REMOTE_ADDR=" + request_.getClientIP());
 	
 	// code de statut de redirection
 	// exigé par php-cgi pour s'exécuter (mesure de sécurité)
