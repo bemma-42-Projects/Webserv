@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "Request.hpp"
+#include "CGISubprocess.hpp"
 
 class RequestAnswer
 {
@@ -31,5 +32,5 @@ class RequestAnswer
 		Request			request_;
 		std::string		answer_;//ne pas oublier la ligne vide
 		std::string		cgi_interpreter_;
-		//CGISubprocess	*cgi_process_;
+		CGISubprocess	*cgi_process_;
 };

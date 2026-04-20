@@ -19,10 +19,17 @@ RequestAnswer::RequestAnswer(Request request)
 	request_ = request;
 	answer_ = "";
 	error_ = 0;
+	this->cgi_process_ = NULL;
 }
 
 RequestAnswer::~RequestAnswer()
-{}
+{
+	if (this->cgi_process_ != NULL)
+	{
+		delete (this->cgi_process_);
+		this->cgi_process_ = NULL;
+	}
+}
 
 //return le reponse
 std::string	RequestAnswer::getAnswer()
@@ -381,41 +388,18 @@ int	RequestAnswer::methodCGI()
 	char	**envp = this->getEnvp();
 
 	try {
-		CGISubprocess cgi_process;
+		//CGISubprocess cgi_process;
         
-		cgi_process.createSubprocess(this->request_.getPath(), this->cgi_interpreter_, envp);
+		this->cgi_process_ = new CGISubprocess();
+
+		this->cgi_process_->createSubprocess(this->request_.getPath(), this->cgi_interpreter_, envp);
 		
-		
-		std::cout << "\n=== DÉBUT DU TEST CGI SYNCHRONE ===" << std::endl;
-
-            // 1. On ferme notre bout d'écriture (On simule un GET, pas de body POST à envoyer)
-            // Si on ne le ferme pas, le read() plus bas pourrait bloquer ou PHP pourrait attendre.
-            close(cgi_process.getWriteFd());
-
-            // 2. On attend que PHP ait fini de travailler (Bloquant - Uniquement pour le test !)
-            int status;
-            waitpid(cgi_process.getPid(), &status, 0);
-
-            // 3. On lit la réponse dans le pipe de lecture
-            char buffer[4096];
-            int bytes_read;
-            std::string cgi_output = "";
-
-            // Même si le FD est non-bloquant, les données sont déjà dans le tuyau car PHP a fini.
-            while ((bytes_read = read(cgi_process.getReadFd(), buffer, sizeof(buffer) - 1)) > 0)
-            {
-                buffer[bytes_read] = '\0';
-                cgi_output += buffer;
-            }
-
-            // 4. Affichage du résultat
-            std::cout << "RÉSULTAT BRUT RÉCUPÉRÉ DEPUIS LE PIPE :\n\n";
-            std::cout << cgi_output << std::endl;
-            std::cout << "=====================================\n" << std::endl;
-            
-        } catch (const std::exception& e) {
-            std::cerr << "Erreur critique CGI : " << e.what() << std::endl;
-        }
+		if (this->request_.getMethod() == "GET")
+			close(this->cgi_process_->getWriteFd());
+    } catch (const std::exception& e) {
+        std::cerr << "CGI Error : " << e.what() << std::endl;
+		this->error_ = 500;
+    }
 
 	int i = 0;
 	while (envp[i] != NULL)

@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 10:14:43 by julien            #+#    #+#             */
-/*   Updated: 2026/04/20 11:33:33 by julien           ###   ########.fr       */
+/*   Updated: 2026/04/20 11:49:34 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,6 +74,7 @@ void    CGISubprocess::createSubprocess(const std::string &filePathAbs, const st
             std::cerr << "CGI Error: chdir failed : " << strerror(errno) << std::endl;
             exit(EXIT_FAILURE);
         }
+
         // close l'extrémité en écriture du pipe (c'est le parent qui écrira dedans)
         close(pipe_to_cgi_[1]);
         // redirige stdin pour lire pipe_to_cgi
