@@ -74,12 +74,6 @@ int main()
             std::cout << "Erreur lors de la génération de la réponse : " << answer.getError() << std::endl;
         }
         return (0);
-	//}
-	//catch(std::exception &e)
-	//{
-	//	std::cerr << "error : " << e.what() << std::endl;
-	//	//Error::setError(e.what());
-	//}
 }
 
 // MAIN ROMANE

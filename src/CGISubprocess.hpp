@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 10:15:03 by julien            #+#    #+#             */
-/*   Updated: 2026/04/20 14:12:58 by julien           ###   ########.fr       */
+/*   Updated: 2026/04/20 14:36:24 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,10 +21,11 @@ class   CGISubprocess
     public:
         CGISubprocess();
         ~CGISubprocess();
-        void    createSubprocess(const std::string &path, const std::string &interpreter, char **envp);
-        int     getWriteFd() const;
-        int     getReadFd() const;
-        pid_t   getPid() const;
+        void        createSubprocess(const std::string &path, const std::string &interpreter, char **envp);
+        int         getWriteFd() const;
+        int         getReadFd() const;
+        pid_t       getPid() const;
+        std::string readResponse();
 
     private:
         void    setupChildPipes_();

@@ -286,7 +286,11 @@ int	Request::parsingHttp()
 		error_ = 405;
 		return 0;
 	}
-	path_ = location_.getRoot() + '/' + url_path_;
+	std::string	root = location_.getRoot();
+	if (!url_path_.empty() && url_path_[0] == '/')
+		path_ = root + url_path_;
+	else
+		path_ = root + "/" + url_path_; 
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
 }

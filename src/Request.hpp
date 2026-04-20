@@ -40,7 +40,6 @@ class Request {
 		void								setClientIP(const std::string &ip);
 		std::string							getClientIP() const;
 
-
 	private:
 		std::string							request_;
 		std::string							method_;

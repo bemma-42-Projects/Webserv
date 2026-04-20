@@ -23,6 +23,7 @@ class RequestAnswer
 		char		**getEnvp();
 		void		addHeadersToEnv(std::vector<std::string>& env_vector);
 		int			methodCGI();
+		void		parseCgiOutput(const std::string &raw);
 
 	private:
 		int				code_;//code de sorti ou error

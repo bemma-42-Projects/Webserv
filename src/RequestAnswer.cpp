@@ -19,6 +19,7 @@ RequestAnswer::RequestAnswer(Request &request) : request_(request)
 	//request_ = request;
 	answer_ = "";
 	error_ = 0;
+	code_ = 200;
 	this->cgi_process_ = NULL;
 }
 
@@ -386,17 +387,18 @@ bool	RequestAnswer::isCgi()
 int	RequestAnswer::methodCGI()
 {
 	char	**envp = this->getEnvp();
+	std::string	raw_cgi_output;
 
-	try {
-		//CGISubprocess cgi_process;
-        
+	try {    
 		this->cgi_process_ = new CGISubprocess();
-
 		this->cgi_process_->createSubprocess(this->request_.getPath(), this->cgi_interpreter_, envp);
 		
 		if (this->request_.getMethod() == "GET")
 			close(this->cgi_process_->getWriteFd());
-    } catch (const std::exception& e) {
+		raw_cgi_output = this->cgi_process_->readResponse();
+		this->parseCgiOutput(raw_cgi_output);
+		std::cout << "DEBUG SORTIE PHP : [" << raw_cgi_output << "]" << std::endl;
+	} catch (const std::exception& e) {
         std::cerr << "CGI Error : " << e.what() << std::endl;
 		this->error_ = 500;
     }
@@ -431,7 +433,6 @@ char		**RequestAnswer::getEnvp()
 	// exemples : GET ou POST ou DELETE
 	env.push_back("REQUEST_METHOD=" + request_.getMethod());
 	
-
 	// l'URL complète demandée par le client (path + paramètres)
 	// exemple : /cgi-bin/script.php?user=test
 	env.push_back("REQUEST_URI=" + request_.getRequestUri());
@@ -541,4 +542,25 @@ void	RequestAnswer::addHeadersToEnv(std::vector<std::string>& env_vector)
 		env_vector.push_back(env_key + "=" + value);
 		++it;
 	}
+}
+
+// pour séparer les headers du body
+void	RequestAnswer::parseCgiOutput(const std::string &raw)
+{
+	size_t	separator = raw.find("\r\n\r\n");
+
+	if (separator != std::string::npos)
+	{
+		std::string headers = raw.substr(0, separator);
+		// pour sauter le \r\n\r\n
+		this->body_ = raw.substr(separator + 4);
+		if (headers.find("Content-type: ") != std::string::npos) {
+            size_t start = headers.find("Content-type: ") + 14;
+            size_t end = headers.find("\r\n", start);
+            this->content_type_ = headers.substr(start, end - start);
+        }
+	}
+	else
+		this->body_ = raw;
+	this->code_ = 200;
 }
