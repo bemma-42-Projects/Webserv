@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 10:15:03 by julien            #+#    #+#             */
-/*   Updated: 2026/04/20 11:20:58 by julien           ###   ########.fr       */
+/*   Updated: 2026/04/20 12:11:06 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,8 +15,6 @@
 
 #include <unistd.h>
 #include <string>
-
-#include <filesystem>
 
 class   CGISubprocess
 {

@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 
 #include "Server.hpp"
+#include "utils.hpp"
 
 #define PORT "8080"
 #define BACKLOG 128
