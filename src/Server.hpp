@@ -21,7 +21,6 @@ class   Server {
     private:
         Server(const Server &src);
         Server &operator=(const Server &rhs);
-        void            setNonBlocking_(int fd);
         void            initAddrinfoParams_(struct addrinfo &addrinfo_params);
         struct addrinfo *getAddrInfo_(const std::string &port_str);
         void            printInterface_(struct addrinfo *p, char *ip_buffer);

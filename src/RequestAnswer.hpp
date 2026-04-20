@@ -24,12 +24,12 @@ class RequestAnswer
 		int			methodCGI();
 
 	private:
-		int			code_;//code de sorti ou error
-		std::string	content_type_;//type de retour (image txt...)
-		std::string	body_;
-		int			error_;
-		Request		request_;
-		std::string	answer_;//ne pas oublier la ligne vide
-		std::string	cgi_interpreter_;
-
+		int				code_;//code de sorti ou error
+		std::string		content_type_;//type de retour (image txt...)
+		std::string		body_;
+		int				error_;
+		Request			request_;
+		std::string		answer_;//ne pas oublier la ligne vide
+		std::string		cgi_interpreter_;
+		//CGISubprocess	*cgi_process_;
 };

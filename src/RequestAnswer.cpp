@@ -1,9 +1,11 @@
 #include "RequestAnswer.hpp"
+#include "CGISubprocess.hpp"
+
 #include <iostream>
 #include <fcntl.h>		// pour open
 #include <unistd.h>		// pour read, close, fork et execve
 #include <sys/stat.h>	// pour stat
-//#include <sys/wait.h>	// pour waitpid
+#include <sys/wait.h>	// pour waitpid
 //#include <cstdlib>		// pour exit
 #include "Config.hpp"
 #include <dirent.h>
@@ -377,7 +379,52 @@ bool	RequestAnswer::isCgi()
 int	RequestAnswer::methodCGI()
 {
 	char	**envp = this->getEnvp();
-	(void)envp;
+
+	try {
+		CGISubprocess cgi_process;
+        
+		cgi_process.createSubprocess(this->request_.getPath(), this->cgi_interpreter_, envp);
+		
+		
+		std::cout << "\n=== DÉBUT DU TEST CGI SYNCHRONE ===" << std::endl;
+
+            // 1. On ferme notre bout d'écriture (On simule un GET, pas de body POST à envoyer)
+            // Si on ne le ferme pas, le read() plus bas pourrait bloquer ou PHP pourrait attendre.
+            close(cgi_process.getWriteFd());
+
+            // 2. On attend que PHP ait fini de travailler (Bloquant - Uniquement pour le test !)
+            int status;
+            waitpid(cgi_process.getPid(), &status, 0);
+
+            // 3. On lit la réponse dans le pipe de lecture
+            char buffer[4096];
+            int bytes_read;
+            std::string cgi_output = "";
+
+            // Même si le FD est non-bloquant, les données sont déjà dans le tuyau car PHP a fini.
+            while ((bytes_read = read(cgi_process.getReadFd(), buffer, sizeof(buffer) - 1)) > 0)
+            {
+                buffer[bytes_read] = '\0';
+                cgi_output += buffer;
+            }
+
+            // 4. Affichage du résultat
+            std::cout << "RÉSULTAT BRUT RÉCUPÉRÉ DEPUIS LE PIPE :\n\n";
+            std::cout << cgi_output << std::endl;
+            std::cout << "=====================================\n" << std::endl;
+            
+        } catch (const std::exception& e) {
+            std::cerr << "Erreur critique CGI : " << e.what() << std::endl;
+        }
+
+	int i = 0;
+	while (envp[i] != NULL)
+	{
+		delete[] envp[i];
+		i++;
+	}
+	delete[] envp;
+
 	return (1);
 }
 

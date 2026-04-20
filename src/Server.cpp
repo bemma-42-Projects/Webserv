@@ -27,18 +27,6 @@ Server::~Server()
         close(epoll_fd_);
 }
 
-// rend un file descriptor non bloquant
-// permet de s'assurer que les appels recv et send ne bloquent jamais la boucle epoll
-void    Server::setNonBlocking_(int fd) {
-    int flags;
-
-    flags = fcntl(fd, F_GETFL, 0);
-	if (flags == -1)
-		throw std::runtime_error("fcntl(F_GETFL) failed");
-	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-		throw std::runtime_error("fcntl(F_SETFL) failed");
-}
-
 // initialise les hints pour getaddrinfo
 // permet d'utiliser IPv4 et IPv6
 void    Server::initAddrinfoParams_(struct addrinfo &addrinfo_params) {
@@ -162,7 +150,7 @@ void	Server::initEpoll_() {
 void    Server::init() {
     createAndBindSocket_(PORT);
 	startListening_();
-	setNonBlocking_(server_socket_);
+	setNonBlocking(server_socket_);
 	initEpoll_();
 }
 
@@ -227,7 +215,7 @@ void    Server::handleNewConnection_() {
         std::cerr << "Error: accept() failed: " << std::strerror(errno) << std::endl;
         return ;
     }
-    setNonBlocking_(client_fd);
+    setNonBlocking(client_fd);
     Client  client(client_fd, client_addr);
     client.updateLastActivity();
     client.setState(Client::READING_REQUEST);
