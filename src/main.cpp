@@ -13,7 +13,6 @@ void    handle_sigint(int sig) {
     g_running = false;
 }
 
-/*
 int main() {
     Server  webServer;
     std::signal(SIGINT, handle_sigint);
@@ -29,8 +28,8 @@ int main() {
     }
     return (0);
 }
-*/
 
+/*
 // MAIN JULIEN CGI
 int main()
 {
@@ -75,6 +74,7 @@ int main()
         }
         return (0);
 }
+*/
 
 // MAIN ROMANE
 /*

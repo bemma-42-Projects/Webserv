@@ -255,6 +255,7 @@ void set_nonblocking(int fd) {
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
+/*
 int main(void)
 {
 	struct addrinfo         hints;                          
@@ -481,7 +482,7 @@ int main(void)
 	}
 	return (0);
 }
-
+*/
 //$(SRC_DIR)/main.cpp \
     //  $(SRC_DIR)/Client.cpp \
     //  $(SRC_DIR)/GaiError.cpp \

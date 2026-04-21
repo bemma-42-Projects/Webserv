@@ -375,7 +375,7 @@ std::string	Request::getClientIP() const
 //{
 //	error_ = error;
 //}
-
+/*
 int main()
 {
 	//try{
@@ -420,3 +420,4 @@ int main()
 	//	//Error::setError(e.what());
 	//}
 }
+*/

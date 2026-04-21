@@ -5,6 +5,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <errno.h>
 
 #include "Server.hpp"
 #include "utils.hpp"
@@ -261,7 +262,8 @@ void    Server::bufferizeResponse_(Client& client, const std::string& response) 
 
 // traite les données brutes reçues d'un client
 void	Server::processClientRequest_(int client_fd, const std::string& received_data) {
-    (void)received_data;
+    //(void)received_data;
+    std::cout << received_data << std::endl;
 	Client	&client = clients_[client_fd];
 
     if (isRequestComplete_(client)) {
@@ -370,9 +372,9 @@ void	Server::run() {
             int client_fd = events[i].data.fd;
             if (client_fd == server_socket_)
                 handleNewConnection_();
-			if (events[i].events & EPOLLIN)
+			else if (events[i].events & EPOLLIN)
 				handleClientRead_(client_fd);
-			if (events[i].events & EPOLLOUT)
+			else if (events[i].events & EPOLLOUT)
 				handleClientWrite_(client_fd);
 		}
 	}
