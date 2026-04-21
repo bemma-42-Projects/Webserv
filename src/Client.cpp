@@ -82,6 +82,11 @@ std::string Client::getIp() const {
     return (this->ip_address_);
 }
 
+Request &Client::getRequest()
+{
+    return (this->request_);
+}
+
 // ajoute les données reçues au buffer de la requête
 void    Client::appendRequestData_(const std::string &data)
 {

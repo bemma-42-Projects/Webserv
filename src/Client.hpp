@@ -31,6 +31,7 @@ class Client {
         time_t                  getLastActivity() const;
         void                    updateLastActivity();
         std::string             getIp() const;
+        Request                 &getRequest();
 
     private:
         void                    initIpAddress_(struct sockaddr_storage addr);

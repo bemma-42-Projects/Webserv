@@ -6,6 +6,7 @@
 # include <sys/epoll.h>
 
 # include "Client.hpp"
+# include "Request.hpp"
 
 # define MAX_EVENTS 64
 
@@ -37,11 +38,11 @@ class   Server {
         void            handleNewConnection_();
         void            setSocketToWriteState_(int client_fd);
         bool	        isRequestComplete_(Client &client);
-        std::string     buildHttpResponse_(Client &client);
+        std::string     buildHttpResponse_(Request &request);
         void            bufferizeResponse_(Client& client, const std::string& response);
         void            processClientRequest_(int client_fd, const std::string& received_data);
         void            handleClientRead_(int client_fd);
-        std::string     getResponseToSend_(Client& client);
+        std::string     getResponseToSend_(Request &request);
         bool            isResponseFullySent_(Client& client, ssize_t bytes_sent);
         void            clearClientBuffers_(Client &client);
         void            setSocketToReadState_(int client_fd);

@@ -91,6 +91,76 @@ Location	Request::getLocation() const
 }
 
 
+std::string	Request::getRequestUri() const
+{
+	return (this->raw_uri_);
+}
+
+std::string	Request::getQueryString() const
+{
+	return (this->query_string_);
+}
+
+std::string	Request::getContentType() const
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Type");
+
+	if (it != headers_.end())
+		return (it->second);
+	return ("");
+}
+
+std::string	Request::getContentLength() const
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
+
+	if (it != headers_.end())
+		return (it->second);
+	return ("0");
+}
+
+std::string	Request::getHost() const
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Host");
+
+	if (it != headers_.end())
+	{
+		std::string	host_raw = it->second;
+		size_t		pos = host_raw.find(':');
+
+		if (pos != std::string::npos)
+			return (host_raw.substr(0, pos));
+		return (host_raw);
+	}
+	return ("localhost");
+}
+
+std::string Request::getPort() const
+{
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Host");
+
+	if (it != headers_.end())
+	{
+		std::string	host_raw = it->second;
+		size_t		pos = host_raw.find(':');
+
+		if (pos != std::string::npos)
+			return (host_raw.substr(pos + 1));
+		return ("80");
+	}
+	return ("80");
+}
+
+void	Request::setClientIP(const std::string &ip)
+{
+	this->client_ip_ = ip;
+}
+
+std::string	Request::getClientIP() const
+{
+	return (this->client_ip_);
+}
+
 //verifie qu'il y a "\r\n\r\n" cad que la requet soit complete
 //!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
 bool	Request::complete()
@@ -299,76 +369,6 @@ int	Request::parsingHttp()
 		path_ = root + "/" + url_path_; 
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
-}
-
-std::string	Request::getRequestUri() const
-{
-	return (this->raw_uri_);
-}
-
-std::string	Request::getQueryString() const
-{
-	return (this->query_string_);
-}
-
-std::string	Request::getContentType() const
-{
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Type");
-
-	if (it != headers_.end())
-		return (it->second);
-	return ("");
-}
-
-std::string	Request::getContentLength() const
-{
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
-
-	if (it != headers_.end())
-		return (it->second);
-	return ("0");
-}
-
-std::string	Request::getHost() const
-{
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Host");
-
-	if (it != headers_.end())
-	{
-		std::string	host_raw = it->second;
-		size_t		pos = host_raw.find(':');
-
-		if (pos != std::string::npos)
-			return (host_raw.substr(0, pos));
-		return (host_raw);
-	}
-	return ("localhost");
-}
-
-std::string Request::getPort() const
-{
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Host");
-
-	if (it != headers_.end())
-	{
-		std::string	host_raw = it->second;
-		size_t		pos = host_raw.find(':');
-
-		if (pos != std::string::npos)
-			return (host_raw.substr(pos + 1));
-		return ("80");
-	}
-	return ("80");
-}
-
-void	Request::setClientIP(const std::string &ip)
-{
-	this->client_ip_ = ip;
-}
-
-std::string	Request::getClientIP() const
-{
-	return (this->client_ip_);
 }
 
 //void	Request::setError(int error)

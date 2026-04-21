@@ -9,6 +9,7 @@
 
 #include "Server.hpp"
 #include "utils.hpp"
+#include "RequestAnswer.hpp"
 
 #define PORT "8080"
 #define BACKLOG 128
@@ -242,39 +243,55 @@ void	Server::setSocketToWriteState_(int client_fd) {
     std::cout << "Socket " << client_fd << " switched to EPOLLOUT. Waiting for network to be ready to send..." << std::endl;
 }
 
+/*
 // vérifie si la requête http du client est complètement reçue
 bool	Server::isRequestComplete_(Client &client) {
     (void)client;
     return true;
 }
+*/
 
 // génère la réponse HTTP
-std::string	Server::buildHttpResponse_(Client &client) {
-    (void)client;
-	return ("Good talking to you!\n");
+std::string	Server::buildHttpResponse_(Request &request) {
+
+    RequestAnswer   answer(request);
+
+    if (answer.setAnswer() == 1)
+		std::cout << "answer =" << answer.getAnswer() << std::endl;
+	return (answer.getAnswer());
 }
 
+/*
 // stocke la réponse générée dans le buffer d'écriture du client
 void    Server::bufferizeResponse_(Client& client, const std::string& response) {
     (void)client;
     (void)response;
 }
+*/
 
 // traite les données brutes reçues d'un client
 void	Server::processClientRequest_(int client_fd, const std::string& received_data) {
     //(void)received_data;
-    std::cout << received_data << std::endl;
+    std::cout << "Received : " << received_data << std::endl;
 	Client	&client = clients_[client_fd];
 
-    if (isRequestComplete_(client)) {
+    int result = clients_[client_fd].getRequest().parsingHttp();
+    
+    if (result == 0)
+        std::cout << "Error" << std::endl;
+    else if (result == 1)
+    {
         client.setState(Client::PROCESSING);
-        std::string response = buildHttpResponse_(client);
-		bufferizeResponse_(client, response);
+        std::string response = buildHttpResponse_(client.getRequest());
+		//bufferizeResponse_(client, response);
         client.setState(Client::WRITING_RESPONSE);
 		setSocketToWriteState_(client_fd);
 	}
-	else
+	if (result == 2)
+    {
 		std::cout << "Socket " << client_fd << ": Request incomplete. Waiting for more data..." << std::endl;
+        //std::cout << "Received : " << received_data.length() << std::endl;
+    }
 }
 
 // gère l'évènement de lecture sur un socket client
@@ -300,9 +317,14 @@ void	Server::handleClientRead_(int client_fd) {
 }
 
 // récupère le prochain bloc de données à envoyer au client
-std::string	Server::getResponseToSend_(Client& client) {
-    (void)client;
-    return "Good talking to you!\n";
+std::string	Server::getResponseToSend_(Request& request) {
+    //(void)client;
+    RequestAnswer   answer(request);
+
+    if (answer.setAnswer() == 1)
+		std::cout << "answer =" << answer.getAnswer() << std::endl;
+	return (answer.getAnswer());
+    //return "Good talking to you!\n";
 }
 
 // vérifie si la réponse entière a été transmise
@@ -337,7 +359,7 @@ void    Server::handleClientWrite_(int client_fd) {
     ssize_t 		bytes_sent;
 
 	Client	&client = clients_[client_fd];
-    std::string response_to_send = getResponseToSend_(client);
+    std::string response_to_send = getResponseToSend_(client.getRequest());
 	bytes_sent = send(client_fd, response_to_send.c_str(), response_to_send.size(), 0);
     if (bytes_sent < 0) {
         std::cerr << "Error: send() failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
@@ -364,7 +386,7 @@ void	Server::run() {
 
 	std::cout << "Entering the main server loop..." << std::endl;
     while (g_running) {
-        handleTimeouts_();   	
+        //handleTimeouts_();
 		n_events = epoll_wait(epoll_fd_, events, MAX_EVENTS, 1000);
 		if (n_events == -1)
             throw std::runtime_error("Fatal error: epoll_wait() failed.");
