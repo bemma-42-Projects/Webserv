@@ -270,50 +270,76 @@ void    Server::bufferizeResponse_(Client& client, const std::string& response) 
 */
 
 // traite les données brutes reçues d'un client
-void	Server::processClientRequest_(int client_fd, const std::string& received_data) {
-    //(void)received_data;
-    std::cout << "Received : " << received_data << std::endl;
+void	Server::processClientRequest_(int client_fd) {
+    std::cout << "1" << std::endl;
 	Client	&client = clients_[client_fd];
+std::cout << "2" << std::endl;
+    const std::string &current_data = client.getRequestData();
 
-    int result = clients_[client_fd].getRequest().parsingHttp();
-    
+    std::cout << "3" << std::endl;
+    int result = clients_[client_fd].getRequest().parsingHttp(current_data);
+
+    std::cout << "4" << std::endl;
     if (result == 0)
-        std::cout << "Error" << std::endl;
+        std::cout << "Error : " << client.getRequest().getError() << std::endl;
     else if (result == 1)
     {
         client.setState(Client::PROCESSING);
         std::string response = buildHttpResponse_(client.getRequest());
-		//bufferizeResponse_(client, response);
         client.setState(Client::WRITING_RESPONSE);
 		setSocketToWriteState_(client_fd);
 	}
 	if (result == 2)
     {
 		std::cout << "Socket " << client_fd << ": Request incomplete. Waiting for more data..." << std::endl;
-        //std::cout << "Received : " << received_data.length() << std::endl;
     }
 }
 
 // gère l'évènement de lecture sur un socket client
 void	Server::handleClientRead_(int client_fd) {
-	char buffer[1024];
-    memset(buffer, 0, sizeof(buffer));
+	char    buffer[4096];
     ssize_t bytes_received;
+    bool    data_read = false;
 
-	bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-    if (bytes_received <= 0) {
-        if (bytes_received == 0)
+    while (true)
+    {
+        memset(buffer, 0, sizeof(buffer));
+        std::cout << "AVANT RECV" << std::endl;
+	    bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+        
+        if (bytes_received > 0)
+        {
+            std::cout << "AVANT STRING CREATE" << std::endl;
+            std::string chunk(buffer, bytes_received);
+            std::cout << "APRES STRING CREATE" << std::endl;
+            clients_[client_fd].appendRequestData(chunk);
+            data_read = true;
+        }
+        else if (bytes_received == 0)
+        {
             std::cout << "Client on socket " << client_fd << " closed the connection." << std::endl;
+            handleClientDisconnect_(client_fd);
+		    return ;
+        }
         else {
-            std::cerr << "Error: recv() failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                break ;
+            }
+            else
+            {
+                std::cout << "Client on socket " << client_fd << " closed the connection." << std::endl;
+                handleClientDisconnect_(client_fd);
+		        return ;
+            }
 		}
-		handleClientDisconnect_(client_fd);
-		return ;
 	}
-    clients_[client_fd].updateLastActivity();
-    std::string received_data(buffer, bytes_received);
-    std::cout << "--- RECEIVED " << bytes_received << " BYTES FROM SOCKET " << client_fd << " ---\n" << received_data << std::endl;
-	processClientRequest_(client_fd, received_data);
+    if (data_read)
+    {
+        clients_[client_fd].updateLastActivity();
+        //std::string received_data(buffer, bytes_received);
+	    processClientRequest_(client_fd);
+    }
 }
 
 // récupère le prochain bloc de données à envoyer au client

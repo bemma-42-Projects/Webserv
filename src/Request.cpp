@@ -165,26 +165,29 @@ std::string	Request::getClientIP() const
 //!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
 bool	Request::complete()
 {
-	size_t	end = request_.find("\r\n\r\n");
-	if (end == std::string::npos)
+	size_t	end_headers = request_.find("\r\n\r\n");
+	if (end_headers == std::string::npos)
 		return false;//requette non complet
 	// std::cout << "test" <<std::endl;
 	size_t it = request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
 	it += 15;
-	std::string	tmp = request_.substr(it, end);
+	size_t	end_line = request_.find("\r\n", it);
+	std::string	tmp = request_.substr(it, end_line - it);
 	size_t	len;
 	std::stringstream ss(tmp);
     ss >> len;
 	//while (request_[end] == '\r' || request_[end] == '\n')
 	//	++end;
-	end += 4;
+	//end += 4;
 	//std::cout << "test" <<std::endl;
 
 	//std::cout << request_.substr(end) << std::endl;
-	std::cout << request_.size() - end << " < " << len << std::endl;
-	if (request_.size() - end < len)
+
+	size_t	body_start = end_headers + 4;
+	//std::cout << request_.size() - end << " < " << len << std::endl;
+	if (request_.size() - body_start < len)
 	{
 		//error_ = 413;
 		return false;
@@ -290,22 +293,22 @@ int	Request::initBody()
 	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
 	if (it == headers_.end())
 	{
-		body_ = "\0";
+		body_ = "";
 		return 0;
 	}
-	std::string value = it->second;
+	size_t				len;
+	std::stringstream	ss(it->second);
+	ss >> len;
+
+	if (len > Config::getBodySize())
+		return 1;
+
 	size_t begin = request_.find("\r\n\r\n");
 	if (begin == std::string::npos)
 		return 1;
-	size_t	len;
-	std::stringstream ss(value);
-    ss >> len;
-	if (len > Config::getBodySize())
-		return 1;
-	while (request_[begin] == '\r' || request_[begin] == '\n')
-		++begin;
-	if (request_.size() - begin != len)
-		return 1;
+
+	begin += 4;
+
 	body_ = request_.substr(begin, len);
 	return 0;
 }
@@ -325,10 +328,16 @@ int	Request::checkOfLocation()
 }
 
 
-int	Request::parsingHttp()
+int	Request::parsingHttp(const std::string &raw_data)
 {
+	std::cout << "1" << std::endl;
+	this->request_ = raw_data;
+
+	std::cout << "2" << std::endl;
 	if (complete() == false)
 		return 2; //continuer la lecture
+
+	std::cout << "3" << std::endl;
 	int res = initFistLine();
 	if (res == 1)
 	{
@@ -340,17 +349,20 @@ int	Request::parsingHttp()
 		error_ = 501;
 		return 0;
 	}
+	std::cout << "4" << std::endl;
 	if (initHeader() == 1)
 	{
 		error_ = 402;
 		return 0 ;
 	}
+	std::cout << "5" << std::endl;
 	int	body =  initBody();
 	if (body == 1)
 	{
 		error_ = 413;
 		return 0;
 	}
+	std::cout << "6" << std::endl;
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
@@ -362,6 +374,7 @@ int	Request::parsingHttp()
 		error_ = 405;
 		return 0;
 	}
+	std::cout << "7" << std::endl;
 	std::string	root = location_.getRoot();
 	if (!url_path_.empty() && url_path_[0] == '/')
 		path_ = root + url_path_;

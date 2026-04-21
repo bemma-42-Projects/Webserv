@@ -32,14 +32,19 @@ class Client {
         void                    updateLastActivity();
         std::string             getIp() const;
         Request                 &getRequest();
+        void                    appendRequestData(const std::string &data);
+        const std::string       &getRequestData() const;
+        const std::string       &getResponseData() const;
+        void                    setResponseData(const std::string &data);
+        void                    eraseSentResponseData(ssize_t bytes_sent);
+        void                    clearBuffers();
 
     private:
         void                    initIpAddress_(struct sockaddr_storage addr);
-        void                    appendRequestData_(const std::string &data);
-        const std::string       &getRequestData_() const;
-        void                    setResponseData_(const std::string &data);
-        void                    eraseSentResponseData_(ssize_t bytes_sent);
-        void                    clearBuffers_();
+        
+        
+        
+        
 
         int                     socket_fd_;
         struct sockaddr_storage addr_;

@@ -20,7 +20,7 @@ class Request {
 		int									getError() const;
 		Location							getLocation() const;
 		//int									requestHttp();							
-		int									parsingHttp();
+		int									parsingHttp(const std::string &raw_data);
 		bool								complete();
 		int									initFistLine();
 		int									initHeader();

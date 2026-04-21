@@ -88,29 +88,35 @@ Request &Client::getRequest()
 }
 
 // ajoute les données reçues au buffer de la requête
-void    Client::appendRequestData_(const std::string &data)
+void    Client::appendRequestData(const std::string &data)
 {
     this->request_buffer_ += data;
 }
 
 // récupère l'intégralité des données brutes de la requête
-const std::string    &Client::getRequestData_() const {
+const std::string    &Client::getRequestData() const {
     return (this->request_buffer_);
 }
 
 // stocke la réponse générée dans le buffer d'écriture du client
-void    Client::setResponseData_(const std::string &data)
+void    Client::setResponseData(const std::string &data)
 {
     this->response_buffer_ = data;
 }
 
+
+const std::string    &Client::getResponseData() const
+{
+    return (this->response_buffer_);
+}
+
 // récupère le prochain bloc de données à envoyer au client
-void    Client::eraseSentResponseData_(ssize_t bytes_sent) {
+void    Client::eraseSentResponseData(ssize_t bytes_sent) {
     this->response_buffer_.erase(0, bytes_sent);
 }
 
 // récupère le prochain bloc de données à envoyer au client
-void    Client::clearBuffers_() {
+void    Client::clearBuffers() {
     this->request_buffer_.clear();
     this->response_buffer_.clear();
     setState(READING_REQUEST);

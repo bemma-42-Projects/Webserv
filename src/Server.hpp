@@ -40,7 +40,7 @@ class   Server {
         bool	        isRequestComplete_(Client &client);
         std::string     buildHttpResponse_(Request &request);
         void            bufferizeResponse_(Client& client, const std::string& response);
-        void            processClientRequest_(int client_fd, const std::string& received_data);
+        void            processClientRequest_(int client_fd);
         void            handleClientRead_(int client_fd);
         std::string     getResponseToSend_(Request &request);
         bool            isResponseFullySent_(Client& client, ssize_t bytes_sent);
