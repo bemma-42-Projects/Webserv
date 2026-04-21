@@ -2,8 +2,12 @@
 #include <iostream>
 
 std::vector<Location> Config::location_;
-size_t Config::body_size_ = 400;
+size_t Config::body_size_ = 450;
+
+// Test Julien
 std::string	Config::root_ = "/home/julien/Webserv";
+
+// Test Romane
 //std::string Config::root_ = "/home/rmetge/cursus/github/webserv";
 
 Config::Config()
@@ -11,6 +15,7 @@ Config::Config()
 	/*
 	//"/downloads", "./data", "./data/tmp", "secret_list.html", true
 
+	// Test Romane
     // C'est ici que le push_back est autorisé
 	std::vector<std::string> methods;
     methods.push_back("GET");
@@ -24,6 +29,7 @@ Config::Config()
 	index2.push_back("test.html");
 	Location loc2("/upload", "./src", "./src/tmp", index2, false, method);
 	location_.push_back(loc2);
+	// Fin test Romane
 
 	//std::vector<std::string> methodsDef;
     //methodsDef.push_back("GET");
@@ -46,14 +52,15 @@ Config::~Config()
 //}
 
 //bool	Config::getAutoindex()
-//{
+//{r); // O
 //	return autoindex_;
 //}
+
 
 void Config::setBodySize(size_t value)
 {
 	(void)value;
-	body_size_ = 400;
+	body_size_ = 450;
 }
 
 size_t	Config::getBodySize()
@@ -82,6 +89,7 @@ std::string	Config::getRoot()
 //implemente des location, (test)
 void	Config::location()
 {
+	// Test Romane
 	/*
 	std::vector<std::string> methods;
     methods.push_back("GET");
@@ -91,10 +99,10 @@ void	Config::location()
 	Location loc1("/src", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methods);
     location_.push_back(loc1);
 	std::vector<std::string> method;
-    method.push_back("DELETE");
+    method.push_back("POST");
 	std::vector<std::string> index2;
 	index2.push_back("test.html");
-	Location loc2("/upload", "./src", "./src/tmp", index2, false, method);
+	Location loc2("/uploads", "/home/rmetge/cursus/github/webserv", "/uploads", index2, false, method);
 	location_.push_back(loc2);
 	std::vector<std::string> methode;
     methode.push_back("GET");
@@ -112,7 +120,9 @@ void	Config::location()
 	Location loc4("/obj", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methode2);
     location_.push_back(loc4);
 	*/
+	// Fin test Romane
 
+	
 	// on crée un vecteur pour lister les méthodes HTTP acceptées sur cette route
 	std::vector<std::string> cgi_methods;
 	// on autorise uniquement les requêtes GET (pour l'instant)

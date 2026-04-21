@@ -98,22 +98,28 @@ bool	Request::complete()
 	size_t	end = request_.find("\r\n\r\n");
 	if (end == std::string::npos)
 		return false;//requette non complet
+	// std::cout << "test" <<std::endl;
 	size_t it = request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
-	it += 16;
+	it += 15;
 	std::string	tmp = request_.substr(it, end);
 	size_t	len;
 	std::stringstream ss(tmp);
     ss >> len;
-	while (request_[end] == '\r' || request_[end] == '\n')
-		++end;
+	//while (request_[end] == '\r' || request_[end] == '\n')
+	//	++end;
+	end += 4;
+	//std::cout << "test" <<std::endl;
 
+	//std::cout << request_.substr(end) << std::endl;
+	std::cout << request_.size() - end << " < " << len << std::endl;
 	if (request_.size() - end < len)
 	{
 		//error_ = 413;
 		return false;
 	}
+	// std::cout << "test" <<std::endl;
 	return true;
 }
 
@@ -240,7 +246,7 @@ int	Request::checkOfLocation()
 	if (loc == NULL)
 		return 1;
 	location_ = *loc;
-	std::cout << location_.getPath() << std::endl;
+	// std::cout << location_.getPath() << std::endl;
 	std::vector<std::string> allowedMethods = location_.getAllowedMethods();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
 			== allowedMethods.end())
@@ -369,3 +375,48 @@ std::string	Request::getClientIP() const
 //{
 //	error_ = error;
 //}
+
+int main()
+{
+	//try{
+		Config::location();
+
+		const char *buffer = 
+		"POST /uploads HTTP/1.1\r\n"
+		"Host: localhost:8080\r\n"
+		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
+		"Content-Length: 162\r\n"
+		"\r\n"
+		"--boundary123\r\n"
+		"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
+		"Content-Type: text/plain\r\n"
+		"\r\n"
+		"Ceci est le contenu de mon fichier !\r\n"
+		"--boundary123--";
+	
+		Request file((char *)buffer);
+		int res = file.parsingHttp();
+		if (res == 0)
+		{
+			std::cout << "error " << file.getError() << std::endl;
+			return 0;
+		}
+		else if (res == 2)
+		{
+			std::cout << "requette non complete" << std::endl;
+			return 0;
+		}
+		// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
+		// std::cout << file << std::endl;
+		RequestAnswer answer(file);
+		// std::cout << "test " << std::endl;
+		if (answer.setAnswer() == 1)
+			std::cout << "anser =" << answer.getAnswer() << std::endl;
+		
+	//}
+	//catch(std::exception &e)
+	//{
+	//	std::cerr << "error : " << e.what() << std::endl;
+	//	//Error::setError(e.what());
+	//}
+}
