@@ -395,6 +395,7 @@ int RequestAnswer::fileName()
     return 0;
 }
 
+/*
 int RequestAnswer::methodPost()
 {
     if (fileName() == 1) 
