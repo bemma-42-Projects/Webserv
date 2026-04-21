@@ -330,14 +330,11 @@ int	Request::checkOfLocation()
 
 int	Request::parsingHttp(const std::string &raw_data)
 {
-	std::cout << "1" << std::endl;
 	this->request_ = raw_data;
 
-	std::cout << "2" << std::endl;
 	if (complete() == false)
 		return 2; //continuer la lecture
 
-	std::cout << "3" << std::endl;
 	int res = initFistLine();
 	if (res == 1)
 	{
@@ -349,20 +346,17 @@ int	Request::parsingHttp(const std::string &raw_data)
 		error_ = 501;
 		return 0;
 	}
-	std::cout << "4" << std::endl;
 	if (initHeader() == 1)
 	{
 		error_ = 402;
 		return 0 ;
 	}
-	std::cout << "5" << std::endl;
 	int	body =  initBody();
 	if (body == 1)
 	{
 		error_ = 413;
 		return 0;
 	}
-	std::cout << "6" << std::endl;
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
@@ -374,7 +368,6 @@ int	Request::parsingHttp(const std::string &raw_data)
 		error_ = 405;
 		return 0;
 	}
-	std::cout << "7" << std::endl;
 	std::string	root = location_.getRoot();
 	if (!url_path_.empty() && url_path_[0] == '/')
 		path_ = root + url_path_;

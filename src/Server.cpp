@@ -243,14 +243,6 @@ void	Server::setSocketToWriteState_(int client_fd) {
     std::cout << "Socket " << client_fd << " switched to EPOLLOUT. Waiting for network to be ready to send..." << std::endl;
 }
 
-/*
-// vérifie si la requête http du client est complètement reçue
-bool	Server::isRequestComplete_(Client &client) {
-    (void)client;
-    return true;
-}
-*/
-
 // génère la réponse HTTP
 std::string	Server::buildHttpResponse_(Request &request) {
 
@@ -261,25 +253,19 @@ std::string	Server::buildHttpResponse_(Request &request) {
 	return (answer.getAnswer());
 }
 
-/*
-// stocke la réponse générée dans le buffer d'écriture du client
-void    Server::bufferizeResponse_(Client& client, const std::string& response) {
-    (void)client;
-    (void)response;
-}
-*/
-
 // traite les données brutes reçues d'un client
 void	Server::processClientRequest_(int client_fd) {
-    std::cout << "1" << std::endl;
 	Client	&client = clients_[client_fd];
-std::cout << "2" << std::endl;
     const std::string &current_data = client.getRequestData();
 
-    std::cout << "3" << std::endl;
+    if (current_data.find("\r\n\r\n") == std::string::npos)
+    {
+        return ;
+    }
+    
+    std::cout << current_data << std::endl;
     int result = clients_[client_fd].getRequest().parsingHttp(current_data);
 
-    std::cout << "4" << std::endl;
     if (result == 0)
         std::cout << "Error : " << client.getRequest().getError() << std::endl;
     else if (result == 1)
@@ -304,14 +290,11 @@ void	Server::handleClientRead_(int client_fd) {
     while (true)
     {
         memset(buffer, 0, sizeof(buffer));
-        std::cout << "AVANT RECV" << std::endl;
 	    bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
         
         if (bytes_received > 0)
         {
-            std::cout << "AVANT STRING CREATE" << std::endl;
             std::string chunk(buffer, bytes_received);
-            std::cout << "APRES STRING CREATE" << std::endl;
             clients_[client_fd].appendRequestData(chunk);
             data_read = true;
         }
@@ -337,20 +320,17 @@ void	Server::handleClientRead_(int client_fd) {
     if (data_read)
     {
         clients_[client_fd].updateLastActivity();
-        //std::string received_data(buffer, bytes_received);
 	    processClientRequest_(client_fd);
     }
 }
 
 // récupère le prochain bloc de données à envoyer au client
 std::string	Server::getResponseToSend_(Request& request) {
-    //(void)client;
     RequestAnswer   answer(request);
 
     if (answer.setAnswer() == 1)
 		std::cout << "answer =" << answer.getAnswer() << std::endl;
 	return (answer.getAnswer());
-    //return "Good talking to you!\n";
 }
 
 // vérifie si la réponse entière a été transmise
