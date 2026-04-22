@@ -125,6 +125,12 @@ bool parseIp(std::string ip) {
 	return (true);
 }
 
+// bool validateIP(std::string str) {
+// 	if (str == "localhost")
+// 		return (true);
+// 	std::string
+// }
+
 bool validateListen(std::vector<std::string> args) {
 
 	for (size_t i = 0, nb_pv = 0; i < args.size() ; i++ )
@@ -237,29 +243,125 @@ bool validateErrorPage(std::vector<std::string> args) {
 	return (true);
 }
 
+bool validateReturn(std::vector<std::string> args) {
+	if (args.size() != 1 && args.size() != 2)
+		return (false);
+	if (args[0] != "200" && args[1] != "201" && args[1] != "204" && args[1] != "301" 
+		&& args[1] != "302" && isErrorCode(args[1]) == false)
+		return (false);
+	return (true);
+	
+}
+
+bool validateIndex(std::vector<std::string> args) {
+	for (size_t i = 0; i < args.size(); i++) {
+		if (args[i][0] == '/' && (i + 1) != args.size())
+			return (false);
+	}
+	return (true);
+}
+
+bool validateAutoIndex(std::vector<std::string> args) {
+	if (args.size() != 1)
+		return (false);
+	if (args[0] != "on" && args[0] != "off")
+		return (false);
+	return (true);
+}
+
+bool validateAllowedMethods(std::vector<std::string> args) {
+	if (args.size() < 1 || args.size() > 3)
+		return (false);
+	for (size_t i = 0; i < args.size(); i++) {
+		if (args[i] != "GET" && args[i] != "POST" && args[i] != "DELETE")
+			return (false);
+	}
+	return (true);
+}
+
+bool validateAllowedUpload(std::vector<std::string> args) {
+	if (args.size() != 1)
+		return (false);
+	if (args[0] != "on" && args[0] != "off")
+		return (false);
+	return (true);
+}
+
+bool validateUploadPath(std::vector<std::string> args) {
+	if (args.size() != 1)
+		return (false);
+	if (args[0].empty())
+		return (false);
+	if (access(args[0].c_str(), F_OK) == -1)
+	{
+		// std::cout << "le dossier n'existe pas" << std::endl;
+		return (false);
+	}
+	if (access(args[0].c_str(), W_OK) == -1)
+	{
+		// std::cout << "je n'arrive pas a lire " << std::endl;
+		return (false);
+	}
+	struct stat sb;
+	if (stat(args[0].c_str(), &sb) == -1)
+	{
+		// std::cout << "stat pas bon" << std::endl;
+		return (false);
+	}
+	if (!S_ISDIR(sb.st_mode))
+	{
+		// std::cout << "C'est pas un dossier" << std::endl;
+		return (false);
+	}
+	return (true);
+}
+
 bool validateSpecificDirective(std::string name, std::vector<std::string> args) {
 	if (name == "listen")
 	{
 		// std::cout << "LISTEN:" << std::endl;
 		return (validateListen(args));
 	}
+
 	else if (name == "root")
 	{
 		// std::cout << "ROOT:" << std::endl;
 		return (validateRoot(args));
 	}
+
 	else if (name == "server_name") {
 		// std::cout << "SERVER_NAME:" << std::endl;
 		return (true);
 	}
+
 	else if (name == "client_max_body_size") {
 		// std::cout << "CLIENT_MAX_BODY_SIZE:" << std::endl;
 		return (validateClientMaxBodySize(args));
 	}
+
 	else if (name == "error_page") {
-		std::cout << "ERROR_PAGE:" << std::endl;
+		// std::cout << "ERROR_PAGE:" << std::endl;
 		return (validateErrorPage(args));
 	}
+
+	else if (name == "index")
+		return (validateIndex(args));
+
+	else if (name == "return")
+		return (validateReturn(args));
+
+	else if (name == "autoindex")
+		return (validateAutoIndex(args));
+
+	else if (name == "allowed_methods")
+		return (validateAllowedMethods(args));
+	
+	else if (name == "allowed_upload")
+		return (validateAllowedUpload(args));
+	
+	else if (name == "upload_path")
+		return (validateUploadPath(args));
+	
 	return (false);
 	
 }
@@ -296,7 +398,7 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 // fonction qui valide la structure du fichier de config (pour l'instant elle check si le 
 // nb d'accolade est bon, si les blocs sont bien fait qu'il n'y a pas de location dans location
 // etc, je ne check pas pour l'instant les directives et les ;)
-bool validateStructure(std::vector<std::string> tokens) {
+bool validateStructure(std::vector<std::string> tokens, std::vector<ServerConfig> &all_servers) {
 
 	State state = OUTSIDE;
 	std::stack<std::string> context;
@@ -309,7 +411,7 @@ bool validateStructure(std::vector<std::string> tokens) {
 				return (false);
 			else if (i + 1 >= tokens.size() || tokens[i + 1] != "{")
 				return (false);
-			context.push("server");
+
 			state = IN_SERVER;
 			i++;
 		}
@@ -364,7 +466,7 @@ int main(int argc, char **argv) {
 	// for (size_t len = 0; len < res.size(); len++) {
 	// 	std::cout << "|" << res[len] << "|" << std::endl; 
 	// }
-	if (validateStructure(res) == false)
+	if (validateStructure(res, all_configs) == false)
 		std::cout << "Erreur bad configuration" << std::endl;
 	else 
 		std::cout << "Everything's good!" << std::endl; 

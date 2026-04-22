@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <ostream>
 #include <map>
 #include <utility>
 
@@ -29,6 +30,8 @@ public:
 	const std::vector<LocationConfig>&		getLocations() const;
 	bool									getAutoindex() const;
 
+	void									setRoot(const std::string& str);
+
 private:
 	std::vector<Listen>				listen_;
 	std::vector<std::string>		server_name_;
@@ -41,4 +44,6 @@ private:
 	bool							autoindex_;
 
 };
+
+std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv);
 
