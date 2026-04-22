@@ -165,29 +165,26 @@ std::string	Request::getClientIP() const
 //!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
 bool	Request::complete()
 {
-	size_t	end_headers = request_.find("\r\n\r\n");
-	if (end_headers == std::string::npos)
+	size_t	end = request_.find("\r\n\r\n");
+	if (end == std::string::npos)
 		return false;//requette non complet
 	// std::cout << "test" <<std::endl;
 	size_t it = request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
 	it += 15;
-	size_t	end_line = request_.find("\r\n", it);
-	std::string	tmp = request_.substr(it, end_line - it);
+	std::string	tmp = request_.substr(it, end);
 	size_t	len;
 	std::stringstream ss(tmp);
     ss >> len;
 	//while (request_[end] == '\r' || request_[end] == '\n')
 	//	++end;
-	//end += 4;
+	end += 4;
 	//std::cout << "test" <<std::endl;
 
 	//std::cout << request_.substr(end) << std::endl;
-
-	size_t	body_start = end_headers + 4;
-	//std::cout << request_.size() - end << " < " << len << std::endl;
-	if (request_.size() - body_start < len)
+	std::cout << request_.size() - end << " < " << len << std::endl;
+	if (request_.size() - end < len)
 	{
 		//error_ = 413;
 		return false;
@@ -293,22 +290,23 @@ int	Request::initBody()
 	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
 	if (it == headers_.end())
 	{
-		body_ = "";
+		body_ = "\0";
 		return 0;
 	}
+	std::string value = it->second;
+	size_t begin = request_.find("\r\n\r\n");
+	if (begin == std::string::npos)
+		return 1;
 	size_t				len;
-	std::stringstream	ss(it->second);
+	std::stringstream	ss(value);
 	ss >> len;
 
 	if (len > Config::getBodySize())
 		return 1;
-
-	size_t begin = request_.find("\r\n\r\n");
-	if (begin == std::string::npos)
-		return 1;
-
-	begin += 4;
-
+	while (request_[begin] == '\r' || request_[begin] == '\n')
+		++begin;
+	if (request_.size() - begin != len)
+		return (1);
 	body_ = request_.substr(begin, len);
 	return 0;
 }
@@ -327,7 +325,8 @@ int	Request::checkOfLocation()
 	return 0;
 }
 
-
+// on parse tout ce qu'on a accumule jusqu'a present
+// pas le dernier morceau de requete
 int	Request::parsingHttp(const std::string &raw_data)
 {
 	this->request_ = raw_data;

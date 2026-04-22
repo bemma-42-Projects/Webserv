@@ -98,27 +98,31 @@ const std::string    &Client::getRequestData() const {
     return (this->request_buffer_);
 }
 
+/*
 // stocke la réponse générée dans le buffer d'écriture du client
 void    Client::setResponseData(const std::string &data)
 {
     this->response_buffer_ = data;
 }
+*/
 
-
+/*
 const std::string    &Client::getResponseData() const
 {
     return (this->response_buffer_);
 }
+*/
 
-// récupère le prochain bloc de données à envoyer au client
+/*
 void    Client::eraseSentResponseData(ssize_t bytes_sent) {
     this->response_buffer_.erase(0, bytes_sent);
 }
+*/
 
-// récupère le prochain bloc de données à envoyer au client
+/*
 void    Client::clearBuffers() {
     this->request_buffer_.clear();
     this->response_buffer_.clear();
     setState(READING_REQUEST);
 }
-
+*/

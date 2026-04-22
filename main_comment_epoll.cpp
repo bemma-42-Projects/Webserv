@@ -46,7 +46,7 @@ void set_nonblocking(int fd) {
         std::cerr << "Error: fcntl(F_SETFL) failed." << std::endl;
 	}
 }
-/*
+
 int main(void)
 {
     struct addrinfo         hints;                          
@@ -589,4 +589,3 @@ int main(void)
     }
     return (0);
 }
-*/

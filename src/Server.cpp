@@ -262,7 +262,7 @@ void	Server::processClientRequest_(int client_fd) {
     {
         return ;
     }
-    
+
     std::cout << current_data << std::endl;
     int result = clients_[client_fd].getRequest().parsingHttp(current_data);
 
