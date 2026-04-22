@@ -247,9 +247,6 @@ void	Server::setSocketToWriteState_(int client_fd) {
 std::string	Server::buildHttpResponse_(Request &request) {
 
     RequestAnswer   answer(request);
-
-    if (answer.setAnswer() == 1)
-		std::cout << "answer =" << answer.getAnswer() << std::endl;
 	return (answer.getAnswer());
 }
 
@@ -263,7 +260,7 @@ void	Server::processClientRequest_(int client_fd) {
         return ;
     }
 
-    std::cout << current_data << std::endl;
+    //std::cout << current_data << std::endl;
     int result = clients_[client_fd].getRequest().parsingHttp(current_data);
 
     if (result == 0)
@@ -329,7 +326,8 @@ std::string	Server::getResponseToSend_(Request& request) {
     RequestAnswer   answer(request);
 
     if (answer.setAnswer() == 1)
-		std::cout << "answer =" << answer.getAnswer() << std::endl;
+		std::cout << "answer :" << std::endl;
+    std::cout << answer.getAnswer() << std::endl;
 	return (answer.getAnswer());
 }
 

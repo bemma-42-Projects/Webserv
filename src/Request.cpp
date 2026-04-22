@@ -371,8 +371,17 @@ int	Request::parsingHttp(const std::string &raw_data)
 	if (!url_path_.empty() && url_path_[0] == '/')
 		path_ = root + url_path_;
 	else
-		path_ = root + "/" + url_path_; 
+		path_ = root + "/" + url_path_;
+	if (path_[path_.length() - 1] == '/')
+	{
+		std::vector<std::string> indexes = location_.getIndex();
+		if (!indexes.empty())
+			path_ += indexes[0];
+	}
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
+	std::cout << root << std::endl;
+	std::cout << url_path_ << std::endl;
+	std::cout << path_ << std::endl;
 	return 1;
 }
 

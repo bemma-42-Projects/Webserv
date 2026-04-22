@@ -14,6 +14,8 @@ void    handle_sigint(int sig) {
 }
 
 int main() {
+	Config::location();
+
     Server  webServer;
     std::signal(SIGINT, handle_sigint);
     std::signal(SIGQUIT, handle_sigint);
