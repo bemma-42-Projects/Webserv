@@ -104,7 +104,7 @@ bool directiveIsAllowed(std::string name, State state) {
 	return (false);
 }
 
-bool parsePort(std::string port_str) {
+bool validatePort(std::string port_str) {
 	if (port_str.empty())
 		return (false);
 
@@ -119,47 +119,69 @@ bool parsePort(std::string port_str) {
 	return (false);
 }
 
-bool parseIp(std::string ip) {
-	if (ip.empty())
+
+bool validateIP(std::string str) {
+	if (str == "localhost")
+		return (true);
+
+	size_t i = 0;
+	int count = 0;
+
+	while (i < str.size()) {
+		size_t start = i;
+		while (i < str.size() && isdigit(str[i]))
+			i++;
+		if (start == i)
+			return (false);
+		std::string number(str, start, i - start);
+		if (number.size() > 3)
+			return (false);
+		int val = atoi(number.c_str());
+		if (val < 0 || val > 255)
+			return (false);
+		
+		if (i < str.size()) {
+			if (str[i] != '.') 
+				return (false);
+			count++;
+			i++;
+			if (i == str.size())
+				return (false);
+		}
+		
+	}
+	if (count != 3)
 		return (false);
 	return (true);
 }
 
-// bool validateIP(std::string str) {
-// 	if (str == "localhost")
-// 		return (true);
-// 	std::string
-// }
+bool validateOneArg(std::string str) {
+	if (str.empty())	
+		return (false);
+	size_t pos = str.find(':');
+	if (pos == str.npos) {
+
+		if (str.find('.') == std::string::npos)
+			return (validatePort(str));
+		return (validateIP(str));
+	}
+
+	std::string ip_str = str.substr(0, pos);
+	if (validateIP(ip_str) == false)
+		return (false);
+	if (str[pos] == ':')
+		pos++;
+	std::string port_str = str.substr(pos, str.size() - pos);
+	if (validatePort(port_str) == false)
+		return (false);
+	return (true);
+}
 
 bool validateListen(std::vector<std::string> args) {
 
-	for (size_t i = 0, nb_pv = 0; i < args.size() ; i++ )
-	{
-		nb_pv = 0;
-		for (size_t y = 0; y < args[i].size() ;y++)
-		{
-			size_t pos_colon = args[i].find(':'); //colon = : en anglais
-
-			if (pos_colon == std::string::npos)
-			{
-				if (parsePort(args[i]) == 0)
-					return (false);
-				if (parseIp(args[i]) == 0)
-					return (false);
-			}
-			if (isdigit(args[i][y]) == 0 && args[i][y] != ':' && args[i][y] != '.')
-			{
-				std::cout << "je ne suis pas un digit n'y un :" << std::endl;
-				return (false);
-
-			}
-			else if (args[i][y] == ':')
-			{
-				if (nb_pv == 1)
-					return (false);
-				nb_pv++;
-			}
-		}
+	for (size_t i = 0; i < args.size() ; i++ ) {
+		if (validateOneArg(args[i]) == false)
+			return (false);
 	}
 	return (true);
 }
