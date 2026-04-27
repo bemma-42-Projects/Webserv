@@ -18,6 +18,7 @@ class Request {
 		std::map<std::string, std::string>	getHeaders() const;
 		std::string 						getBody() const;
 		int									getError() const;
+		std::string 						getErrorMessage() const;
 		Location							getLocation() const;
 		//int									requestHttp();							
 		int									parsingHttp();
@@ -40,6 +41,7 @@ class Request {
 		std::map<std::string, std::string>	headers_;
 		std::string							body_;
 		int									error_;
+		std::string							message_error_;
 		Location							location_;
 };
 

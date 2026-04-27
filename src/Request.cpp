@@ -85,6 +85,12 @@ int	Request::getError() const
 	return error_;
 }
 
+std::string Request::getErrorMessage() const
+{
+	return message_error_;
+}
+
+
 Location	Request::getLocation() const
 {
 	return location_;
@@ -208,7 +214,7 @@ int	Request::initBody()
 	std::stringstream ss(value);
     ss >> len;
 	if (len > Config::getBodySize())
-		return 1;
+		return 2;
 	while (request_[begin] == '\r' || request_[begin] == '\n')
 		++begin;
 	if (request_.size() - begin != len)
@@ -239,34 +245,46 @@ int	Request::parsingHttp()
 	int res = initFistLine();
 	if (res == 1)
 	{
-		error_ = 401;
+		error_ = 400;
+		message_error_ = "Bad Request";
 		return 0;
 	}
 	else if (res == 2)
 	{
 		error_ = 501;
+		message_error_ = "Not Implemented";
 		return 0;
 	}
 	if (initHeader() == 1)
 	{
-		error_ = 402;
+		error_ = 400;
+		message_error_ = "Bad Request";
 		return 0 ;
 	}
 	int	body =  initBody();
 	if (body == 1)
 	{
+		error_ = 400;
+        message_error_ = "Bad Request";
+		return 0;
+	}
+	else if (body == 2)
+	{
 		error_ = 413;
+		message_error_ = "Payload Too Large";
 		return 0;
 	}
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
 		error_ = 404;
+		message_error_ = "Not Found";
 		return 0;
 	}
 	else if (checkLoc == 2)
 	{
 		error_ = 405;
+		message_error_ = "Method Not Allowed";
 		return 0;
 	}
 	path_ = location_.getRoot() + url_path_;//attention si / a la fin
@@ -285,7 +303,7 @@ int main()
 		Config::location();
 
 		const char *buffer = 
-		"POST /uploads HTTP/1.1\r\n"
+		"POST /upload HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
 		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
 		"Content-Length: 162\r\n"
@@ -302,6 +320,7 @@ int main()
 		if (res == 0)
 		{
 			std::cout << "error " << file.getError() << std::endl;
+			std::cout << Error::AnswerError(file.getError(), file.getErrorMessage());
 			return 0;
 		}
 		else if (res == 2)

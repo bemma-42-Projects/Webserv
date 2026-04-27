@@ -7,13 +7,14 @@
 #include <dirent.h>
 #include <sstream>
 #include <fstream>
+#include "Error.hpp"
 
 //initialise les variable
 RequestAnswer::RequestAnswer(Request request)
 {
 	request_ = request;
 	answer_ = "";
-	error_ = 0;
+	//error_ = 0;
 }
 
 RequestAnswer::~RequestAnswer()
@@ -26,12 +27,12 @@ std::string	RequestAnswer::getAnswer()
 }
 
 //return l'error
-int	RequestAnswer::getError()
-{
-	return error_;
-}
+//int	RequestAnswer::getError()
+//{
+//	return error_;
+//}
 
-std::string itoa(int nbr)
+std::string RequestAnswer::Itoa(int nbr)
 {
 	std::stringstream ss;
     
@@ -118,8 +119,9 @@ int	RequestAnswer::getIfDir()
 	if (!dir)
 	{
 		std::cout << "error 404" << std::endl;
-		error_ = 404;
+		//error_ = 404;
 		code_ = 404;
+		message_ = "Not Found";
 		return 1;// Erreur 403 ou 404
 	} 
 	std::string	res;
@@ -145,7 +147,7 @@ int	RequestAnswer::getIfDir()
 		else
 		{
 			std::cout << "error 400" << std::endl;
-			error_ = 400;
+			//error_ = 400;
 			code_ = 400;
 			return 1;
 		} 
@@ -201,8 +203,9 @@ int	RequestAnswer::methodGet()
 	if (stat(request_.getPath().c_str(), &info) != 0)
 	{
 		std::cerr << "error  404" << std::endl;
-		error_ = 404;
+		//error_ = 404;
 		code_ = 404;
+		message_ = "Not Found";
 		return 1;
 	}
 	std::string res;
@@ -226,8 +229,9 @@ int	RequestAnswer::methodGet()
 			return (getIfDir());
 		else
 		{
-			error_ = 403;
+			//error_ = 403;
 			code_ = 403;
+			message_ = "Forbidden";
 		}
 	}
 	return 1;
@@ -315,8 +319,9 @@ int RequestAnswer::methodPost()
 {
     if (fileName() == 1) 
     {
-        error_ = 400;
+        //error_ = 400;
         code_ = 400;
+		message_ = "Bad Request";
         return 1;
     }
 
@@ -327,8 +332,9 @@ int RequestAnswer::methodPost()
 
     if (!outfile.is_open()) {
         std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
-        error_ = 500;
+        //error_ = 500;
 		code_ = 500;
+		message_ = "Internal Server Error";
         return 1;
     }
 
@@ -364,7 +370,7 @@ int RequestAnswer::methodPost()
 //int	RequestAnswer::setAnswer()
 void	RequestAnswer::fullAnswer()
 {
-	std::string header = request_.getVersion() + ' ' + itoa(code_);
+	std::string header = request_.getVersion() + ' ' + Itoa(code_);
 	if (code_ == 200)
 		header += " OK\r\n";
 	else if (code_ == 201)
@@ -377,7 +383,7 @@ void	RequestAnswer::fullAnswer()
 		content_type_ = "text/html";
 	}
 	header += "Content-Type: " + content_type_ + "\r\n";
-	header += "Content-Length: " + itoa(body_.length()) + "\r\n";
+	header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
 	header += "\r\n";
 
 	//std::cout << "header = " << header << std::endl;
@@ -403,8 +409,9 @@ int	RequestAnswer::setAnswer()
 		if (unlink(request_.getPath().c_str()) != 0)
 		{
 			std::cout << "error 404 error supression"  << std::endl;
-			error_ = 404;
+			//error_ = 404;
 			code_ = 404;
+			message_ = "Not Found";
 			//return (0);//error
 		}
 		//else 
@@ -435,7 +442,9 @@ int	RequestAnswer::setAnswer()
 		//}
 	}
 ////mettre le reponse dans une answer_
-	fullAnswer();
+	if (code_ < 400)
+		fullAnswer();
+	answer_ = Error::AnswerError(code_, message_);
 	//std::cout << body_ << std::endl;
 	return 1;
 }

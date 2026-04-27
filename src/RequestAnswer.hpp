@@ -18,14 +18,17 @@ class RequestAnswer
 		std::string findIndex(Location loc);
 		std::string findContentType(const std::string& path);
 		int			fileName();
+		std::string Itoa(int nbr);
 
 
 	private:
 		int			code_;//code de sorti ou error
+		std::string message_;
 		std::string	content_type_;//type de retour (image txt...)
 		std::string	body_;
-		int			error_;
+		//int			error_;
 		Request		request_;
 		std::string	answer_;//ne pas oublier la ligne vide
 		std::string	post_file_name_;
+
 };
