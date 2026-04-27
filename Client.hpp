@@ -17,8 +17,8 @@ class Client {
         };
         Client();
         Client(int socket_fd, struct sockaddr_storage addr);
-        Client(const Client &copy);
-        Client &operator=(const Client &src);
+        Client(const Client &src);
+        Client  &operator=(const Client &rhs);
         ~Client();
 
         int             getSocketFd() const;
