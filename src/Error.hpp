@@ -6,8 +6,14 @@ class Error
 	public:
 		Error();
 		~Error();
-		static void	setError(int error);
+		void	setError(int code, std::string message);
+		void	ErrorPage();
+		void	AnswerError();
+
 
 	private:
-		static int error_;
+		int			code_;
+		std::string	message_;
+		std::string error_page_;
+		std::string	answer_error;
 };

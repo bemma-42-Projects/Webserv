@@ -234,72 +234,6 @@ int	RequestAnswer::methodGet()
 }
 
 //recupere le path du file name pour upload les fichier
-// //int	RequestAnswer::methodPost()
-/*int	RequestAnswer::fileName()
-{
-	Location	loc = request_.getLocation();
-	std::string root = loc.getRoot() + loc.getPath();
-	struct stat s;
-	if (stat(root.c_str(), &s) == 0 && S_ISDIR(s.st_mode))
-	{
-		std::cout << "deb" << std::endl;
-		struct stat p;
-		stat(request_.getPath().c_str(), &p);
-		if (p.st_mode & S_IFREG)
-		{
-			post_file_name_ =  request_.getPath();
-			std::cout << post_file_name_ << std::endl;
-			return 0;
-		}
-		bool	quote = false;
-		std::string body = request_.getBody();
-		size_t	id = body.find("Content-Disposition:");
-		if (id == std::string::npos)
-			return 1;
-		size_t start = body.find("filename=", id);
-		if (start == std::string::npos)
-			return 1;
-		start += 9;
-		while (body[start] == ' ')
-			++start;
-		if (body[start] == '\"')
-		{
-			++start;
-			quote = true;
-		}
-		size_t end = body.find("\r\n", start);
-		if (end == std::string::npos)
-			return 1;
-		while (quote == true)
-		{
-			if (body[end - 1] == '\"')
-				quote = false;
-			--end;
-		}
-
-		size_t	s = body.find_last_of('/', end);
-		if (s != std::string::npos)
-			start = s + 1;
-		std::string file_name = body.substr(start, end - start);
-		std::cout << "file name = " << file_name << std::endl;
-		// struct stat f;
-		std::string test = root + '/' + file_name;
-		std::cout << "test = " << test << std::endl;
-
-		struct stat b;
-		stat(test.c_str(), &b);
-		if (b.st_mode & S_IFREG)
-		{
-			post_file_name_ =  test;
-			std::cout << " file name = " << post_file_name_ << std::endl;
-			return 0;
-		}
-	}
-	std::cout << "error" << std::endl;
-	return 1;
-}*/
-
-
 int RequestAnswer::fileName()
 {
     Location    loc = request_.getLocation();
@@ -324,10 +258,8 @@ int RequestAnswer::fileName()
     if (is_directory) {
         std::string body = request_.getBody();
         size_t id = body.find("Content-Disposition:");
-        if (id == std::string::npos) return 1;
-
-
-
+        if (id == std::string::npos)
+			return 1;
 		size_t start = body.find("filename=", id);
 		if (start == std::string::npos)
 			return 1;
@@ -361,21 +293,21 @@ int RequestAnswer::fileName()
         post_file_name_ += file_name;
     } 
     // ÉTAPE 3 : Si ce n'est pas un dossier, le nom est déjà dans l'URL
-    else {
+    else
         post_file_name_ = url_path;
-    }
 
     // ÉTAPE 4 : Vérification finale - Est-ce que le dossier parent existe ?
     size_t last_slash = post_file_name_.find_last_of('/');
-    if (last_slash != std::string::npos) {
+    if (last_slash != std::string::npos) 
+	{
         std::string dir_to_check = post_file_name_.substr(0, last_slash);
-        if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) {
-            std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
+        if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) 
+		{
+            //std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
             return 1;
         }
     }
-
-    std::cout << "Fichier final retenu : " << post_file_name_ << std::endl;
+    //std::cout << "Fichier final retenu : " << post_file_name_ << std::endl;
     return 0;
 }
 
@@ -404,24 +336,24 @@ int RequestAnswer::methodPost()
     size_t startPos = body.find("\r\n\r\n");
 
     // Correction de la condition : on veut entrer ici si on A TROUVÉ \r\n\r\n
-    if (startPos != std::string::npos) {
+    if (startPos != std::string::npos) 
+	{
         startPos += 4; // On saute les deux \r\n\r\n
         
         size_t endPos = body.find("\r\n--", startPos); 
         size_t fileSize;
 
-        if (endPos == std::string::npos) {
+        if (endPos == std::string::npos)
             fileSize = body.size() - startPos;
-        } else {
+        else 
             fileSize = endPos - startPos;
-        }
 
         outfile.write(&body[startPos], fileSize);
     } 
-    else {
+    else
         // Cas où ce n'est pas du multipart (données brutes)
         outfile.write(body.c_str(), body.size());
-    }
+
     
     outfile.close();
     code_ = 201; 
@@ -446,7 +378,7 @@ void	RequestAnswer::fullAnswer()
 	}
 	header += "Content-Type: " + content_type_ + "\r\n";
 	header += "Content-Length: " + itoa(body_.length()) + "\r\n";
-	header += "\r\n\r\n";
+	header += "\r\n";
 
 	//std::cout << "header = " << header << std::endl;
 
