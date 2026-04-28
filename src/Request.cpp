@@ -328,7 +328,7 @@ int	Request::checkOfLocation()
 
 // on parse tout ce qu'on a accumule jusqu'a present
 // pas le dernier morceau de requete
-int	Request::parsingHttp(const std::string &raw_data)
+ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
 	this->request_ = raw_data;
 
@@ -446,7 +446,7 @@ void	Request::clear()
 	this->version_.clear();
 	this->headers_.clear();
 	this->body_.clear();
-	this->error_.clear();
+	this->error_ = 0;
 	this->location_ = Location();
 	this->raw_uri_.clear();
 	this->query_string_.clear();

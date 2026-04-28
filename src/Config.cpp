@@ -5,31 +5,31 @@ std::vector<Location> Config::location_;
 size_t Config::body_size_ = 450;
 
 // Test Julien
-//std::string	Config::root_ = "/home/julien/Webserv";
+//std::string	Config::root_ = "/home/julien/Webserv/src/www";
 std::string	Config::root_ = "/home/juduchar/Common/Webserv";
 
 // Test Romane
-//std::string Config::root_ = "/home/rmetge/cursus/github/webserv";
+//std::string Config::root_ = "/home/rmetge/cursus/github/webserv/src/www";
 
 Config::Config()
 {
+	// 1. Configuration des méthodes autorisées
 	std::vector<std::string> methods;
 	methods.push_back("GET");
 
-	std::vector<std::string> index;
-	index.push_back("index.html");
+	// 2. Configuration des fichiers par défaut (index)
+	std::vector<std::string> indexFiles;
+	indexFiles.push_back("index.html");
+	indexFiles.push_back("index.php");
 
-	std::vector<std::string>cgiIndex;
-	cgiIndex.push_back("index.php");
-
-	Location cgiLoc("/cgi-bin", "./src/www", "/usr/bin/php-cgi", index, false, methods);
-	
+	// --- LOCATION CGI ---
+	Location cgiLoc("/cgi-bin", "./src/www", "/usr/bin/php-cgi", indexFiles, false, methods);
 	cgiLoc.addCgiHandler(".php", "/usr/bin/php-cgi");
 
-	location_.pushback(cgiLoc);
+	location_.push_back(cgiLoc);
 
-	Location rootLoc("/", "./src/www", "", index, false, methods);
-
+	// --- LOCATION ROOT ---
+	Location rootLoc("/", "./src/www", "", indexFiles, false, methods);
 	location_.push_back(rootLoc);
 
 	//"/downloads", "./data", "./data/tmp", "secret_list.html", true
@@ -91,8 +91,7 @@ size_t	Config::getBodySize()
 void Config::setRoot(size_t value)
 {
 	(void)value;
-	//root_ = "/home/rmetge/cursus/github/webserv";
-	root_ = "/home/juduchar/Common/Webserv";
+	root_ = "/home/rmetge/cursus/github/webserv";
 }
 
 std::string	Config::getRoot()
@@ -110,25 +109,27 @@ std::string	Config::getRoot()
 //implemente des location, (test)
 void	Config::location()
 {
+	// 1. Configuration des méthodes autorisées
 	std::vector<std::string> methods;
 	methods.push_back("GET");
 
-	std::vector<std::string> index;
-	index.push_back("index.html");
+	// 2. Configuration des fichiers par défaut (index)
+	std::vector<std::string> indexFiles;
+	indexFiles.push_back("index.html");
+	indexFiles.push_back("index.php");
 
-	std::vector<std::string>cgiIndex;
-	cgiIndex.push_back("index.php");
-
-	Location cgiLoc("/cgi-bin", "./src/www", "/usr/bin/php-cgi", index, false, methods);
-	
+	// --- LOCATION CGI ---
+	// Note : Vérifie que ton constructeur de Location accepte bien ces paramètres
+	Location cgiLoc("/cgi-bin", "./src/www", "/usr/bin/php-cgi", indexFiles, false, methods);
 	cgiLoc.addCgiHandler(".php", "/usr/bin/php-cgi");
+	// Si tu veux aussi du Python :
+	// cgiLoc.addCgiHandler(".py", "/usr/bin/python3"); 
 
-	location_.pushback(cgiLoc);
+	location_.push_back(cgiLoc);
 
-	Location rootLoc("/", "./src/www", "", index, false, methods);
-
+	// --- LOCATION ROOT ---
+	Location rootLoc("/", "./src/www", "", indexFiles, false, methods);
 	location_.push_back(rootLoc);
-
 	/*
 	std::vector<std::string> methods;
     methods.push_back("GET");

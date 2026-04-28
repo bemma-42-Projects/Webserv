@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 10:15:03 by julien            #+#    #+#             */
-/*   Updated: 2026/04/20 15:43:50 by julien           ###   ########.fr       */
+/*   Updated: 2026/04/28 13:50:40 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,11 +25,6 @@ class   CGISubprocess
         int         getWriteFd() const;
         int         getReadFd() const;
         pid_t       getPid() const;
-
-        // ce n'est plus le subprocess CGI qui lira la reponse
-        // mais le serveur, avec epoll !
-        // lorsque le fd sera disponible en lecture !
-        //std::string readResponse();
 
     private:
         void    setupChildPipes_();

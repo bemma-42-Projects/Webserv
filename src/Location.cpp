@@ -24,27 +24,27 @@ Location::Location(std::string path, std::string root,
 	this->allowed_methods_ = methods;
 }
 
-std::vector<std::string>	Location::getIndex()
+std::vector<std::string>	Location::getIndex() const
 {
 	return (this->index_);
 }
 
-bool	Location::getAutoindex()
+bool	Location::getAutoindex() const
 {
 	return (this->autoindex_);
 }
 
-std::string	Location::getRoot()
+std::string	Location::getRoot() const
 {
 	return (this->root_);
 }
 
-std::string	Location::getPath()
+std::string	Location::getPath() const
 {
 	return (this->path_);
 }
 
-std::vector<std::string>	Location::getAllowedMethods()
+std::vector<std::string>	Location::getAllowedMethods() const
 {
 	return (this->allowed_methods_);
 }

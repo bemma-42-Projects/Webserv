@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/04/20 16:51:56 by julien           ###   ########.fr       */
+/*   Updated: 2026/04/28 13:53:05 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 // le read fd aussi !
 #include "CGISubprocess.hpp"
 
-CGIHandler::CGIHandler(Request &request, const std::string &interpreter) : request_(request), interpreter_(interpreter), cgi_raw_output("")
+CGIHandler::CGIHandler(Request &request, const std::string &interpreter) : request_(request), interpreter_(interpreter), cgi_raw_output_("")
 {
     
 }
@@ -83,24 +83,50 @@ char		**CGIHandler::getEnvp()
 	std::vector<std::string>	env;
 	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
-	env.push_back("REQUEST_METHOD=" + request_.getMethod());
-	env.push_back("REQUEST_URI=" + request_.getRequestUri());
+	env.push_back("REQUEST_METHOD=" + this->request_.getMethod());
+	env.push_back("REQUEST_URI=" + this->request_.getRequestUri());
+
+	char	cwd[1024];
+	std::string	absolutePath;
+
+	if (getcwd(cwd, sizeof(cwd)) != NULL)
+	{
+		std::string	currentDir(cwd);
+		std::string	relativePath = this->request_.getPath();
+
+		if (relativePath.size() >= 2 && relativePath[0] == '.' && relativePath[1] == '/')
+		{
+			relativePath = relativePath.substr(1);
+		}
+		if (!relativePath.empty() && relativePath[0] == '/')
+			absolutePath = currentDir + relativePath;
+		else
+			absolutePath = currentDir + "/" + relativePath;
+	}
+	else
+		absolutePath = this->request_.getPath();
+	env.push_back("SCRIPT_FILENAME=" + absolutePath);
+
+
+	env.push_back("PATH_TRANSLATED=" + this->request_.getPath());
+
+	env.push_back("DOCUMENT_ROOT=" + this->request_.getLocation().getRoot());
+
+	env.push_back("SCRIPT_NAME=" + this->request_.getUrlPath());
+    env.push_back("QUERY_STRING=" + this->request_.getQueryString());
+	env.push_back("CONTENT_TYPE=" + this->request_.getContentType());
     
-	// VOIR FIX UBUNTU
-	env.push_back("SCRIPT_FILENAME=" + request_.getPath());
-	// VOIR AUSSI DOCUMENT_ROOT UBUNTU
-	
-	env.push_back("SCRIPT_NAME=" + request_.getUrlPath());
-    env.push_back("QUERY_STRING=" + request_.getQueryString());
-	env.push_back("CONTENT_TYPE=" + request_.getContentType());
-    std::stringstream	ss_len;
+	std::stringstream	ss_len;
 	ss_len << request_.getContentLength();
 	env.push_back("CONTENT_LENGTH=" + ss_len.str());
-	env.push_back("SERVER_NAME=" + request_.getHost());
+	
+	env.push_back("SERVER_NAME=" + this->request_.getHost());
+	
 	std::stringstream	ss_port;
-	ss_port << request_.getPort();
+	ss_port << this->request_.getPort();
 	env.push_back("SERVER_PORT=" + ss_port.str());
-	env.push_back("REMOTE_ADDR=" + request_.getClientIP());
+	
+	env.push_back("REMOTE_ADDR=" + this->request_.getClientIP());
 	env.push_back("REDIRECT_STATUS=200");
 	this->addHeadersToEnv(env);
 
@@ -154,27 +180,37 @@ void    CGIHandler::addHeadersToEnv(std::vector<std::string>& env_vector)
 	}
 }
 
-// NOUVELLE VERSION, voir pourquoi elle a ete remplacee
 // fonction pour exécuter le CGI
-/*void    CGIHandler::execute()
+void    CGIHandler::execute()
 {
-	char	        **envp = this->getEnvp();
+	// alloue le tableau de variables d'environnement
+    char    **envp = this->getEnvp();
 
-
-
-	std::string     raw_cgi_output;
-    CGISubprocess   subprocess;
-
-	try {    
-        subprocess.createSubprocess(this->request_.getPath(), this->interpreter_, envp);
-		
-		if (this->request_.getMethod() == "GET")
-			close(subprocess.getWriteFd());
-		raw_cgi_output = subprocess.readResponse();
-		this->parseCgiOutput(raw_cgi_output);
-    } catch (const std::exception& e) {
-        this->freeEnvp(envp);
+        // --- LOGS DE DEBUG ---
+    std::cout << "--- CGI ENVP LOGS ---" << std::endl;
+    if (envp) {
+        for (int i = 0; envp[i]; i++) {
+            std::cout << "[ENV] " << envp[i] << std::endl;
+        }
     }
+    std::cout << "----------------------" << std::endl;
+    // ----------------------
+
+    try {
+		// crée le fork et appelle execve
+		// crée aussi les pipes pour relier la sortie du script au serveur
+        this->subprocess_.createSubprocess(this->request_.getPath(), this->interpreter_, envp);
+
+		// si c'est GET, on envoie pas le corps de la requete
+		// on ferme le pipe d'ecriture
+        if (this->request_.getMethod() == "GET")
+                close(this->subprocess_.getWriteFd());
+    }
+	// liberation de la memoire en cas d'erreur
+	catch (const std::exception& e) {
+        this->freeEnvp(envp);
+            throw;
+    }
+	// liberation de la memoire a la fin
     this->freeEnvp(envp);
 }
-*/
