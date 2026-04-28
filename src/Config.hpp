@@ -16,7 +16,7 @@ class Config
 		static void 		setRoot(size_t value);
 		static std::string	getRoot();
 		static std::map<int, std::string>	getError();
-		//static std::string	getIndex();
+		//static std::vector<std::string>	getIndex();
 		static Location* 	matchLocation(std::string requestPath);
 		static void	location();
 
@@ -24,7 +24,7 @@ class Config
 		//static bool			autoindex_;
 		static size_t						body_size_;
 		static std::string					root_;
-		//static std::string	index_;
+		//static std::vector<std::string>		index_; 
 		static std::vector<Location> 		location_;
 		static std::map<int, std::string>	error_;
 

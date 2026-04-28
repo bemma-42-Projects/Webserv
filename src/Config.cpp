@@ -80,9 +80,9 @@ std::map<int, std::string>	Config::getError()
 	return error_;
 }
 
-//std::string Config::index_ = "/index.html"; // rejoute un / devant pour que je puis direct l'utiliser
+//std::vector<std::string> Config::index_ = "/index.html"; // rejoute un / devant pour que je puis direct l'utiliser
 
-//std::string	Config::getIndex()
+//std::vector<std::string>	Config::getIndex()
 //{
 //	return index_;
 //}

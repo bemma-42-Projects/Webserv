@@ -173,20 +173,17 @@ int	RequestAnswer::getIfDir()
 //cherche un index qui existe et est lisible et on le renvoi
 std::string RequestAnswer::findIndex(Location loc)
 {
+
     std::vector<std::string>::iterator it;
 	std::vector<std::string> index = loc.getIndex();
+	//if (!loc.getIndex().empty())
+	//	index = loc.getIndex();
+	//else
+	//	index = Config::getIndex();
     for (it = index.begin(); it != index.end(); ++it)
 	{
 		const std::string root = loc.getRoot();
-		// std::cout << "test1" << std::endl;
-		// std::cout << root << std::endl;
-
-		// std::cout << "it = " << *it << std::endl;
-
-		std::string fullPath = root + '/' + *it;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		
-		// std::cout << "test2" << std::endl;
-        
+		std::string fullPath = root + '/' + *it;
         // On utilise la fonction access() de <unistd.h> 
         // pour vérifier si le fichier existe et est lisible
         if (access(fullPath.c_str(), R_OK) == 0)

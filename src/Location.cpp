@@ -1,5 +1,5 @@
 #include "Location.hpp"
-
+//#include "Config.hpp"
 
 Location::Location() : path_(""), root_(""), autoindex_(false) {
 }
@@ -23,7 +23,9 @@ Location::Location(std::string path, std::string root,
 
 std::vector<std::string>	Location::getIndex()
 {
+	//if (!index_.empty())
 	return index_;
+	//return Config::getIndex();
 }
 
 bool	Location::getAutoindex()
