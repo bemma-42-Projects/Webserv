@@ -97,7 +97,7 @@ int	RequestAnswer::getIfFile(std::string file)
 	if (fd == -1)
 		return 1;
 	std::string	res;
-	char buffer[2000];//taille de la reponse ([4096])
+	char buffer[4096];//taille de la reponse ([4096])
 	ssize_t	bite_read;
 	while ((bite_read = read(fd, buffer, sizeof(buffer))) > 0)
 	{
@@ -434,9 +434,11 @@ int	RequestAnswer::setAnswer()
 		//}
 	}
 ////mettre le reponse dans une answer_
+	//code_ = 404;
 	if (code_ < 400)
 		fullAnswer();
-	answer_ = Error::AnswerError(code_, message_);
+	Location	loc = request_.getLocation();
+	answer_ = Error::AnswerError(code_, message_, &loc);
 	//std::cout << body_ << std::endl;
 	return 1;
 }

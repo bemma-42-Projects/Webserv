@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <map>
 
 class Location {
 
@@ -16,6 +17,7 @@ public:
 	std::string					getRoot();
 	std::string					getPath();
 	std::vector<std::string>	getAllowedMethods();
+	std::map<int, std::string>	getError();
 
 private:
 
@@ -25,4 +27,5 @@ private:
     std::vector<std::string>	index_;           // "secret_list.html"
     bool						autoindex_;       // true
     std::vector<std::string>	allowed_methods_; // ["GET", "POST"]
+	std::map<int, std::string>	error_;
 };

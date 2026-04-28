@@ -1,8 +1,5 @@
 #include "Location.hpp"
 
-//Location::Location()
-//{
-//}
 
 Location::Location() : path_(""), root_(""), autoindex_(false) {
 }
@@ -47,4 +44,10 @@ std::string	Location::getPath()
 std::vector<std::string>	Location::getAllowedMethods()
 {
 	return allowed_methods_;
+}
+
+std::map<int, std::string>	Location::getError()
+{
+    error_[404] = "./er.txt";
+	return error_;
 }

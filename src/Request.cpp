@@ -320,7 +320,7 @@ int main()
 		if (res == 0)
 		{
 			std::cout << "error " << file.getError() << std::endl;
-			std::cout << Error::AnswerError(file.getError(), file.getErrorMessage());
+			std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), NULL);
 			return 0;
 		}
 		else if (res == 2)
