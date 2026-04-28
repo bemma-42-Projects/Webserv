@@ -3,13 +3,9 @@
 #include <exception>
 #include <algorithm>
 #include <sstream>
-//#include <fcntl.h>    // pour open
-//#include <unistd.h>   // pour read, close
-//#include <sys/stat.h> // pour stat
 #include "Config.hpp"
 #include "RequestAnswer.hpp"
 #include "Error.hpp"
-//#include <dirent.h>
 
 
 Request::Request()
@@ -97,8 +93,7 @@ bool	Request::complete()
 {
 	size_t	end = request_.find("\r\n\r\n");
 	if (end == std::string::npos)
-		return false;//requette non complet
-	// std::cout << "test" <<std::endl;
+		return false;
 	size_t it = request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
@@ -107,19 +102,10 @@ bool	Request::complete()
 	size_t	len;
 	std::stringstream ss(tmp);
     ss >> len;
-	//while (request_[end] == '\r' || request_[end] == '\n')
-	//	++end;
 	end += 4;
-	//std::cout << "test" <<std::endl;
-
-	//std::cout << request_.substr(end) << std::endl;
 	std::cout << request_.size() - end << " < " << len << std::endl;
 	if (request_.size() - end < len)
-	{
-		//error_ = 413;
 		return false;
-	}
-	// std::cout << "test" <<std::endl;
 	return true;
 }
 
@@ -146,8 +132,6 @@ int	Request::initFistLine()
 	if (it == std::string::npos || it >= last)
 		return 1;
 	url_path_ = request_.substr(begin, it - begin);
-	// std::cout << url_path_ << std::endl;
-	//path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
 	begin = request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
 		return 1;
@@ -274,10 +258,6 @@ int	Request::parsingHttp()
 	return 1;
 }
 
-//void	Request::setError(int error)
-//{
-//	error_ = error;
-//}
 
 int main()
 {

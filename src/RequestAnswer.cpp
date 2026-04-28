@@ -45,7 +45,6 @@ std::string RequestAnswer::findContentType(const std::string& path)
 {
     static std::map<std::string, std::string> mimeTypes;
 
-    // Initialisation au premier appel (static)
     if (mimeTypes.empty()) {
         // TEXTE
         mimeTypes[".html"] = "text/html";
@@ -80,7 +79,6 @@ std::string RequestAnswer::findContentType(const std::string& path)
 		return mimeTypes[ext];
 	return "application/octet-stream";
 
-    // Type par défaut si l'extension est inconnue ou absente
 }
 
 
@@ -89,8 +87,6 @@ std::string RequestAnswer::findContentType(const std::string& path)
 //int	RequestAnswer::getMethode()
 int	RequestAnswer::getIfFile(std::string file)
 {
-	//std::cout << Config::getRoot() + file << std::endl;
-	//int	fd = open((request_.getLocation().getRoot() + '/' + file).c_str(), O_RDONLY);
 	std::cout << "dir" << std::endl;
 	int	fd = open((file).c_str(), O_RDONLY);
 	if (fd == -1)
@@ -103,7 +99,6 @@ int	RequestAnswer::getIfFile(std::string file)
 		res.append(buffer, bite_read);
 	}
 	close(fd);
-	//std::cout << res << std::endl;
 	body_ = res;
 	code_ = 200;
 	content_type_ = findContentType(file);
@@ -113,7 +108,6 @@ int	RequestAnswer::getIfFile(std::string file)
 //recupere le contenue du dossier pour la methode get
 int	RequestAnswer::getIfDir()
 {
-	// std::cout << "pd" << std::endl;
 	DIR* dir = opendir(request_.getPath().c_str());
 	if (!dir)
 	{
@@ -132,11 +126,8 @@ int	RequestAnswer::getIfDir()
 		std::string name = entry->d_name; // recupere le nom du fichier
 		if (name == ".") // on ne dois pas annaliser le "." sinon on ouvre le dossier actuel et il faut qu'on le gere
 			continue;
-		// On construit le chemin complet pour que stat puisse le trouver
 		std::string fullPath = request_.getPath() + "/" + name;
 		struct stat st;
-		
-		//std::string displayName = name;
 		if (stat(fullPath.c_str(), &st) == 0) // regarde si le fichier existe
 		{
 			if (S_ISDIR(st.st_mode))
@@ -149,19 +140,10 @@ int	RequestAnswer::getIfDir()
 			code_ = 400;
 			return 1;
 		} 
-		// Le lien href doit être le nom, mais le texte affiché est displayName
 		body += "<li><a href=\"" + name + "\">" + name + "</a></li>\n";
 	}
 	body += "</ul><hr></body></html>";
 	closedir(dir);
-	//std::string header = "HTTP/1.1 200 OK\r\n";
-	//header += "Content-Type: text/html\r\n";
-	//header += "Content-Length: " + itoa(body.length()) + "\r\n"; // Il faudra une petite fonction pour convertir int en string
-	//header += "\r\n"; // La ligne vide cruciale !
-	//res = header + body;
-	//std::cout << res << std::endl;
-
-	//answer_ = res;
 	body_ = body;
 	code_ = 200;
 	content_type_ = "text/html";
@@ -176,17 +158,7 @@ std::string RequestAnswer::findIndex(Location loc)
     for (it = index.begin(); it != index.end(); ++it)
 	{
 		const std::string root = loc.getRoot();
-		// std::cout << "test1" << std::endl;
-		// std::cout << root << std::endl;
-
-		// std::cout << "it = " << *it << std::endl;
-
-		std::string fullPath = root + '/' + *it;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		
-		// std::cout << "test2" << std::endl;
-        
-        // On utilise la fonction access() de <unistd.h> 
-        // pour vérifier si le fichier existe et est lisible
+		std::string fullPath = root + '/' + *it;
         if (access(fullPath.c_str(), R_OK) == 0)
             return *it; // On a trouvé le premier index valide !
     }
@@ -212,11 +184,7 @@ int	RequestAnswer::methodGet()
 	else if (S_ISDIR(info.st_mode))
 	{
 		Location	loc = request_.getLocation();
-		//divier la fontion
-		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
-		// std::cout << "dir" << std::endl;
 		std::string index = findIndex(loc);
-		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
 			return (getIfFile(Config::getRoot() + '/' + index));	
@@ -242,19 +210,11 @@ int RequestAnswer::fileName()
 
     struct stat s;
     bool is_directory = false;
-
-    // ÉTAPE 1 : On vérifie si l'URL pointe vers un dossier existant
     if (stat(url_path.c_str(), &s) == 0) {
         if (S_ISDIR(s.st_mode)) {
             is_directory = true;
         }
-    } 
-    // Si le dossier finit par '/', on le force en is_directory même si stat échoue
-    // else if (!url_path.empty() && url_path[url_path.size() - 1] == '/') {
-    //     is_directory = true;
-    // }
-
-    // ÉTAPE 2 : Si c'est un dossier, on cherche obligatoirement dans le Body
+    }
     if (is_directory) {
         std::string body = request_.getBody();
         size_t id = body.find("Content-Disposition:");
@@ -285,29 +245,20 @@ int RequestAnswer::fileName()
 		if (s != std::string::npos)
 			start = s + 1;
 		std::string file_name = body.substr(start, end - start);
-
-        // On construit le chemin final : Dossier + / + Nom
         post_file_name_ = url_path;
         if (post_file_name_[post_file_name_.size() - 1] != '/')
             post_file_name_ += '/';
         post_file_name_ += file_name;
-    } 
-    // ÉTAPE 3 : Si ce n'est pas un dossier, le nom est déjà dans l'URL
+    }
     else
         post_file_name_ = url_path;
-
-    // ÉTAPE 4 : Vérification finale - Est-ce que le dossier parent existe ?
     size_t last_slash = post_file_name_.find_last_of('/');
     if (last_slash != std::string::npos) 
 	{
         std::string dir_to_check = post_file_name_.substr(0, last_slash);
         if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) 
-		{
-            //std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
-            return 1;
-        }
+			return 1;
     }
-    //std::cout << "Fichier final retenu : " << post_file_name_ << std::endl;
     return 0;
 }
 
@@ -319,42 +270,30 @@ int RequestAnswer::methodPost()
         code_ = 400;
         return 1;
     }
-
-    // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
     std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
-
     std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
-
-    if (!outfile.is_open()) {
+    if (!outfile.is_open())
+	{
         std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
         error_ = 500;
 		code_ = 500;
         return 1;
     }
-
     const std::string& body = request_.getBody();
     size_t startPos = body.find("\r\n\r\n");
-
-    // Correction de la condition : on veut entrer ici si on A TROUVÉ \r\n\r\n
     if (startPos != std::string::npos) 
 	{
-        startPos += 4; // On saute les deux \r\n\r\n
-        
+        startPos += 4; 
         size_t endPos = body.find("\r\n--", startPos); 
         size_t fileSize;
-
         if (endPos == std::string::npos)
             fileSize = body.size() - startPos;
         else 
             fileSize = endPos - startPos;
-
         outfile.write(&body[startPos], fileSize);
     } 
     else
-        // Cas où ce n'est pas du multipart (données brutes)
         outfile.write(body.c_str(), body.size());
-
-    
     outfile.close();
     code_ = 201; 
     return 0;
@@ -379,9 +318,6 @@ void	RequestAnswer::fullAnswer()
 	header += "Content-Type: " + content_type_ + "\r\n";
 	header += "Content-Length: " + itoa(body_.length()) + "\r\n";
 	header += "\r\n";
-
-	//std::cout << "header = " << header << std::endl;
-
 	answer_ = header + body_;
 }
 
@@ -392,10 +328,6 @@ int	RequestAnswer::setAnswer()
 	if (request_.getMethod() == "GET")
 	{
 		methodGet();
-		//if (methodGet() != 0)
-			//return 0;//error
-		//else
-		//	return 1;//get
 	}
 
 	else if (request_.getMethod() == "DELETE")
@@ -405,38 +337,14 @@ int	RequestAnswer::setAnswer()
 			std::cout << "error 404 error supression"  << std::endl;
 			error_ = 404;
 			code_ = 404;
-			//return (0);//error
 		}
-		//else 
-		//	return (2);//delete
-		//Utilise unlink() pour supprimer le fichier
 	}
 	else if (request_.getMethod() == "POST")
 	{
 		methodPost();
 
-	//	std::string	url = request_.getUrlPath();
-	//	if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
-	//		|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
-	//		|| url.substr(url.size() - 3) == ".pl")*/)
-	//	{
-
-	//		//CGI
-	//		//Si CGI → fork + pipe + execve avec body_ en entrée
-	//	}
-	//	else
-	//	{
-			
-
-	//		//upload
-	//		//Si upload → ouvrir un fichier sur path_ et y écrire body_
-	//		//Si succès → construire une réponse 201 Created
-	//		//Si échec → remplir error_ et retourner 0 comme tu fais déjà
-		//}
 	}
-////mettre le reponse dans une answer_
 	fullAnswer();
-	//std::cout << body_ << std::endl;
 	return 1;
 }
 
