@@ -3,12 +3,14 @@
 #include <fcntl.h>
 #include <string>
 #include <errno.h>
-#include <cstring>
+// #include <cstring>
 #include <iostream>
 #include <unistd.h>
 #include <vector>
 #include <cctype>
 #include <stack>
+#include <cstdlib>
+
 #include <sys/stat.h>
 
 #include "ServerConfig.hpp"
@@ -104,19 +106,19 @@ bool directiveIsAllowed(std::string name, State state) {
 	return (false);
 }
 
-bool validatePort(std::string port_str) {
+int validatePort(std::string port_str) {
 	if (port_str.empty())
-		return (false);
+		return (-1);
 
 	for (size_t i = 0; i < port_str.size(); i++) {
 		if (!isdigit(port_str[i]))
-			return (false);
+			return (-1);
 	}
-
-	long port = stol(port_str, 0, 10 );
+	char *end;
+	long port = strtol(port_str.c_str(), &end, 10 );
 	if (port >= 0 && port <= 65535)
-		return (true);
-	return (false);
+		return (port);
+	return (-1);
 }
 
 
@@ -155,7 +157,8 @@ bool validateIP(std::string str) {
 	return (true);
 }
 
-bool validateOneArg(std::string str) {
+//pour listen valide la premiere ip adresse
+bool validateOneArg(std::string str, ServerConfig& srv) {
 	if (str.empty())	
 		return (false);
 	size_t pos = str.find(':');
@@ -172,17 +175,22 @@ bool validateOneArg(std::string str) {
 	if (str[pos] == ':')
 		pos++;
 	std::string port_str = str.substr(pos, str.size() - pos);
-	if (validatePort(port_str) == false)
+	int portres = validatePort(port_str);
+	if (portres == -1)
 		return (false);
+	srv.addListen(ip_str, portres);
 	return (true);
 }
 
-bool validateListen(std::vector<std::string> args) {
+bool validateListen(std::vector<std::string> args, State state, ServerConfig& srv) {
 
+	if (state != IN_SERVER)
+		return (false);
 	for (size_t i = 0; i < args.size() ; i++ ) {
-		if (validateOneArg(args[i]) == false)
+		if (validateOneArg(args[i], srv) == false)
 			return (false);
 	}
+	std::cout << "listen = good" << std::endl;
 	return (true);
 }
 
@@ -215,7 +223,7 @@ bool validateRoot(std::vector<std::string> args) {
 		// std::cout << "C'est pas un dossier" << std::endl;
 		return (false);
 	}
-	// std::cout << "--le path est bon!" << std::endl;
+	std::cout << "Root = good" << std::endl;
 	return (true);
 }
 
@@ -229,6 +237,7 @@ bool validateClientMaxBodySize(std::vector<std::string> args) {
 		i++;
 	if (i < args[0].size())
 		return (false);
+	std::cout << "ClientMaxBodySize = good" << std::endl;
 	return (true);
 }
 
@@ -260,17 +269,63 @@ bool validateErrorPage(std::vector<std::string> args) {
 	if (access(args.back().c_str(), F_OK) == -1) {
 		std::cout << "je ne trouve pas" << std::endl;
 		return (false);
+	}
+	if (access(args.back().c_str(), R_OK) == -1) {
+		std::cout << "je ne trouve pas" << std::endl;
+		return (false);
 	} 
-	std::cout << "GOOD!" << std::endl;
+	std::cout << "ErrorPage = good" << std::endl;
 	return (true);
 }
 
+bool isValidUrl(const std::string& url) {
+	if (url.empty())
+		return (false);
+
+	if (url[0] == '/')
+		return (true);
+
+	if (url.find("http://") == 0 && url.length() > 7)
+		return (true);
+
+	if (url.find("https://") == 0 && url.length() > 8)
+		return (true);
+
+	return (false);
+}
+
 bool validateReturn(std::vector<std::string> args) {
-	if (args.size() != 1 && args.size() != 2)
+	if (args.size() < 1 || args.size() > 2)
+	{
+		std::cout << "args mauvais" << std::endl;
 		return (false);
-	if (args[0] != "200" && args[1] != "201" && args[1] != "204" && args[1] != "301" 
-		&& args[1] != "302" && isErrorCode(args[1]) == false)
+	}
+	if (args.size() == 1) {
+		if (args[0] == "200" || args[0] == "201" || args[0] == "204" || args[0] == "301" 
+			|| args[0] == "302" || isErrorCode(args[0]) == true)
+		{
+			if (args[0] == "301" || args[0] == "302") {
+				std::cout << "redir doit avoir url" << std::endl;
+				return (false);
+			}
+			return (true);
+		}
+		if (isValidUrl(args[0]))
+			return (true);
 		return (false);
+	}
+	else if (args.size() == 2) {
+		if (args[0] != "200" && args[0] != "201" && args[0] != "204" && args[0] != "301" 
+			&& args[0] != "302" && isErrorCode(args[0]) == false)
+		{
+			std::cout << "mauvais code erreur" << std::endl;
+			return (false);
+		}
+		if (args[1].empty())
+			return (false);
+	}
+	
+	std::cout << "Return = good" << std::endl;
 	return (true);
 	
 }
@@ -280,36 +335,64 @@ bool validateIndex(std::vector<std::string> args) {
 		if (args[i][0] == '/' && (i + 1) != args.size())
 			return (false);
 	}
+	std::cout << "Index = good" << std::endl;
 	return (true);
 }
 
-bool validateAutoIndex(std::vector<std::string> args) {
+bool validateAutoIndex(std::vector<std::string> args, State state, ServerConfig& srv) {
 	if (args.size() != 1)
 		return (false);
-	if (args[0] != "on" && args[0] != "off")
-		return (false);
-	return (true);
+	if (args[0] == "on" || args[0] == "off") {
+		if (state == IN_SERVER && args[0] == "on") {
+			srv.setAutoIndex(true);
+			return (true);
+		}
+		else if (state == IN_LOCATION && args[0] == "on") {
+			if (srv.getLocations().empty()) {
+				std::cerr << "pas de location" << std::endl;
+				return (false);
+			}
+			srv.getLastLocation().setAutoIndex(true);
+			return (true);
+		}
+		else if (args[0] == "off")
+			return (true);
+	}
+	return (false);
 }
 
-bool validateAllowedMethods(std::vector<std::string> args) {
+bool validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv) {
 	if (args.size() < 1 || args.size() > 3)
 		return (false);
 	for (size_t i = 0; i < args.size(); i++) {
 		if (args[i] != "GET" && args[i] != "POST" && args[i] != "DELETE")
 			return (false);
 	}
-	return (true);
+	if (!srv.getLocations().empty()) {
+		srv.getLastLocation().setAllowedMethods(args);
+		std::cout << "AllowedMethods = good" << std::endl;
+		return (true);
+	}
+	return (false);
 }
 
-bool validateAllowedUpload(std::vector<std::string> args) {
+bool validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv) {
 	if (args.size() != 1)
 		return (false);
-	if (args[0] != "on" && args[0] != "off")
-		return (false);
-	return (true);
+	if (!srv.getLocations().empty()) {
+		if (args[0] == "on") {
+			srv.getLastLocation().setAllowedUpload(true);
+			return (true);
+		}
+		else if (args[0] == "off") {
+			return (true);
+		}
+	}
+	// std::cout << "AllowedUpload = good" << std::endl;
+	return (false);
 }
 
-bool validateUploadPath(std::vector<std::string> args) {
+bool validateUploadPath(std::vector<std::string> args,ServerConfig& srv) {
 	if (args.size() != 1)
 		return (false);
 	if (args[0].empty())
@@ -335,61 +418,153 @@ bool validateUploadPath(std::vector<std::string> args) {
 		// std::cout << "C'est pas un dossier" << std::endl;
 		return (false);
 	}
-	return (true);
+	std::cout << "UploadPath = good" << std::endl;
+	if (!srv.getLocations().empty()) {
+		srv.getLastLocation().setUploadPath(args[0]);
+		return (true);
+	}
+	return (false);
 }
 
-bool validateSpecificDirective(std::string name, std::vector<std::string> args) {
+//on va check sur quelle directive on est et en fonction aller check si tout est bon pour
+// la directive
+bool validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv) {
 	if (name == "listen")
 	{
 		// std::cout << "LISTEN:" << std::endl;
-		return (validateListen(args));
+		return (validateListen(args, state, srv));
+		
 	}
 
 	else if (name == "root")
 	{
+	 if (validateRoot(args) == true) {
+		if (state == IN_SERVER) {
+			srv.setRoot(args[0]);
+			return (true);
+		}
+		else if (state == IN_LOCATION) {
+			if (srv.getLocations().empty()) {
+				std::cerr << "pas de location" << std::endl;
+				return (false);
+			}
+			srv.getLastLocation().setRootLoc(args[0]);
+			return (true);
+		}
+
+	 }
 		// std::cout << "ROOT:" << std::endl;
-		return (validateRoot(args));
+		return (false);
 	}
 
 	else if (name == "server_name") {
-		// std::cout << "SERVER_NAME:" << std::endl;
+		srv.setServerName(args);
 		return (true);
 	}
 
 	else if (name == "client_max_body_size") {
+		if (validateClientMaxBodySize(args) == true) {
+			char *end;
+			size_t size = strtol(args[0].c_str(), &end, 10);
+			if (state == IN_SERVER) {
+				srv.setClientMaxBodySize(size);
+				return (true);
+			}
+			else if (state == IN_LOCATION) {
+				if (srv.getLocations().empty()) {
+					std::cerr << "pas de location" << std::endl;
+					return (false);
+				}
+				srv.getLastLocation().setClientMaxBodySize(size);
+				return (true);
+			}
+			return (false);
+		}
 		// std::cout << "CLIENT_MAX_BODY_SIZE:" << std::endl;
-		return (validateClientMaxBodySize(args));
+		return (false);
 	}
 
 	else if (name == "error_page") {
-		// std::cout << "ERROR_PAGE:" << std::endl;
-		return (validateErrorPage(args));
+		if (validateErrorPage(args)) {
+			std::string path = args.back();
+
+			for (size_t i = 0; i < args.size() - 1; i++) {
+				int code = std::atoi(args[i].c_str());
+				if (state == IN_SERVER) 
+					srv.addErrorPage(code, path);
+				else if (state == IN_LOCATION && !srv.getLocations().empty())
+					srv.getLastLocation().addErrorPage(code, path);
+				else
+					return (false);
+			}
+			return (true);
+		}
+		return (false);
 	}
 
-	else if (name == "index")
-		return (validateIndex(args));
+	else if (name == "index") {
+		if (validateIndex(args)) {
+			if (state == IN_SERVER) {
+				srv.setIndex(args);
+				return (true);
+			}
+			else if (state == IN_LOCATION && !srv.getLocations().empty()) {
+				srv.getLastLocation().setIndex(args);
+				return (true);
+			}
+		}
+		return (false);
+	}
 
-	else if (name == "return")
-		return (validateReturn(args));
-
+	else if (name == "return") {
+		if (validateReturn(args)) {
+			int code = 0;
+			std::string url = "";
+			if (args.size() == 1) {
+				if (args[0] == "200" || args[0] == "201" || args[0] == "204" || args[0] == "301" 
+						|| args[0] == "302" || isErrorCode(args[0]) == true)
+				{
+					code = std::atoi(args[0].c_str());
+				}
+				else {
+					code = 302;
+					url = args[0];
+				}
+			}
+			else if (args.size() == 2) {
+				code = std::atoi(args[0].c_str());
+				url = args[1];
+			}
+			if (state == IN_SERVER) {
+				srv.setReturn(code, url);
+				return (true);
+			}
+			else if (state == IN_LOCATION && !srv.getLocations().empty()) {
+				srv.getLastLocation().setReturn(code, url);
+				return (true);
+			}
+		}
+		return (false);
+	}
 	else if (name == "autoindex")
-		return (validateAutoIndex(args));
+		return (validateAutoIndex(args,state, srv));
 
 	else if (name == "allowed_methods")
-		return (validateAllowedMethods(args));
+		return (validateAllowedMethods(args, srv));
 	
 	else if (name == "allowed_upload")
-		return (validateAllowedUpload(args));
+		return (validateAllowedUpload(args, srv));
 	
 	else if (name == "upload_path")
-		return (validateUploadPath(args));
+		return (validateUploadPath(args, srv));
 	
 	return (false);
 	
 }
 
-
-bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State state) {
+//validation globale des directive on va juste check si les attentes communes a 
+//toutes les directives sont respecter 
+bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State state, ServerConfig& srv) {
 	std::vector<std::string> args;
 	std::string name = tokens[i];
 
@@ -411,7 +586,7 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 		return (false);
 	if (i >= tokens.size() || tokens[i] != ";")
 		return (false);
-	if (validateSpecificDirective(name, args) == false)
+	if (validateSpecificDirective(name, args, state, srv) == false)
 		return (false);
 	return (true);
 }
@@ -433,48 +608,73 @@ bool validateStructure(std::vector<std::string> tokens, std::vector<ServerConfig
 				return (false);
 			else if (i + 1 >= tokens.size() || tokens[i + 1] != "{")
 				return (false);
-
+			ServerConfig server;
+			all_servers.push_back(server);
+			context.push("server");
 			state = IN_SERVER;
 			i++;
 		}
 		else if (tokens[i] == "location")
 		{
 			if (state != IN_SERVER)
+			{
+				std::cout << "c'est pas bon ici " << state << std::endl;
 				return (false);
+			}
 			if (i + 1 >= tokens.size() || tokens[i + 1].find_first_of("{}") != std::string::npos)
 				return (false);
 			if (i + 2 >= tokens.size() || tokens[i + 2] != "{")
 				return (false);
+			LocationConfig location;
+			location.setPath(tokens[i + 1]);
+			all_servers.back().addLocation(location);
 			context.push("location");
 			state = IN_LOCATION;
 			i += 2;
 		}
 		else if (tokens[i] == "{")
+		{
+			std::cout << "c'est pas bon ici" << std::endl;
 			return (false);
+		}
 		else if (tokens[i] == "}")
 		{
 			if (context.empty())
+			{
+				std::cout << "c'est pas bon ici" << std::endl;
 				return (false);
+			}
 			context.pop();
 			if (context.empty())
 				state = OUTSIDE;
-			else if (context.top() == "server")
-				state = IN_SERVER;
-			else if (context.top() == "location")
-				state = IN_LOCATION;
+			else {
+				if (context.top() == "server")
+					state = IN_SERVER;
+				else if (context.top() == "location")
+					state = IN_LOCATION;
+			}
+			
 			
 		}
 		else if (isSimpleDirective(tokens[i]) == true)
 		{
+			if (all_servers.empty()) {
+				std::cout << "directive hors bloc server" << std::endl;
+				return (false);
+			}
 
 			// std::cout << "         Je suis sur une directive!" << std::endl;
-			if (validateOneDirective(tokens, i, state) == false)
+			if (validateOneDirective(tokens, i, state, all_servers.back()) == false)
+			{
+				std::cout << "c'est pas bon ici" << std::endl;
 				return (false);
+			}
 		}
 		
 	}
 	if (state == OUTSIDE && context.empty())
 		return (true);
+	std::cout << "c'est pas bon ici" << std::endl;
 	return (false);
 }
 
@@ -483,14 +683,22 @@ int main(int argc, char **argv) {
 
 	std::vector<ServerConfig> all_configs;
 	std::string text = readFile(argv[1]);
-	// std::cout << text << std::endl << std::endl;
 	std::vector<std::string> res = tokenizeConfig(text);
-	// for (size_t len = 0; len < res.size(); len++) {
-	// 	std::cout << "|" << res[len] << "|" << std::endl; 
+	// try {
+	// 	validateStructure(res, all_configs);
+	// }
+	// catch (const std::exception& e) {
+	// 	std::cerr << "Erreur fatale de configuration : " << e.what() << std::endl;
+	// 	return (1); 
 	// }
 	if (validateStructure(res, all_configs) == false)
 		std::cout << "Erreur bad configuration" << std::endl;
 	else 
-		std::cout << "Everything's good!" << std::endl; 
-}
+		std::cout << "Everything's good!" << std::endl;
 
+	for (size_t i = 0; i < all_configs.size(); i++) {
+
+		std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
+		std::cout << all_configs[i] << std::endl << std::endl;
+	}
+}

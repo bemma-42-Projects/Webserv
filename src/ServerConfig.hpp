@@ -29,8 +29,18 @@ public:
 	const std::pair<int, std::string>&		getReturn() const;
 	const std::vector<LocationConfig>&		getLocations() const;
 	bool									getAutoindex() const;
+	LocationConfig&							getLastLocation();
 
 	void									setRoot(const std::string& str);
+	void									setIndex(const std::vector<std::string>& index);
+	void									setClientMaxBodySize(size_t size);
+	void									setAutoIndex(bool allow);
+	void									setServerName(const std::vector<std::string>& names);
+	void									setReturn(int code, const std::string& url);
+
+	void									addLocation(const LocationConfig& loc);
+	void									addListen(const std::string& ip, int port);
+	void									addErrorPage(int code, const std::string& path);
 
 private:
 	std::vector<Listen>				listen_;
