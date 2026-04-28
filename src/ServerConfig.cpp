@@ -122,6 +122,13 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 	}
 	stream << std::endl;
 
+	if (srv.getReturn().first != 0) { // On vérifie si un code est défini
+		stream << "Return: " << srv.getReturn().first;
+		if (!srv.getReturn().second.empty()) {
+			stream << " (" << srv.getReturn().second << ")";
+		}
+		stream << std::endl;
+	}
 
 	stream << "Auto index: " << srv.getAutoindex() << std::endl;
 	stream << "Client max body size: " << srv.getClientMaxBodySize() << std::endl;
