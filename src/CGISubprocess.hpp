@@ -25,7 +25,11 @@ class   CGISubprocess
         int         getWriteFd() const;
         int         getReadFd() const;
         pid_t       getPid() const;
-        std::string readResponse();
+
+        // ce n'est plus le subprocess CGI qui lira la reponse
+        // mais le serveur, avec epoll !
+        // lorsque le fd sera disponible en lecture !
+        //std::string readResponse();
 
     private:
         void    setupChildPipes_();

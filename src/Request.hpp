@@ -4,6 +4,12 @@
 #include "Config.hpp"
 #include "Location.hpp"
 
+enum	ParsingStatus {
+	PARSING_FAILED = 0,
+	PARSING_SUCCESS = 1,
+	PARSING_INCOMPLETE = 2
+};
+
 class Request {
 
 	public:
@@ -19,6 +25,7 @@ class Request {
 		std::string 						getBody() const;
 		int									getError() const;
 		Location							getLocation() const;
+		std::string							getClientIP() const;
 		//int									requestHttp();							
 		int									parsingHttp(const std::string &raw_data);
 		bool								complete();
@@ -38,7 +45,6 @@ class Request {
 		std::string							getHost() const;
 		std::string							getPort() const;
 		void								setClientIP(const std::string &ip);
-		std::string							getClientIP() const;
 
 	private:
 		std::string							request_;

@@ -1,41 +1,18 @@
 #include "Client.hpp"
+
 #include <cstring>
 
 // constructeur par défaut
-Client::Client() : socket_fd_(-1), state_(READING_REQUEST), last_activity_(time(NULL)), ip_address_("") {
+// on initialise aussi request_ et answer_ à NULL maintenant
+// 
+Client::Client() : socket_fd_(-1), state_(READING_REQUEST), last_activity_(time(NULL)), ip_address_(""), request_buffer_(), response_buffer_(), request_(), answer_() {
     memset(&addr_, 0, sizeof(addr_));
 }
 
-// constructeur paramétrique
-Client::Client(int socket_fd, struct sockaddr_storage addr) : socket_fd_(socket_fd), addr_(addr), state_(READING_REQUEST), last_activity_(time(NULL)) {
+Client::Client(int socket_fd, struct sockaddr_storage addr) : socket_fd_(socket_fd), addr_(addr), state_(READING_REQUEST), last_activity_(time(NULL)),  ip_address_(""), request_buffer_(), response_buffer_(), request_(), answer_() {
     initIpAddress_(addr);
-    this->request_.setClientIP(this->ip_address_);
 }
 
-// constructeur par copie
-Client::Client(const Client &src) : socket_fd_(src.socket_fd_), addr_(src.addr_), state_(src.state_), last_activity_(src.last_activity_), ip_address_(src.ip_address_), request_(src.request_) {
-
-}
-
-// opérateur d'assignation
-Client &Client::operator=(const Client &rhs) {
-    if (this != &rhs) {
-        socket_fd_ = rhs.socket_fd_;
-        addr_ = rhs.addr_;
-        state_ = rhs.state_;
-        last_activity_ = rhs.last_activity_;
-        ip_address_ = rhs.ip_address_;
-        request_ = rhs.request_;
-    }
-    return (*this);
-}
-
-// destructeur
-Client::~Client() {
-
-}
-
-// convertit la structure d'adresse en IP lisible et la stocke dans ip_address_
 void Client::initIpAddress_(struct sockaddr_storage addr) {
     char ip_buffer[INET6_ADDRSTRLEN];
     void *raw_ip_ptr;
@@ -51,78 +28,80 @@ void Client::initIpAddress_(struct sockaddr_storage addr) {
     this->ip_address_ = std::string(ip_buffer) + " (" + ip_version + ")";
 }
 
-
-// récupère le descripteur de fichier du socket client
 int Client::getSocketFd() const {
     return (this->socket_fd_);
 }
 
-// récupère l'état actuel du client
 Client::State Client::getState() const {
     return (this->state_);
 }
 
-// modifie l'état actuel du client
 void Client::setState(State state) {
     this->state_ = state;
 }
 
-// récupère le timestamp de la dernière action du client
 time_t Client::getLastActivity() const {
     return (this->last_activity_);
 }
 
-// actualise le chronomètre d'activité du client
 void Client::updateLastActivity() {
     this->last_activity_ = time(NULL);
 }
 
-// récupère l'adresse IP du client sous forme de texte
 std::string Client::getIp() const {
     return (this->ip_address_);
 }
 
+// pont entre Server et Request
+// le serveur lit le réseau avec epoll
+// s'il y a des données, il fait un read et obtient un buffer
+// le serveur doit utiliser ce getter pour accéder à la fonction de parsing
+// de Request !
+// et aussi vérifier s'il faut continuer de lire ou préparer la réponse
 Request &Client::getRequest()
 {
     return (this->request_);
 }
 
-// ajoute les données reçues au buffer de la requête
+// pont entre server et RequestAnswer
+// une fois que le parsing de la requete est un succes
+// le serveur doit ordonner la creation de la reponse
+// c'est grace a cette fonction que le serveur
+// accede a la reponse
+RequestAnswer   &Client::getAnswer()
+{
+    return (this->answer_);
+}
+
+// lorsque le navigateur envoie une requete, elle peut etre decoupee en plusieurs paquets
+// il faut donc remplir le buffer a chaque fois que epoll a detecte
+// que le client a envoye quelque-chose
+// (quand on recoit un event EPOLLIN)
 void    Client::appendRequestData(const std::string &data)
 {
     this->request_buffer_ += data;
 }
 
-// récupère l'intégralité des données brutes de la requête
-const std::string    &Client::getRequestData() const {
+// pour acceder au buffer, et voir s'il reste des donnees ou non
+const std::string   &Client::getRequestData() const {
     return (this->request_buffer_);
 }
 
-/*
-// stocke la réponse générée dans le buffer d'écriture du client
-void    Client::setResponseData(const std::string &data)
+void    Client::clearBuffers()
 {
-    this->response_buffer_ = data;
-}
-*/
-
-/*
-const std::string    &Client::getResponseData() const
-{
-    return (this->response_buffer_);
-}
-*/
-
-/*
-void    Client::eraseSentResponseData(ssize_t bytes_sent) {
-    this->response_buffer_.erase(0, bytes_sent);
-}
-*/
-
-/*
-void    Client::clearBuffers() {
     this->request_buffer_.clear();
     this->response_buffer_.clear();
-    setState(READING_REQUEST);
+
+    this->request_.clear();
+    this->answer_.clear();
+
+    this->last_activity_ = time(NULL);
 }
-*/
+
+// socket_fd_ représente la connexion réseau avec le navigateur web
+// il faut fermer la connexion réseau lorsque le client est détruit !
+Client::~Client() {
+    if (this->socket_fd_ != -1)
+        close(this->socket_fd_);
+    this->socket_fd_ = -1;
+}

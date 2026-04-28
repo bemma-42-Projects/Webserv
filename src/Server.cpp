@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <sys/wait.h> // pour waitpid
 
 #include "Server.hpp"
 #include "utils.hpp"
@@ -244,37 +245,83 @@ void	Server::setSocketToWriteState_(int client_fd) {
 }
 
 // génère la réponse HTTP
+// A supprimer, ceci est maintenant dans RequestAnswer
+/*
 std::string	Server::buildHttpResponse_(Request &request) {
 
     RequestAnswer   answer(request);
 	return (answer.getAnswer());
 }
+*/
 
 // traite les données brutes reçues d'un client
 void	Server::processClientRequest_(int client_fd) {
-	Client	&client = clients_[client_fd];
-    const std::string &current_data = client.getRequestData();
+	Client	        &client = clients_[client_fd];
+    Request         &request = client.getRequest();
+    RequestAnswer   &response = client.getAnswer();
 
-    if (current_data.find("\r\n\r\n") == std::string::npos)
+    ParsingStatus   parsing_status = request.parsingHttp(client.getRequestData());
+
+    if (parsing_status == PARSING_FAILED)
     {
+        std::cout << "Error : " << request.getError() << std::endl;
+        // recuperer le code d'erreur genere par le parser
+        // et demander au constructeur de la reponse de generer le HTML de l'erreur
+        //response.buildErrorPage(request.getError());
+
+        // changer l'etat du client en WRITING_RESPONSE
+        client.setState(Client::WRITING_RESPONSE);
+        // dire a epoll d'arreter d'ecouter en IN et prevenir des 
+        // que le client est reseau a envoyer la reponse (OUT)
+        setSocketToWriteState_(client_fd);
         return ;
     }
-
-    //std::cout << current_data << std::endl;
-    int result = clients_[client_fd].getRequest().parsingHttp(current_data);
-
-    if (result == 0)
-        std::cout << "Error : " << client.getRequest().getError() << std::endl;
-    else if (result == 1)
+    // si la requete est incomplete, on retourne directement
+    // on attendra le prochain tour de boucle
+    // comportement asynchrone, on ne bloque pas le serveur
+    // le client sera mis de cote et les autres clients seront ecoutes alors
+    if (parsing_status == PARSING_INCOMPLETE)
+        return ;
+    
+    else if (parsing_status == PARSING_SUCCESS)
     {
         client.setState(Client::PROCESSING);
-        std::string response = buildHttpResponse_(client.getRequest());
-        client.setState(Client::WRITING_RESPONSE);
-		setSocketToWriteState_(client_fd);
-	}
-	if (result == 2)
-    {
-		std::cout << "Socket " << client_fd << ": Request incomplete. Waiting for more data..." << std::endl;
+
+        AnswerStatus answer_status = response.setAnswer(request);
+
+        if (answer_status == READY_TO_SEND)
+        {
+            client.setState(Client::WRITING_RESPONSE);
+	    	setSocketToWriteState_(client_fd);   
+        }
+        else if (answer_status == ERROR)
+        {
+            // recuperer le code d'erreur genere par le parser
+            // et demander au constructeur de la reponse de generer le HTML de l'erreur
+            //response.buildErrorPage(request.getError());
+            client.setState(Client::WRITING_RESPONSE);
+            setSocketToWriteState_(client_fd);
+        }
+        else if (answer_status == CGI_IN_PROGRESS)
+        {
+            client.setState(Client::WAITING_CGI);
+
+            int cgi_fd  = response.getCGIHandler()->getReadFd();
+
+            struct  epoll_event ev;
+            ev.events = EPOLLIN | EPOLLET;
+            ev.data.fd = cgi_fd;
+
+            if (epoll_ctl(this->epoll_fd_, EPOLL_CTL_ADD, cgi_fd, &ev) == -1)
+            {
+                std::cerr << "Eroor epoll_ctl CGI FD " << cgi_fd << std::endl;
+            }
+            else
+            {
+                this->cgi_to_client_[cgi_fd] = client_fd;
+                std::cout << "CGI lancé sur le fd " << cgi_fd << "for the client " << client_fd << std::endl;
+            }
+        }
     }
 }
 
@@ -301,18 +348,8 @@ void	Server::handleClientRead_(int client_fd) {
             handleClientDisconnect_(client_fd);
 		    return ;
         }
-        else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                break ;
-            }
-            else
-            {
-                std::cout << "Client on socket " << client_fd << " closed the connection." << std::endl;
-                handleClientDisconnect_(client_fd);
-		        return ;
-            }
-		}
+        else
+            break ;
 	}
     if (data_read)
     {
@@ -321,6 +358,11 @@ void	Server::handleClientRead_(int client_fd) {
     }
 }
 
+/*
+// Plus nécessaire
+// car si cette requete lance un CGI, RequestAnswer va créer un CGIHandler
+// si l'objet est détruit à la fin de la fonction, le CGI tournera dans le vide
+// et il y a aussi le probleme que la reponse peut arriver en chunks
 // récupère le prochain bloc de données à envoyer au client
 std::string	Server::getResponseToSend_(Request& request) {
     RequestAnswer   answer(request);
@@ -330,19 +372,30 @@ std::string	Server::getResponseToSend_(Request& request) {
     std::cout << answer.getAnswer() << std::endl;
 	return (answer.getAnswer());
 }
+*/
 
+/*
+// A SUPPRIMER
 // vérifie si la réponse entière a été transmise
 bool	Server::isResponseFullySent_(Client& client, ssize_t bytes_sent) {
-    (void)client;
-    (void)bytes_sent;
-    return true;
-}
+    client.getAnswer().eraseAnswer()(bytes_sent);
 
+    if (client.getAnswer().isAnswerEmpty())
+        return true;
+    return (false);
+}
+*/
+
+/*
+// INTEGRER DANS LE CLIENT
 // réinitialise l'état du client après une transaction
+
 void	Server::clearClientBuffers_(Client &client)
 {
 	client.setState(Client::READING_REQUEST);
 }
+*/
+
 
 // bascule la surveillance epoll d'un client en mode lecture
 void	Server::setSocketToReadState_(int client_fd) {
@@ -360,12 +413,14 @@ void	Server::setSocketToReadState_(int client_fd) {
 
 // gère l'évènement d'écriture sur un socket client
 void    Server::handleClientWrite_(int client_fd) {
-    ssize_t 		bytes_sent;
+    Client	&client = clients_[client_fd];
+    RequestAnswer   &response = client.getAnswer();
 
-	Client	&client = clients_[client_fd];
-    std::string response_to_send = getResponseToSend_(client.getRequest());
-	bytes_sent = send(client_fd, response_to_send.c_str(), response_to_send.size(), 0);
-    if (bytes_sent < 0) {
+    const std::string   &buffer = response.getAnswer();
+
+    ssize_t 		bytes_sent = send(client_fd, buffer.c_str(), buffer.length(), 0);
+
+	if (bytes_sent < 0) {
         std::cerr << "Error: send() failed on socket " << client_fd << ": " << std::strerror(errno) << std::endl;
 		handleClientDisconnect_(client_fd);
 		return ;
@@ -376,11 +431,65 @@ void    Server::handleClientWrite_(int client_fd) {
 	}
     std::cout << "Successfully sent " << bytes_sent << " bytes back to socket " << client_fd << std::endl;
     client.updateLastActivity();
-	if (isResponseFullySent_(client, bytes_sent))
+
+    response.eraseSentBytes(bytes_sent);
+
+	if (response.isResponseFullySent())
 	{
-		clearClientBuffers_(client);
+		client.clearBuffers();
 		setSocketToReadState_(client_fd);
 	}
+}
+
+void    Server::handleCgiRead_(int cgi_fd)
+{
+    // on retrouve le client associé au fd du CGI
+    std::map<int, int>::iterator    it = cgi_to_client_.find(cgi_fd);
+    if (it == cgi_to_client_.end())
+    {
+        std::cerr << "Error" << std::endl;
+        epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, cgi_fd, NULL);
+        close(cgi_fd);
+        return ;
+    } 
+    int client_fd = it->second;
+
+    Client  &client = clients_[client_fd];
+
+    char    buffer[4096];
+    ssize_t bytes_read = read(cgi_fd, buffer, sizeof(buffer));
+
+    if (bytes_read > 0)
+    {
+        std::string chunk(buffer, bytes_read);
+        client.getAnswer().getCGIHandler()->appendOutput(chunk);
+    }
+    else if (bytes_read == 0)
+    {
+        int status;
+        // on fait un waitpid
+        // pour récupérer le zombie proprement
+        waitpid(client.getAnswer().getCGIHandler()->getPid(), &status, 0);
+        
+        // on nettoie
+        epoll_ctl(this->epoll_fd_, EPOLL_CTL_DEL, cgi_fd, NULL);
+        close(cgi_fd);
+        this->cgi_to_client_.erase(it);
+
+        client.getAnswer().buildCGIResponse();
+        client.setState(Client::WRITING_RESPONSE);
+        setSocketToWriteState_(client_fd);
+    }
+    else
+    {
+        epoll_ctl(this->epoll_fd_, EPOLL_CTL_DEL, cgi_fd, NULL);
+        close(cgi_fd);
+        this->cgi_to_client_.erase(it);
+
+        //client.getAnswer().buildErrorPage(500);
+        client.setState(Client::WRITING_RESPONSE);
+        setSocketToWriteState_(client_fd);
+    }
 }
 
 // lance la boucle d'évènements principale du serveur
@@ -395,13 +504,26 @@ void	Server::run() {
 		if (n_events == -1)
             throw std::runtime_error("Fatal error: epoll_wait() failed.");
         for (int i = 0; i < n_events; i++) {
-            int client_fd = events[i].data.fd;
-            if (client_fd == server_socket_)
+            int fd = events[i].data.fd;
+            // si c'est le serveur
+            // c'est une nouvelle connection
+            if (fd == this->server_socket_)
                 handleNewConnection_();
-			else if (events[i].events & EPOLLIN)
-				handleClientRead_(client_fd);
-			else if (events[i].events & EPOLLOUT)
-				handleClientWrite_(client_fd);
+            // si c'est un client
+            else if (this->clients_.count(fd) > 0)
+            {
+                // en EPOLLIN
+                // on lit
+                if (events[i].events & EPOLLIN)
+				    handleClientRead_(fd);
+                // en EPOLLOUT
+                // on écrit
+			    else if (events[i].events & EPOLLOUT)
+				    handleClientWrite_(fd);
+            }
+            // si c'est un pipe CGI
+            else if (cgi_to_client_.count(fd) > 0)
+                handleCgiRead_(fd);
 		}
 	}
 }

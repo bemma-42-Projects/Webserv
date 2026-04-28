@@ -12,11 +12,11 @@ public:
 		std::string upload_path, std::vector<std::string> index, 
 		bool autoindex, std::vector<std::string> methods);
 	~Location();
-	std::vector<std::string>			getIndex();
-	bool								getAutoindex();
-	std::string							getRoot();
-	std::string							getPath();
-	std::vector<std::string>			getAllowedMethods();
+	std::vector<std::string>			getIndex() const;
+	bool								getAutoindex() const;
+	std::string							getRoot() const;
+	std::string							getPath() const;
+	std::vector<std::string>			getAllowedMethods() const;
 
 	std::map<std::string, std::string>	getCgiHandlers() const;
 

@@ -9,6 +9,7 @@
 #include "Config.hpp"
 #include "RequestAnswer.hpp"
 #include "Error.hpp"
+#include "Location.hpp"
 //#include <dirent.h>
 
 
@@ -17,8 +18,8 @@ Request::Request()
 
 Request::Request(char *buffer)
 {
-	request_ = buffer;
-	error_ = 0;
+	this->request_ = buffer;
+	this->error_ = 0;
 }
 
 Request::~Request(){}
@@ -47,47 +48,47 @@ std::ostream& operator<<(std::ostream& out, const Request& request)
 
 std::string Request::getRequest() const
 {
-	return(request_);
+	return (this->request_);
 }
 
 std::string Request::getMethod() const
 {
-	return(method_);
+	return (this->method_);
 }
 
 std::string Request::getPath() const
 {
-	return(path_);
+	return (this->path_);
 }
 
 std::string Request::getUrlPath() const
 {
-	return(url_path_);
+	return (this->url_path_);
 }
 
 std::string Request::getVersion() const
 {
-	return(version_);
+	return (this->version_);
 }
 
 std::map<std::string, std::string> Request::getHeaders() const
 {
-	return(headers_);
+	return (this->headers_);
 }
 
 std::string Request::getBody() const
 {
-	return(body_);
+	return (this->body_);
 }
 
 int	Request::getError() const
 {
-	return error_;
+	return (this->error_);
 }
 
 Location	Request::getLocation() const
 {
-	return location_;
+	return (this->location_);
 }
 
 
@@ -103,27 +104,27 @@ std::string	Request::getQueryString() const
 
 std::string	Request::getContentType() const
 {
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Type");
+	std::map<std::string, std::string>::const_iterator it = this->headers_.find("Content-Type");
 
-	if (it != headers_.end())
+	if (it != this->headers_.end())
 		return (it->second);
 	return ("");
 }
 
 std::string	Request::getContentLength() const
 {
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
+	std::map<std::string, std::string>::const_iterator it = this->headers_.find("Content-Length");
 
-	if (it != headers_.end())
+	if (it != this->headers_.end())
 		return (it->second);
 	return ("0");
 }
 
 std::string	Request::getHost() const
 {
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Host");
+	std::map<std::string, std::string>::const_iterator it = this->headers_.find("Host");
 
-	if (it != headers_.end())
+	if (it != this->headers_.end())
 	{
 		std::string	host_raw = it->second;
 		size_t		pos = host_raw.find(':');
@@ -137,9 +138,9 @@ std::string	Request::getHost() const
 
 std::string Request::getPort() const
 {
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Host");
+	std::map<std::string, std::string>::const_iterator it = this->headers_.find("Host");
 
-	if (it != headers_.end())
+	if (it != this->headers_.end())
 	{
 		std::string	host_raw = it->second;
 		size_t		pos = host_raw.find(':');
@@ -165,15 +166,15 @@ std::string	Request::getClientIP() const
 //!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
 bool	Request::complete()
 {
-	size_t	end = request_.find("\r\n\r\n");
+	size_t	end = this->request_.find("\r\n\r\n");
 	if (end == std::string::npos)
 		return false;//requette non complet
 	// std::cout << "test" <<std::endl;
-	size_t it = request_.find("Content-Length:");
+	size_t it = this->request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
 	it += 15;
-	std::string	tmp = request_.substr(it, end);
+	std::string	tmp = this->request_.substr(it, end);
 	size_t	len;
 	std::stringstream ss(tmp);
     ss >> len;
@@ -183,14 +184,14 @@ bool	Request::complete()
 	//std::cout << "test" <<std::endl;
 
 	//std::cout << request_.substr(end) << std::endl;
-	std::cout << request_.size() - end << " < " << len << std::endl;
-	if (request_.size() - end < len)
+	std::cout << this->request_.size() - end << " < " << len << std::endl;
+	if (this->request_.size() - end < len)
 	{
 		//error_ = 413;
-		return false;
+		return (false);
 	}
 	// std::cout << "test" <<std::endl;
-	return true;
+	return (true);
 }
 
 
@@ -211,118 +212,118 @@ void	Request::splitUri_()
 int	Request::initFistLine()
 {
 	size_t	begin = 0;
-	size_t last = request_.find("\r\n");
+	size_t last = this->request_.find("\r\n");
 	if (last == std::string::npos)
-		return 1;
+		return (1);
 
-	size_t	it = request_.find(" ", begin);
+	size_t	it = this->request_.find(" ", begin);
 	if (it == std::string::npos || it >= last)
-		return 1;
+		return (1);
 
-	method_ = request_.substr(begin, it);
-	if (method_ != "GET" && method_ != "POST" && method_ != "DELETE")
-		return 2; //501 Not Implemented
+	this->method_ = this->request_.substr(begin, it);
+	if (this->method_ != "GET" && this->method_ != "POST" && this->method_ != "DELETE")
+		return (2); //501 Not Implemented
 
 	
-	begin = request_.find("/", it);
+	begin = this->request_.find("/", it);
 	if (begin == std::string::npos || begin != (it + 1))
-		return 1;
+		return (1);
 
-	it = request_.find(" ", begin);
+	it = this->request_.find(" ", begin);
 	if (it == std::string::npos || it >= last)
-		return 1;
+		return (1);
 
-	url_path_ = request_.substr(begin, it - begin);
-	std::cout << url_path_ << std::endl;
+	this->url_path_ = this->request_.substr(begin, it - begin);
+	std::cout << this->url_path_ << std::endl;
 
-	this->raw_uri_ = url_path_;
+	this->raw_uri_ = this->url_path_;
 	this->splitUri_();
 
 	//path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
 	
 	
-	begin = request_.find("HTTP", it);
+	begin = this->request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
-		return 1;
-	version_ = request_.substr(begin, last - begin);
-	return 0;
+		return (1);
+	this->version_ = this->request_.substr(begin, last - begin);
+	return (0);
 }
 
 //initialise la map avec le header
 int	Request::initHeader()
 {
-	size_t last = request_.find("\r\n\r\n");
+	size_t last = this->request_.find("\r\n\r\n");
 	if (last == std::string::npos)
-		return 1;
+		return (1);
 	size_t end = 0;
 	while (end < last)
 	{
-		size_t	begin = request_.find("\r\n", end);
+		size_t	begin = this->request_.find("\r\n", end);
 		if (begin == std::string::npos)
-			return 1;
+			return (1);
 		if (begin == last)
 			break;
 		begin += 2;
 		end = begin;
-		size_t it = request_.find(":", begin);
+		size_t it = this->request_.find(":", begin);
 		if (it == std::string::npos || it >= last)
-			return 1;
-		std::string cle = request_.substr(begin, it - begin);
+			return (1);
+		std::string key = this->request_.substr(begin, it - begin);
 		if (it +2 >= last || request_[it + 1] != ' ')
-			return 1;
+			return (1);
 		begin = it + 2;
-		size_t	end = request_.find("\r\n", begin);
-		std::string value = request_.substr(begin, end - begin);
-		headers_.insert(std::pair<std::string, std::string>(cle, value));
+		size_t	end = this->request_.find("\r\n", begin);
+		std::string value = this->request_.substr(begin, end - begin);
+		this->headers_.insert(std::pair<std::string, std::string>(key, value));
 	}
-	if (headers_.find("Host") == headers_.end() 
-		|| (method_ == "POST" && headers_.find("Content-Length") == headers_.end()))
-		return 1;
-	if (headers_.find("Content-Type") == headers_.end())
-		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
+	if (this->headers_.find("Host") == this->headers_.end() 
+		|| (this->method_ == "POST" && this->headers_.find("Content-Length") == this->headers_.end()))
+		return (1);
+	if (this->headers_.find("Content-Type") == this->headers_.end())
+		this->headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
 	
-	return 0;
+	return (0);
 }
 
 //verifie que le body exist et initialise le body de la class
 int	Request::initBody()
 {
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
-	if (it == headers_.end())
+	std::map<std::string, std::string>::const_iterator it = this->headers_.find("Content-Length");
+	if (it == this->headers_.end())
 	{
-		body_ = "\0";
-		return 0;
+		this->body_ = "\0";
+		return (0);
 	}
 	std::string value = it->second;
-	size_t begin = request_.find("\r\n\r\n");
+	size_t begin = this->request_.find("\r\n\r\n");
 	if (begin == std::string::npos)
-		return 1;
+		return (1);
 	size_t				len;
 	std::stringstream	ss(value);
 	ss >> len;
 
 	if (len > Config::getBodySize())
-		return 1;
-	while (request_[begin] == '\r' || request_[begin] == '\n')
-		++begin;
-	if (request_.size() - begin != len)
 		return (1);
-	body_ = request_.substr(begin, len);
-	return 0;
+	while (this->request_[begin] == '\r' || this->request_[begin] == '\n')
+		++begin;
+	if (this->request_.size() - begin != len)
+		return (1);
+	this->body_ = this->request_.substr(begin, len);
+	return (0);
 }
 
 int	Request::checkOfLocation()
 {
-	Location* loc = Config::matchLocation(url_path_);
+	Location* loc = Config::matchLocation(this->url_path_);
 	if (loc == NULL)
-		return 1;
-	location_ = *loc;
+		return (1);
+	this->location_ = *loc;
 	// std::cout << location_.getPath() << std::endl;
-	std::vector<std::string> allowedMethods = location_.getAllowedMethods();
-	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
+	std::vector<std::string> allowedMethods = this->location_.getAllowedMethods();
+	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->method_)
 			== allowedMethods.end())
-		return 2;
-	return 0;
+		return (2);
+	return (0);
 }
 
 // on parse tout ce qu'on a accumule jusqu'a present
@@ -332,57 +333,57 @@ int	Request::parsingHttp(const std::string &raw_data)
 	this->request_ = raw_data;
 
 	if (complete() == false)
-		return 2; //continuer la lecture
+		return (PARSING_INCOMPLETE); //continuer la lecture
 
 	int res = initFistLine();
 	if (res == 1)
 	{
-		error_ = 401;
-		return 0;
+		this->error_ = 401;
+		return (PARSING_FAILED);
 	}
 	else if (res == 2)
 	{
-		error_ = 501;
-		return 0;
+		this->error_ = 501;
+		return (PARSING_FAILED);
 	}
 	if (initHeader() == 1)
 	{
-		error_ = 402;
-		return 0 ;
+		this->error_ = 402;
+		return (PARSING_FAILED);
 	}
-	int	body =  initBody();
+	int	body = initBody();
 	if (body == 1)
 	{
-		error_ = 413;
-		return 0;
+		this->error_ = 413;
+		return (PARSING_FAILED);
 	}
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
-		error_ = 404;
-		return 0;
+		this->error_ = 404;
+		return (PARSING_FAILED);
 	}
 	else if (checkLoc == 2)
 	{
-		error_ = 405;
-		return 0;
+		this->error_ = 405;
+		return (PARSING_FAILED);
 	}
-	std::string	root = location_.getRoot();
-	if (!url_path_.empty() && url_path_[0] == '/')
-		path_ = root + url_path_;
+	std::string	root = this->location_.getRoot();
+	if (!(this->url_path_.empty()) && this->url_path_[0] == '/')
+		this->path_ = root + this->url_path_;
 	else
-		path_ = root + "/" + url_path_;
-	if (path_[path_.length() - 1] == '/')
+		this->path_ = root + "/" + this->url_path_;
+	if (this->path_[this->path_.length() - 1] == '/')
 	{
-		std::vector<std::string> indexes = location_.getIndex();
+		std::vector<std::string> indexes = this->location_.getIndex();
 		if (!indexes.empty())
-			path_ += indexes[0];
+			this->path_ += indexes[0];
 	}
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	std::cout << root << std::endl;
-	std::cout << url_path_ << std::endl;
-	std::cout << path_ << std::endl;
-	return 1;
+	std::cout << this->url_path_ << std::endl;
+	std::cout << this->path_ << std::endl;
+	return (PARSING_SUCCESS);
 }
 
 //void	Request::setError(int error)
@@ -435,3 +436,19 @@ int main()
 	//}
 }
 */
+
+void	Request::clear()
+{
+	this->request_.clear();
+	this->method_.clear();
+	this->path_.clear();
+	this->url_path_.clear();
+	this->version_.clear();
+	this->headers_.clear();
+	this->body_.clear();
+	this->error_.clear();
+	this->location_ = Location();
+	this->raw_uri_.clear();
+	this->query_string_.clear();
+	this->client_ip_.clear();
+}

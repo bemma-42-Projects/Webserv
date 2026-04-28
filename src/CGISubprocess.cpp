@@ -22,6 +22,23 @@
 #include <string>
 #include <iostream>
 
+
+// on construit les pipes d'ecriture et de lecture
+// le serveur se dedouble avec fork
+// le parent reste le serveur
+// l'enfant devient le script CGI
+// dup2 permet de rediriger la sortie sur le terminal par une sortie dans le fd d'ecriture
+// les echos php iront dans ce pipe
+// pendant que le script php fait son travail et remplis le pipe
+// le serveur ajoute le fd de lecture dans la boucle epoll
+// des que epoll signale qu'il y a des donnees a lire (EPOLLIN), le serveur appelle read sur le fd de lecture
+// il ajoute les octets a la chaine avec append raw output
+// puis le pipe se ferme
+// le prochain read envoie EOF
+// puis on appelle build CGI response pour traduire la reponse CGI en reponse HTTP
+
+
+
 CGISubprocess::CGISubprocess()
 {
     pipe_to_cgi_[0] = -1;
@@ -31,7 +48,32 @@ CGISubprocess::CGISubprocess()
 
     if (pipe(pipe_to_cgi_) != 0)
         throw (std::runtime_error("Failed to create pipe to CGI" + std::string(strerror(errno))));
-    setNonBlocking(pipe_to_cgi_[0]);
+    
+    // ATTENTION :
+    // lorsque l'on crée un pipe, le système donne 2 fd
+    // si on appelle fcntl (avec setNonBlocking)
+    // le comportement de ce fd est au niveau du kernel
+    // puis on fait un fork
+    // mais le cgi (processus enfant) recoit une copie exacte des fds du parent !
+    // AVEC CES FLAGS !
+    // si le pipe est plein, le programme se mettra en pause
+    // et attendra que le serveur vide le pipe
+    // mais en mode non bloquant, une erreur sera renvoyée directement !
+    // EAGAIN
+    // un simple script .sh va donc faire crasher le serveur
+    // SEUL LE SERVEUR DOIT DONC AVOIR DES FDs NON BLOQUANTS
+    // il ne faut donc pas mettre pipe_to_cgi_[0]
+    // et pipe_from_cgi_[1] en non blocking
+
+        // direction serveur -> CGI
+        // en lecture (pour lire)
+        // envoie les donnees au script (0)
+        // si le script lit mais que le serveur n'a pas encore tout envoyé
+        // le script doit attendre
+        // setNonBlocking(pipe_to_cgi_[0]);
+
+    // le serveur va y appeler write pour envoyer des donnees au script (1)
+
     setNonBlocking(pipe_to_cgi_[1]);
     if (pipe(pipe_from_cgi_) != 0)
     {
@@ -39,8 +81,14 @@ CGISubprocess::CGISubprocess()
         close(pipe_to_cgi_[1]);
         throw (std::runtime_error("Failed to create pipe from CGI" + std::string(strerror(errno))));
     }
+    // le serveur appelera read sur ce fd
+    // s'il n'y a plus rien, retourne a epoll
+    // avec EAGAIN
     setNonBlocking(pipe_from_cgi_[0]);
-    setNonBlocking(pipe_from_cgi_[1]);
+    // idem ici
+    // si le script génère trop de texte d'un coup
+    // il doit attendre que le serveur vide le pipe
+    // setNonBlocking(pipe_from_cgi_[1]);
 }
 
 void    CGISubprocess::setupChildPipes_()
@@ -57,6 +105,15 @@ void    CGISubprocess::setupChildPipes_()
     close(pipe_from_cgi_[1]);
 }
 
+// transforme le clone du serveur web en script CGI
+// change le working directory
+// le script ne doit pas s'executer depuis la racine du serveur
+// mais bien dans le repertoire courant ou se trouve le script !
+// execve doit avoir un tableau de chaines de caracteres
+// de type C !
+// le programme a lancer et le fichier que le programme doit lire
+// donc
+// l'interpreter et le fichier php (par exemple)
 void    CGISubprocess::runChild_(const std::string &path, const std::string &interpreter, char **envp)
 {
     setupChildPipes_();
@@ -81,6 +138,19 @@ void    CGISubprocess::runChild_(const std::string &path, const std::string &int
     }
 }
 
+// fork permet de creer une copie du serveur web
+// dans le parent, fork renvoie le PID de l'enfant
+// dans l'enfant, il renvoie 0
+// -1 : le serveur n'a plus de memoire
+// ou limite de processus autorises atteinte
+// ATTENTION : chaque processus doit fermer le bout du pipe
+// qu'il n'utilise pas
+// le parent (le serveur) n'a pas besoin de lire ce qu'il a envoué
+// et ne doit pas ecrire non plus dans la sortie du CGI !
+// AUSSI, cela evite des problemes avec EPOLL
+// car si le parent gardait sont propre bout d'ecriture ouvert
+// le read ne renverrait jamais 0 et epoll restrerait bloqué !
+// conséquence : page web qui charge a l'infini
 void    CGISubprocess::createSubprocess(const std::string &path, const std::string &interpreter, char **envp)
 {
     this->pid_ = fork();
@@ -101,6 +171,12 @@ void    CGISubprocess::createSubprocess(const std::string &path, const std::stri
      * 3. Laisser la boucle d'événements principale appeler le read quand des données sont prêtes.
      * 4. Gérer un état 'CGI_READING' pour cette connexion.
 */
+
+// ceci est maintenant dans le serveur !
+// car le subprocess doit juste creer le processus et preter ses fd !
+// sinon, c'est incompatible avec EPOLL
+// car c'est le server qui gere le epoll !
+/*
 std::string CGISubprocess::readResponse()
 {
     char        buffer[4096];
@@ -129,6 +205,7 @@ std::string CGISubprocess::readResponse()
 
     return (response);    
 }
+*/
 
 CGISubprocess::~CGISubprocess()
 {
@@ -140,7 +217,10 @@ CGISubprocess::~CGISubprocess()
     if (this->pipe_from_cgi_[0] != -1)
     {
         close(this->pipe_from_cgi_[0]);
-        this->pipe_to_cgi_[0] = -1;
+        // FIX
+        // reset fermer pipe_from_cgi[0]
+        // et non pas pipe_to_cgi[0]
+        this->pipe_from_cgi_[0] = -1;
     }
 }
 

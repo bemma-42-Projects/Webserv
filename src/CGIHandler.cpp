@@ -11,8 +11,15 @@
 /* ************************************************************************** */
 
 #include "CGIHandler.hpp"
+#include <string>
 
-CGIHandler::CGIHandler(Request &request, const std::string &interpreter) : request_(request), interpreter_(interpreter), code_(200)
+// attention : le PID de l'interpreter cgi
+// provient du CGISubproccess !
+// il faut donc inclure CGISubprocess
+// le read fd aussi !
+#include "CGISubprocess.hpp"
+
+CGIHandler::CGIHandler(Request &request, const std::string &interpreter) : request_(request), interpreter_(interpreter), cgi_raw_output("")
 {
     
 }
@@ -38,6 +45,36 @@ void    CGIHandler::freeEnvp(char **envp)
 }
 
 
+// pour obtenir le Pid de l'interpreteur CGI
+// utile pour que le serveur puisse waitpid la réponse CGI
+int	CGIHandler::getPid() const
+{
+	return (this->subprocess_.getPid());
+}
+
+// pour obtenir le fd de lecture du CGI
+// car le serveur devra aussi accéder au fd du CGI
+// pour le mettre dans la liste d'epoll_events
+int	CGIHandler::getReadFd() const
+{
+	return (this->subprocess_.getReadFd());
+}
+
+// il faut gérer le fait que la réponse du CGI peut arriver en chunks !
+// il faut donc un appendOutput
+// qui prendra le chunk et le concaténera au raw output cgi
+void	CGIHandler::appendOutput(const std::string &chunk)
+{
+	this->cgi_raw_output_ += chunk;
+}
+
+// il faut aussi bien sur un getRawOutput
+// qui sera utilisé par le traducteur réponse CGI en réponse HTTP buildCGIReponse
+std::string CGIHandler::getRawOutput() const
+{
+	return (this->cgi_raw_output_);
+}
+
 // en CGI, le seul moyen de communication entre le serveur
 // et le script PHP (avant son exécution)
 // sont les variables d'environnement
@@ -48,7 +85,11 @@ char		**CGIHandler::getEnvp()
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
 	env.push_back("REQUEST_METHOD=" + request_.getMethod());
 	env.push_back("REQUEST_URI=" + request_.getRequestUri());
-    env.push_back("SCRIPT_FILENAME=" + request_.getPath());
+    
+	// VOIR FIX UBUNTU
+	env.push_back("SCRIPT_FILENAME=" + request_.getPath());
+	// VOIR AUSSI DOCUMENT_ROOT UBUNTU
+	
 	env.push_back("SCRIPT_NAME=" + request_.getUrlPath());
     env.push_back("QUERY_STRING=" + request_.getQueryString());
 	env.push_back("CONTENT_TYPE=" + request_.getContentType());
@@ -113,11 +154,14 @@ void    CGIHandler::addHeadersToEnv(std::vector<std::string>& env_vector)
 	}
 }
 
-
+// NOUVELLE VERSION, voir pourquoi elle a ete remplacee
 // fonction pour exécuter le CGI
-void    CGIHandler::execute()
+/*void    CGIHandler::execute()
 {
 	char	        **envp = this->getEnvp();
+
+
+
 	std::string     raw_cgi_output;
     CGISubprocess   subprocess;
 
@@ -133,40 +177,4 @@ void    CGIHandler::execute()
     }
     this->freeEnvp(envp);
 }
-
-// pour séparer les headers du body
-void	CGIHandler::parseCgiOutput(const std::string &raw)
-{
-	size_t	separator = raw.find("\r\n\r\n");
-
-	if (separator != std::string::npos)
-	{
-		std::string headers = raw.substr(0, separator);
-		// pour sauter le \r\n\r\n
-		this->body_ = raw.substr(separator + 4);
-		if (headers.find("Content-type: ") != std::string::npos) {
-            size_t start = headers.find("Content-type: ") + 14;
-            size_t end = headers.find("\r\n", start);
-            this->content_type_ = headers.substr(start, end - start);
-        }
-	}
-	else
-		this->body_ = raw;
-	this->code_ = 200;
-}
-
-std::string CGIHandler::getBody() const
-{
-    return (body_);
-}
-
-std::string CGIHandler::getContentType() const
-{
-    return (content_type_);
-}
-
-int CGIHandler::getCode() const
-{
-    return (code_);
-}
-
+*/

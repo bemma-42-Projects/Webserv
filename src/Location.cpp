@@ -14,47 +14,47 @@ Location::Location(std::string path, std::string root,
 		std::string upload_path, std::vector<std::string> index, 
 		bool autoindex, std::vector<std::string> methods)
 {
-	path_ = path;
-	root_ = root;
-	upload_path_ = upload_path;
-	index_ = index;
-	autoindex_ = autoindex;
+	this->path_ = path;
+	this->root_ = root;
+	this->upload_path_ = upload_path;
+	this->index_ = index;
+	this->autoindex_ = autoindex;
 
 	// C'est ici que le push_back est autorisé
-	allowed_methods_ = methods;
+	this->allowed_methods_ = methods;
 }
 
 std::vector<std::string>	Location::getIndex()
 {
-	return index_;
+	return (this->index_);
 }
 
 bool	Location::getAutoindex()
 {
-	return autoindex_;
+	return (this->autoindex_);
 }
 
 std::string	Location::getRoot()
 {
-	return root_;
+	return (this->root_);
 }
 
 std::string	Location::getPath()
 {
-	return path_;
+	return (this->path_);
 }
 
 std::vector<std::string>	Location::getAllowedMethods()
 {
-	return allowed_methods_;
+	return (this->allowed_methods_);
 }
 
 void	Location::addCgiHandler(std::string ext, std::string interpreter)
 {
-	cgi_handlers_[ext] = interpreter;
+	this->cgi_handlers_[ext] = interpreter;
 }
 
 std::map<std::string, std::string>	Location::getCgiHandlers() const
 {
-	return cgi_handlers_;
+	return (this->cgi_handlers_);
 }
