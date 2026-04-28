@@ -396,23 +396,15 @@ int	RequestAnswer::setAnswer()
 {
 	answer_.clear();
 	if (request_.getMethod() == "GET")
-	{
 		methodGet();
-		//if (methodGet() != 0)
-			//return 0;//error
-		//else
-		//	return 1;//get
-	}
 
 	else if (request_.getMethod() == "DELETE")
 	{
 		if (unlink(request_.getPath().c_str()) != 0)
 		{
 			std::cout << "error 404 error supression"  << std::endl;
-			//error_ = 404;
 			code_ = 404;
 			message_ = "Not Found";
-			//return (0);//error
 		}
 		//else 
 		//	return (2);//delete
