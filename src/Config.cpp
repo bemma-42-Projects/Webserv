@@ -71,6 +71,15 @@ std::string	Config::getRoot()
 	return root_;
 }
 
+std::map<int, std::string> Config::error_;
+
+
+std::map<int, std::string>	Config::getError()
+{
+    error_[404] = "./error.txt";
+	return error_;
+}
+
 //std::string Config::index_ = "/index.html"; // rejoute un / devant pour que je puis direct l'utiliser
 
 //std::string	Config::getIndex()
