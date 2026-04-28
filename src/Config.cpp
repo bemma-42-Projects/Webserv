@@ -19,7 +19,17 @@ Config::Config()
 	std::vector<std::string> index;
 	index.push_back("index.html");
 
+	std::vector<std::string>cgiIndex;
+	cgiIndex.push_back("index.php");
+
+	Location cgiLoc("/cgi-bin", "./src/www", "/usr/bin/php-cgi", index, false, methods);
+	
+	cgiLoc.addCgiHandler(".php", "/usr/bin/php-cgi");
+
+	location_.pushback(cgiLoc);
+
 	Location rootLoc("/", "./src/www", "", index, false, methods);
+
 	location_.push_back(rootLoc);
 
 	//"/downloads", "./data", "./data/tmp", "secret_list.html", true
@@ -106,7 +116,17 @@ void	Config::location()
 	std::vector<std::string> index;
 	index.push_back("index.html");
 
+	std::vector<std::string>cgiIndex;
+	cgiIndex.push_back("index.php");
+
+	Location cgiLoc("/cgi-bin", "./src/www", "/usr/bin/php-cgi", index, false, methods);
+	
+	cgiLoc.addCgiHandler(".php", "/usr/bin/php-cgi");
+
+	location_.pushback(cgiLoc);
+
 	Location rootLoc("/", "./src/www", "", index, false, methods);
+
 	location_.push_back(rootLoc);
 
 	/*
