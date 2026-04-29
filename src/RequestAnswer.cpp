@@ -343,7 +343,7 @@ AnswerStatus	RequestAnswer::methodPost()
 		if (s != std::string::npos)
 			start = s + 1;
 		std::string file_name = body.substr(start, end - start);
-		std::cout << "file name = " << file_name << std::endl;
+		//std::cout << "file name = " << file_name << std::endl;
 		// struct stat f;
 		std::string test = root + '/' + file_name;
 		std::cout << "test = " << test << std::endl;
@@ -521,8 +521,8 @@ bool	RequestAnswer::isCgi()
 	if (it != cgi_handlers.end())
 	{
 		// DEBUG
-		std::cout << "extension : " << it->first << std::endl;
-		std::cout << "interpreter : " << it->second << std::endl;
+		//std::cout << "extension : " << it->first << std::endl;
+		//std::cout << "interpreter : " << it->second << std::endl;
 		//
 		this->cgi_interpreter_ = it->second;
 		return (true);

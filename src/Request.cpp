@@ -184,7 +184,7 @@ bool	Request::complete()
 	//std::cout << "test" <<std::endl;
 
 	//std::cout << request_.substr(end) << std::endl;
-	std::cout << this->request_.size() - end << " < " << len << std::endl;
+	//std::cout << this->request_.size() - end << " < " << len << std::endl;
 	if (this->request_.size() - end < len)
 	{
 		//error_ = 413;
@@ -234,7 +234,7 @@ int	Request::initFistLine()
 		return (1);
 
 	this->url_path_ = this->request_.substr(begin, it - begin);
-	std::cout << this->url_path_ << std::endl;
+	//std::cout << this->url_path_ << std::endl;
 
 	this->raw_uri_ = this->url_path_;
 	this->splitUri_();
@@ -379,10 +379,10 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 		if (!indexes.empty())
 			this->path_ += indexes[0];
 	}
-	std::cout << "\n--------------------------------------------------------\n" << std::endl;
-	std::cout << root << std::endl;
-	std::cout << this->url_path_ << std::endl;
-	std::cout << this->path_ << std::endl;
+	//std::cout << "\n--------------------------------------------------------\n" << std::endl;
+	//std::cout << root << std::endl;
+	//std::cout << this->url_path_ << std::endl;
+	//std::cout << this->path_ << std::endl;
 	return (PARSING_SUCCESS);
 }
 

@@ -201,8 +201,8 @@ Location* Config::matchLocation(std::string requestPath)
     size_t longestLen = 0;
     std::vector<Location>::iterator it;
 
-	std::cout << "Request Path " << requestPath << std::endl;
-	std::cout << "Location size " << 	location_.size() << std::endl;
+	//std::cout << "Request Path " << requestPath << std::endl;
+	//std::cout << "Location size " << 	location_.size() << std::endl;
 
 	
 
@@ -210,11 +210,11 @@ Location* Config::matchLocation(std::string requestPath)
     {
         std::string locPath = it->getPath();
         
-		std::cout << "locPath : " << locPath << std::endl;
+		//std::cout << "locPath : " << locPath << std::endl;
 	
         if (requestPath.find(locPath) == 0) 
         {
-			std::cout << "locPath : " << locPath.length() << std::endl;
+			//std::cout << "locPath : " << locPath.length() << std::endl;
             if (locPath.length() > longestLen) 
             {
                 longestLen = locPath.length();

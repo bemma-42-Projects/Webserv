@@ -101,7 +101,7 @@ void    Client::clearBuffers()
 // socket_fd_ représente la connexion réseau avec le navigateur web
 // il faut fermer la connexion réseau lorsque le client est détruit !
 Client::~Client() {
-    if (this->socket_fd_ != -1)
-        close(this->socket_fd_);
-    this->socket_fd_ = -1;
+    //if (this->socket_fd_ != -1)
+    //    close(this->socket_fd_);
+    //this->socket_fd_ = -1;
 }

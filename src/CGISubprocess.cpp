@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 10:14:43 by julien            #+#    #+#             */
-/*   Updated: 2026/04/28 13:52:24 by julien           ###   ########.fr       */
+/*   Updated: 2026/04/29 11:40:15 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -140,6 +140,7 @@ void    CGISubprocess::createSubprocess(const std::string &path, const std::stri
 
 CGISubprocess::~CGISubprocess()
 {
+    /*
     if (this->pipe_to_cgi_[1] != -1)
     {
         close(this->pipe_to_cgi_[1]);
@@ -153,6 +154,7 @@ CGISubprocess::~CGISubprocess()
         // et non pas pipe_to_cgi[0]
         this->pipe_from_cgi_[0] = -1;
     }
+    */
 }
 
 int     CGISubprocess::getWriteFd() const

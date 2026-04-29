@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/04/28 13:53:05 by julien           ###   ########.fr       */
+/*   Updated: 2026/04/28 14:32:27 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -187,7 +187,8 @@ void    CGIHandler::execute()
     char    **envp = this->getEnvp();
 
         // --- LOGS DE DEBUG ---
-    std::cout << "--- CGI ENVP LOGS ---" << std::endl;
+    /*
+	std::cout << "--- CGI ENVP LOGS ---" << std::endl;
     if (envp) {
         for (int i = 0; envp[i]; i++) {
             std::cout << "[ENV] " << envp[i] << std::endl;
@@ -195,7 +196,7 @@ void    CGIHandler::execute()
     }
     std::cout << "----------------------" << std::endl;
     // ----------------------
-
+	*/
     try {
 		// crée le fork et appelle execve
 		// crée aussi les pipes pour relier la sortie du script au serveur
