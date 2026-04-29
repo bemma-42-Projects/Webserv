@@ -11,7 +11,7 @@ Error::~Error(){}
 
 int         Error::code_ = 0;
 std::string Error::message_ = "";
-Location*	Error::loc_ = NULL;
+LocationConfig*	Error::loc_ = NULL;
 
 std::string Error::Itoa(int nbr)
 {
@@ -26,7 +26,7 @@ std::string	Error::ErrorPage()
 {
 	if (loc_ != NULL)
 	{
-		std::map<int, std::string>	error_loc = loc_->getError();
+		std::map<int, std::string>	error_loc = loc_->getErrorPage();
 		//if (error_conf.find(400) != error_conf.end())
 		std::map<int, std::string>::const_iterator it = error_loc.find(code_);
 		if (it != error_loc.end())
@@ -88,7 +88,7 @@ std::string	Error::ErrorPage()
 }
 
 
-std::string	Error::AnswerError(int code, std::string message, Location* loc)
+std::string	Error::AnswerError(int code, std::string message, LocationConfig* loc)
 {
 	code_ = code;
 	message_ = message;

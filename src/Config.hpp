@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <map>
-#include "Location.hpp"
+#include "LocationConfig.hpp"
 
 
 class Config
@@ -17,7 +17,7 @@ class Config
 		static std::string	getRoot();
 		static std::map<int, std::string>	getError();
 		//static std::vector<std::string>	getIndex();
-		static Location* 	matchLocation(std::string requestPath);
+		static LocationConfig* 	matchLocation(std::string requestPath);
 		static void	location();
 
 	private:
@@ -25,7 +25,7 @@ class Config
 		static size_t						body_size_;
 		static std::string					root_;
 		//static std::vector<std::string>		index_; 
-		static std::vector<Location> 		location_;
+		static std::vector<LocationConfig> 		location_;
 		static std::map<int, std::string>	error_;
 
 };

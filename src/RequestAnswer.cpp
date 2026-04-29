@@ -14,6 +14,7 @@ RequestAnswer::RequestAnswer(Request request)
 {
 	request_ = request;
 	answer_ = "";
+	code_ = 200;
 	//error_ = 0;
 }
 
@@ -23,6 +24,7 @@ RequestAnswer::~RequestAnswer()
 //return le reponse
 std::string	RequestAnswer::getAnswer()
 {
+	//std::cout << answer_ << std::endl;
 	return answer_;
 }
 
@@ -171,7 +173,7 @@ int	RequestAnswer::getIfDir()
 }
 
 //cherche un index qui existe et est lisible et on le renvoi
-std::string RequestAnswer::findIndex(Location loc)
+std::string RequestAnswer::findIndex(LocationConfig loc)
 {
 
     std::vector<std::string>::iterator it;
@@ -211,18 +213,18 @@ int	RequestAnswer::methodGet()
 
 	else if (S_ISDIR(info.st_mode))
 	{
-		Location	loc = request_.getLocation();
+		//LocationConfig	loc = request_.getLocation();
 		//divier la fontion
 		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
 		// std::cout << "dir" << std::endl;
-		std::string index = findIndex(loc);
+		std::string index = findIndex(loc_);
 		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
 			return (getIfFile(Config::getRoot() + '/' + index));	
 			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
-		else if (loc.getAutoindex() == true)
+		else if (loc_.getAutoindex() == true)
 			return (getIfDir());
 		else
 		{
@@ -237,8 +239,8 @@ int	RequestAnswer::methodGet()
 //recupere le path du file name pour upload les fichier
 int RequestAnswer::fileName()
 {
-    Location    loc = request_.getLocation();
-    std::string root_path = loc.getRoot() + loc.getPath(); // Chemin dossier sur disque
+    //LocationConfig    loc = request_.getLocation();
+    std::string root_path = loc_.getRoot() + loc_.getPath(); // Chemin dossier sur disque
     std::string url_path = request_.getPath();           // Chemin demandé dans l'URL
 
     struct stat s;
@@ -386,11 +388,13 @@ void	RequestAnswer::fullAnswer()
 	//std::cout << "header = " << header << std::endl;
 
 	answer_ = header + body_;
+	//std::cout << answer_ << std::endl;
 }
 
 //envoie les fonction par rapport au methode (get, post, delete)
 int	RequestAnswer::setAnswer()
 {
+	LocationConfig	loc_ = request_.getLocation();
 	answer_.clear();
 	if (request_.getMethod() == "GET")
 		methodGet();
@@ -404,6 +408,7 @@ int	RequestAnswer::setAnswer()
 			message_ = "Not Found";
 		}
 		//else 
+		//	code_ = 200;
 		//	return (2);//delete
 		//Utilise unlink() pour supprimer le fichier
 	}
@@ -431,11 +436,10 @@ int	RequestAnswer::setAnswer()
 		//}
 	}
 ////mettre le reponse dans une answer_
-	//code_ = 404;
-	if (code_ < 400)
-		fullAnswer();
-	Location	loc = request_.getLocation();
-	answer_ = Error::AnswerError(code_, message_, &loc);
+	//code_ = 4754;
+	if (code_ > 400)
+		answer_ = Error::AnswerError(code_, message_, &loc_);
+	fullAnswer();
 	//std::cout << body_ << std::endl;
 	return 1;
 }

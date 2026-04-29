@@ -2,7 +2,7 @@
 #include <string>
 #include <map>
 #include "Config.hpp"
-#include "Location.hpp"
+//#include "LocationConfig.hpp"
 
 class Request {
 
@@ -19,7 +19,7 @@ class Request {
 		std::string 						getBody() const;
 		int									getError() const;
 		std::string 						getErrorMessage() const;
-		Location							getLocation() const;
+		LocationConfig						getLocation() const;
 		//int									requestHttp();							
 		int									parsingHttp();
 		bool								complete();
@@ -42,7 +42,7 @@ class Request {
 		std::string							body_;
 		int									error_;
 		std::string							message_error_;
-		Location							location_;
+		LocationConfig							location_;
 };
 
 std::ostream& operator<<(std::ostream& out, const Request& request);

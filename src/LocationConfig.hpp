@@ -6,11 +6,12 @@
 #include <iostream>
 #include <map>
 #include <utility>
+//#include "ServerConfig.hpp"
 
 class LocationConfig {
 public:
 
-	LocationConfig();
+	LocationConfig(/*ServerConfig conf*/);
 	const std::string&							getPath() const;
 	const std::string&							getRoot() const;
 	const std::vector<std::string>&				getIndex() const;

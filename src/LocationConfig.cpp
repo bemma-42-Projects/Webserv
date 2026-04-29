@@ -1,9 +1,19 @@
 #include "LocationConfig.hpp"
 
-LocationConfig::LocationConfig() {
-	autoindex_ = false;
-	allowed_upload_ = false;
-	client_max_body_size_ = 0;
+
+
+
+LocationConfig::LocationConfig(/*ServerConfig conf*/) {
+	
+	//client_max_body_size_ = conf.getClientMaxBodySize();
+	//root_ = conf.getRoot();
+	//index_ = conf.getIndex();
+	//autoindex_ = conf.getAutoindex();
+	allowed_upload_ = false;//utiliser dans answerrequest
+	//error_page_ = conf.getErrorPage();
+
+
+	//avec la configue
 }
 
 const std::string&	LocationConfig::getPath() const {
@@ -11,6 +21,7 @@ const std::string&	LocationConfig::getPath() const {
 }
 
 const std::string&	LocationConfig::getRoot() const {
+
 	return (root_);
 }
 
@@ -40,7 +51,9 @@ const std::string&	LocationConfig::getUploadPath() const {
 
 
 size_t	LocationConfig::getClientMaxBodySize() const {
+	//if (client_max_body_size_)
 	return (client_max_body_size_);
+	//return (Config::getBodySize());
 }
 
 const std::map<std::string, std::string>&	LocationConfig::getCgi() const {

@@ -91,7 +91,7 @@ std::string Request::getErrorMessage() const
 }
 
 
-Location	Request::getLocation() const
+LocationConfig	Request::getLocation() const
 {
 	return location_;
 }
@@ -189,7 +189,8 @@ int	Request::initHeader()
 		headers_.insert(std::pair<std::string, std::string>(cle, value));
 	}
 	if (headers_.find("Host") == headers_.end() 
-		|| (method_ == "POST" && headers_.find("Content-Length") == headers_.end()))
+		|| (method_ == "POST" && headers_.find("Content-Length") == headers_.end() 
+		&& location_.getAllowedUpload() == false))
 		return 1;
 	if (headers_.find("Content-Type") == headers_.end())
 		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
@@ -213,7 +214,7 @@ int	Request::initBody()
 	size_t	len;
 	std::stringstream ss(value);
     ss >> len;
-	if (len > Config::getBodySize())
+	if (len > location_.getClientMaxBodySize())
 		return 2;
 	while (request_[begin] == '\r' || request_[begin] == '\n')
 		++begin;
@@ -225,12 +226,17 @@ int	Request::initBody()
 
 int	Request::checkOfLocation()
 {
-	Location* loc = Config::matchLocation(url_path_);
+	LocationConfig* loc = Config::matchLocation(url_path_);
 	if (loc == NULL)
 		return 1;
 	location_ = *loc;
-	// std::cout << location_.getPath() << std::endl;
+	 std::cout << location_.getPath() << std::endl;
 	std::vector<std::string> allowedMethods = location_.getAllowedMethods();
+	//std::cout << "Methods: ";
+	//for (size_t i = 0; i < allowedMethods.size(); ++i) {
+	//	std::cout << allowedMethods[i] << (i < allowedMethods.size() - 1 ? ", " : "");
+	//}
+	//std::cout << std::endl;
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
 			== allowedMethods.end())
 		return 2;
@@ -255,6 +261,19 @@ int	Request::parsingHttp()
 		message_error_ = "Not Implemented";
 		return 0;
 	}
+	int checkLoc = checkOfLocation();
+	if (checkLoc == 1)
+	{
+		error_ = 404;
+		message_error_ = "Not Found";
+		return 0;
+	}
+	else if (checkLoc == 2)
+	{
+		error_ = 405;
+		message_error_ = "Method Not Allowed";
+		return 0;
+	}
 	if (initHeader() == 1)
 	{
 		error_ = 400;
@@ -274,19 +293,6 @@ int	Request::parsingHttp()
 		message_error_ = "Payload Too Large";
 		return 0;
 	}
-	int checkLoc = checkOfLocation();
-	if (checkLoc == 1)
-	{
-		error_ = 404;
-		message_error_ = "Not Found";
-		return 0;
-	}
-	else if (checkLoc == 2)
-	{
-		error_ = 405;
-		message_error_ = "Method Not Allowed";
-		return 0;
-	}
 	path_ = location_.getRoot() + url_path_;//attention si / a la fin
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
@@ -303,7 +309,7 @@ int main()
 		Config::location();
 
 		const char *buffer = 
-		"POST /upload HTTP/1.1\r\n"
+		"DELETE /src/test HTTP/1.1\r\n"
 		"Host: localhost:8080\r\n"
 		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
 		"Content-Length: 162\r\n"

@@ -1,33 +1,50 @@
 #include "Config.hpp"
 #include <iostream>
 
-std::vector<Location> Config::location_;
+std::vector<LocationConfig> Config::location_;
 
 Config::Config()
 {
-	//"/downloads", "./data", "./data/tmp", "secret_list.html", true
+	{
+        LocationConfig loc;
+        std::vector<std::string> methods;
+        methods.push_back("DELETE");
+        
+        std::vector<std::string> index;
+        index.push_back("test.html");
 
-    // C'est ici que le push_back est autorisé
-	std::vector<std::string> methods;
-    methods.push_back("GET");
-    methods.push_back("POST");
-	std::vector<std::string> index;
-	index.push_back("/index.html");
-	Location loc1("Makefile", "./data", "./data/tmp", index, true, methods);
-	std::vector<std::string> method;
-    method.push_back("DELETE");
-	std::vector<std::string> index2;
-	index2.push_back("test.html");
-	Location loc2("/upload", "./src", "./src/tmp", index2, false, method);
-	location_.push_back(loc2);
+        loc.setPath("/upload");
+        loc.setRootLoc("./src");
+        loc.setUploadPath("./src/tmp");
+        loc.setIndex(index);
+        loc.setAutoIndex(false);
+        loc.setAllowedMethods(methods);
+        
+        // On ajoute la location au vecteur statique de la classe
+        location_.push_back(loc);
+    }
 
-	//std::vector<std::string> methodsDef;
-    //methodsDef.push_back("GET");
-	//std::vector<std::string> index3;
-	//index3.push_back("test.html");
-	//Location defaultLoc("/", "./www", "", index3, false, methodsDef);
-	//defaultLocation_ = defaultLoc;
+    // --- Configuration de la Location par défaut (/) ---
+    {
+        LocationConfig defaultLoc;
+        std::vector<std::string> methodsDef;
+        methodsDef.push_back("GET");
+        
+        std::vector<std::string> indexDef;
+        indexDef.push_back("test.html");
 
+        defaultLoc.setPath("/");
+        defaultLoc.setRootLoc("./www");
+        defaultLoc.setUploadPath(""); // Vide si non utilisé
+        defaultLoc.setIndex(indexDef);
+        defaultLoc.setAutoIndex(false);
+        defaultLoc.setAllowedMethods(methodsDef);
+
+        // Si tu as une variable spécifique pour la location par défaut :
+        //defaultLocation_ = defaultLoc;
+        // Ou si elle va aussi dans le vecteur :
+        // location_.push_back(defaultLoc);
+    }
 }
 Config::~Config()
 {}
@@ -90,44 +107,97 @@ std::map<int, std::string>	Config::getError()
 //implemente des location, (test)
 void	Config::location()
 {
-	std::vector<std::string> methods;
-    methods.push_back("GET");
-    methods.push_back("POST");
-	std::vector<std::string> index;
-	index.push_back("indexj.html");
-	Location loc1("/src", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methods);
-    location_.push_back(loc1);
-	std::vector<std::string> method;
-    method.push_back("POST");
-	std::vector<std::string> index2;
-	index2.push_back("test.html");
-	Location loc2("/uploads", "/home/rmetge/cursus/github/webserv", "/uploads", index2, false, method);
-	location_.push_back(loc2);
-	std::vector<std::string> methode;
-    methode.push_back("GET");
-    methode.push_back("POST");
-	//std::vector<std::string> index3;
-	index.push_back("index.html");
-	Location loc3("/Makefile", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methode);
-    location_.push_back(loc3);
+	//// --- LOCATION 1 : /src ---
+    //{
+    //    LocationConfig loc;
+    //    std::vector<std::string> methods;
+    //    methods.push_back("GET");
+    //    methods.push_back("POST");
 
-	std::vector<std::string> methode2;
-    methode2.push_back("DELETE");
-    methode2.push_back("POST");
-	//std::vector<std::string> index4;
-	index.push_back("index.html");
-	Location loc4("/obj", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methode2);
-    location_.push_back(loc4);
+    //    std::vector<std::string> index;
+    //    index.push_back("indexj.html");
+
+    //    loc.setPath("/src");
+    //    loc.setRootLoc("/home/rmetge/cursus/github/webserv");
+    //    loc.setUploadPath("./data/tmp");
+    //    loc.setIndex(index);
+    //    loc.setAutoIndex(false);
+    //    loc.setAllowedMethods(methods);
+
+    //    location_.push_back(loc);
+    //}
+
+    // --- LOCATION 2 : /uploads ---
+    {
+        LocationConfig loc;
+        std::vector<std::string> methods;
+        methods.push_back("POST");
+
+        std::vector<std::string> index;
+        index.push_back("test.html");
+
+        loc.setPath("/uploads");
+        loc.setRootLoc("/home/rmetge/cursus/github/webserv");
+        loc.setUploadPath("/uploads");
+        loc.setIndex(index);
+        loc.setAutoIndex(false);
+        loc.setAllowedMethods(methods);
+
+        location_.push_back(loc);
+    }
+
+    // --- LOCATION 3 : /Makefile ---
+    {
+        LocationConfig loc;
+        std::vector<std::string> methods;
+        methods.push_back("GET");
+        methods.push_back("POST");
+
+        std::vector<std::string> index;
+        index.push_back("indexj.html"); // Attention: dans ton code original tu réutilisais l'ancien index
+        index.push_back("index.html");
+
+        loc.setPath("/Makefile");
+        loc.setRootLoc("/home/rmetge/cursus/github/webserv");
+        loc.setUploadPath("./data/tmp");
+        loc.setIndex(index);
+        loc.setAutoIndex(false);
+        loc.setAllowedMethods(methods);
+
+        location_.push_back(loc);
+    }
+
+    // --- LOCATION 4 : /obj ---
+    {
+        LocationConfig loc;
+        std::vector<std::string> methods;
+        methods.push_back("DELETE");
+        methods.push_back("POST");
+
+        std::vector<std::string> index;
+        index.push_back("indexj.html"); 
+        index.push_back("index.html");
+        // index.push_back("index.html"); // Ajouté comme dans ton exemple
+
+        loc.setPath("/src");
+        loc.setRootLoc("/home/rmetge/cursus/github/webserv");
+        loc.setUploadPath("./data/tmp");
+        loc.setIndex(index);
+        loc.setAutoIndex(false);
+        loc.setAllowedMethods(methods);
+
+        location_.push_back(loc);
+    }
 }
 
 
 //cherche la location par raport au path 
 //int	Request::parsingHttp()
-Location* Config::matchLocation(std::string requestPath) 
+LocationConfig* Config::matchLocation(std::string requestPath) 
 {
-    Location* bestMatch = NULL;
+    LocationConfig* bestMatch = NULL;
     size_t longestLen = 0;
-    std::vector<Location>::iterator it;
+    std::vector<LocationConfig>::iterator it;
 
     for (it = location_.begin(); it != location_.end(); ++it)
     {

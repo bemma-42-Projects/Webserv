@@ -15,13 +15,14 @@ class RequestAnswer
 		int			getIfDir();
 		std::string	getAnswer();
 		int			getError();
-		std::string findIndex(Location loc);
+		std::string findIndex(LocationConfig loc);
 		std::string findContentType(const std::string& path);
 		int			fileName();
 		std::string Itoa(int nbr);
 
 
 	private:
+		LocationConfig	loc_;
 		int			code_;//code de sorti ou error
 		std::string message_;
 		std::string	content_type_;//type de retour (image txt...)
