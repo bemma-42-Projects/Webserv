@@ -221,7 +221,7 @@ int	RequestAnswer::methodGet()
 		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
-			return (getIfFile(request_.getServer().getRoot() + '/' + index));	
+			return (getIfFile(request_.getServer()->getRoot() + '/' + index));	
 			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
 		else if (loc_.getAutoindex() == true)

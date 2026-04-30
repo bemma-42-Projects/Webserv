@@ -162,13 +162,15 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 //int	Request::parsingHttp()
 LocationConfig* ServerConfig::matchLocation(std::string requestPath) 
 {
+	std::cout << "test regdfh " << std::endl;
     LocationConfig* bestMatch = NULL;
     size_t longestLen = 0;
     std::vector<LocationConfig>::iterator it;
 
     for (it = locations_.begin(); it != locations_.end(); ++it)
     {
-        std::string locPath = it->getPath();
+		std::string locPath = it->getPath();
+		std::cout << "test " << std::endl;
         
         if (requestPath.find(locPath) == 0) 
         {
@@ -179,5 +181,6 @@ LocationConfig* ServerConfig::matchLocation(std::string requestPath)
             }
         }
     }
+	std::cout << "test 4 " << std::endl;
     return bestMatch;
 }

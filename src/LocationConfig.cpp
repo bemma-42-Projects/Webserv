@@ -3,11 +3,20 @@
 
 
 LocationConfig::LocationConfig() {
-	path_ = "";
+	path_ = "/src";
 	client_max_body_size_ = 0;
 	autoindex_ = false;
 	allowed_upload_ = false;//utiliser dans answerrequest
-
+	std::vector<std::string> methods;
+	methods.push_back("DELETE");
+	methods.push_back("POST");
+	allowed_methods_ = methods;
+	std::vector<std::string> index;
+	index.push_back("indexj.html"); 
+	index.push_back("index.html");
+	index_ = index;
+	root_ = "/home/rmetge/cursus/github/webserv";
+	upload_path_ = "./data/tmp";
 }
 
 LocationConfig::LocationConfig(ServerConfig conf) {
@@ -24,6 +33,7 @@ LocationConfig::LocationConfig(ServerConfig conf) {
 }
 
 const std::string&	LocationConfig::getPath() const {
+	std::cout << path_ << std::endl;
 	return (path_);
 }
 

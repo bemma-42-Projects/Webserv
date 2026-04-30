@@ -705,9 +705,9 @@ int main(int argc, char **argv) {
 	//	std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
 	//	std::cout << all_configs[i] << std::endl << std::endl;
 	//}
+	std::cout << all_configs[1].getLocations()[1].getPath() << std::endl;
 
 	//Config::location();
-	
 	const char *buffer = 
 	"GET /Makefile HTTP/1.1\r\n"
 	"Host: localhost:8080\r\n"
@@ -722,6 +722,7 @@ int main(int argc, char **argv) {
 	"--boundary123--";
 	
 	Request file((char *)buffer, all_configs[1]);
+	std::cout << "ou est le probleme?" << std::endl;
 	int result = file.parsingHttp();
 	if (result == 0)
 	{
@@ -744,3 +745,4 @@ int main(int argc, char **argv) {
 }
 
 
+//probleme avec le getpath, ca segfault

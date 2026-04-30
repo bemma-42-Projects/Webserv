@@ -16,11 +16,11 @@
 Request::Request()
 {}
 
-Request::Request(char *buffer, ServerConfig server)
+Request::Request(char *buffer, ServerConfig& server) : server_(&server)
 {
 	request_ = buffer;
 	error_ = 0;
-	server_ = server;
+	//server_ = server;
 }
 
 Request::~Request(){}
@@ -98,7 +98,7 @@ LocationConfig	Request::getLocation() const
 	return location_;
 }
 
-ServerConfig	Request::getServer() const
+ServerConfig*	Request::getServer() const
 {
 	return server_;
 }
@@ -232,9 +232,11 @@ int	Request::initBody()
 
 int	Request::checkOfLocation()
 {
-	LocationConfig* loc = server_.matchLocation(url_path_);
+	std::cout << "test " << std::endl;
+	LocationConfig* loc = server_->matchLocation(url_path_);
 	if (loc == NULL)
 		return 1;
+	std::cout << "test " << std::endl;
 	location_ = *loc;
 	 std::cout << location_.getPath() << std::endl;
 	std::vector<std::string> allowedMethods = location_.getAllowedMethods();
@@ -254,6 +256,7 @@ int	Request::parsingHttp()
 {
 	if (complete() == false)
 		return 2; //continuer la lecture
+	std::cout << "pb " << std::endl;
 	int res = initFistLine();
 	if (res == 1)
 	{
@@ -267,6 +270,7 @@ int	Request::parsingHttp()
 		message_error_ = "Not Implemented";
 		return 0;
 	}
+	std::cout << "pb " << std::endl;
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
@@ -280,12 +284,14 @@ int	Request::parsingHttp()
 		message_error_ = "Method Not Allowed";
 		return 0;
 	}
+	std::cout << "pb " << std::endl;
 	if (initHeader() == 1)
 	{
 		error_ = 400;
 		message_error_ = "Bad Request";
 		return 0 ;
 	}
+	std::cout << "pb " << std::endl;
 	int	body =  initBody();
 	if (body == 1)
 	{
@@ -299,6 +305,7 @@ int	Request::parsingHttp()
 		message_error_ = "Payload Too Large";
 		return 0;
 	}
+	std::cout << "pb " << std::endl;
 	path_ = location_.getRoot() + url_path_;//attention si / a la fin
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
