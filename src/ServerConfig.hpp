@@ -9,6 +9,8 @@
 
 #include "LocationConfig.hpp"
 
+class LocationConfig;
+
 struct Listen {
 	std::string	ip;
 	int			port;
@@ -41,6 +43,8 @@ public:
 	void									addLocation(const LocationConfig& loc);
 	void									addListen(const std::string& ip, int port);
 	void									addErrorPage(int code, const std::string& path);
+
+	LocationConfig* 						matchLocation(std::string requestPath);
 
 private:
 	std::vector<Listen>				listen_;

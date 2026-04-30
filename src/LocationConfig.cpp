@@ -2,15 +2,22 @@
 
 
 
-
-LocationConfig::LocationConfig(/*ServerConfig conf*/) {
-	
-	//client_max_body_size_ = conf.getClientMaxBodySize();
-	//root_ = conf.getRoot();
-	//index_ = conf.getIndex();
-	//autoindex_ = conf.getAutoindex();
+LocationConfig::LocationConfig() {
+	path_ = "";
+	client_max_body_size_ = 0;
+	autoindex_ = false;
 	allowed_upload_ = false;//utiliser dans answerrequest
-	//error_page_ = conf.getErrorPage();
+
+}
+
+LocationConfig::LocationConfig(ServerConfig conf) {
+	
+	client_max_body_size_ = conf.getClientMaxBodySize();
+	root_ = conf.getRoot();
+	index_ = conf.getIndex();
+	autoindex_ = conf.getAutoindex();
+	allowed_upload_ = false;//utiliser dans answerrequest
+	error_page_ = conf.getErrorPage();
 
 
 	//avec la configue

@@ -10,6 +10,10 @@
 #include <cctype>
 #include <stack>
 #include <cstdlib>
+#include "Request.hpp"
+#include "Error.hpp"
+#include "RequestAnswer.hpp"
+#include "LocationConfig.hpp"
 
 #include <sys/stat.h>
 
@@ -696,9 +700,47 @@ int main(int argc, char **argv) {
 	else 
 		std::cout << "Everything's good!" << std::endl;
 
-	for (size_t i = 0; i < all_configs.size(); i++) {
+	//for (size_t i = 0; i < all_configs.size(); i++) {
 
-		std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
-		std::cout << all_configs[i] << std::endl << std::endl;
+	//	std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
+	//	std::cout << all_configs[i] << std::endl << std::endl;
+	//}
+
+	//Config::location();
+	
+	const char *buffer = 
+	"GET /Makefile HTTP/1.1\r\n"
+	"Host: localhost:8080\r\n"
+	"Content-Type: multipart/form-data; boundary=boundary123\r\n"
+	"Content-Length: 162\r\n"
+	"\r\n"
+	"--boundary123\r\n"
+	"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
+	"Content-Type: text/plain\r\n"
+	"\r\n"
+	"Ceci est le contenu de mon fichier !\r\n"
+	"--boundary123--";
+	
+	Request file((char *)buffer, all_configs[1]);
+	int result = file.parsingHttp();
+	if (result == 0)
+	{
+		std::cout << "error " << file.getError() << std::endl;
+		std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), all_configs[1].getErrorPage());
+		return 0;
 	}
+	else if (result == 2)
+	{
+		std::cout << "requette non complete" << std::endl;
+		return 0;
+	}
+	// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
+	// std::cout << file << std::endl;
+	RequestAnswer answer(file);
+	// std::cout << "test " << std::endl;
+	if (answer.setAnswer() == 1)
+		std::cout << "anser =" << answer.getAnswer() << std::endl;
+
 }
+
+

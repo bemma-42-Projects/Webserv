@@ -17,7 +17,7 @@ class Config
 		static std::string	getRoot();
 		static std::map<int, std::string>	getError();
 		//static std::vector<std::string>	getIndex();
-		static LocationConfig* 	matchLocation(std::string requestPath);
+		//static LocationConfig* 	matchLocation(std::string requestPath);
 		static void	location();
 
 	private:

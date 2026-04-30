@@ -6,19 +6,21 @@
 //#include <fcntl.h>    // pour open
 //#include <unistd.h>   // pour read, close
 //#include <sys/stat.h> // pour stat
-#include "Config.hpp"
+//#include "Config.hpp"
 #include "RequestAnswer.hpp"
 #include "Error.hpp"
+#include "ServerConfig.hpp"
 //#include <dirent.h>
 
 
 Request::Request()
 {}
 
-Request::Request(char *buffer)
+Request::Request(char *buffer, ServerConfig server)
 {
 	request_ = buffer;
 	error_ = 0;
+	server_ = server;
 }
 
 Request::~Request(){}
@@ -96,6 +98,10 @@ LocationConfig	Request::getLocation() const
 	return location_;
 }
 
+ServerConfig	Request::getServer() const
+{
+	return server_;
+}
 
 //verifie qu'il y a "\r\n\r\n" cad que la requet soit complete
 //!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
@@ -226,7 +232,7 @@ int	Request::initBody()
 
 int	Request::checkOfLocation()
 {
-	LocationConfig* loc = Config::matchLocation(url_path_);
+	LocationConfig* loc = server_.matchLocation(url_path_);
 	if (loc == NULL)
 		return 1;
 	location_ = *loc;
@@ -303,48 +309,48 @@ int	Request::parsingHttp()
 //	error_ = error;
 //}
 
-int main()
-{
-	//try{
-		Config::location();
+//int main()
+//{
+//	//try{
+//		Config::location();
 
-		const char *buffer = 
-		"DELETE /src/test HTTP/1.1\r\n"
-		"Host: localhost:8080\r\n"
-		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
-		"Content-Length: 162\r\n"
-		"\r\n"
-		"--boundary123\r\n"
-		"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
-		"Content-Type: text/plain\r\n"
-		"\r\n"
-		"Ceci est le contenu de mon fichier !\r\n"
-		"--boundary123--";
+//		const char *buffer = 
+//		"GET /Makefile HTTP/1.1\r\n"
+//		"Host: localhost:8080\r\n"
+//		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
+//		"Content-Length: 162\r\n"
+//		"\r\n"
+//		"--boundary123\r\n"
+//		"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
+//		"Content-Type: text/plain\r\n"
+//		"\r\n"
+//		"Ceci est le contenu de mon fichier !\r\n"
+//		"--boundary123--";
 	
-		Request file((char *)buffer);
-		int res = file.parsingHttp();
-		if (res == 0)
-		{
-			std::cout << "error " << file.getError() << std::endl;
-			std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), NULL);
-			return 0;
-		}
-		else if (res == 2)
-		{
-			std::cout << "requette non complete" << std::endl;
-			return 0;
-		}
-		// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
-		// std::cout << file << std::endl;
-		RequestAnswer answer(file);
-		// std::cout << "test " << std::endl;
-		if (answer.setAnswer() == 1)
-			std::cout << "anser =" << answer.getAnswer() << std::endl;
+//		Request file((char *)buffer);
+//		int res = file.parsingHttp();
+//		if (res == 0)
+//		{
+//			std::cout << "error " << file.getError() << std::endl;
+//			std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), NULL);
+//			return 0;
+//		}
+//		else if (res == 2)
+//		{
+//			std::cout << "requette non complete" << std::endl;
+//			return 0;
+//		}
+//		// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
+//		// std::cout << file << std::endl;
+//		RequestAnswer answer(file);
+//		// std::cout << "test " << std::endl;
+//		if (answer.setAnswer() == 1)
+//			std::cout << "anser =" << answer.getAnswer() << std::endl;
 		
-	//}
-	//catch(std::exception &e)
-	//{
-	//	std::cerr << "error : " << e.what() << std::endl;
-	//	//Error::setError(e.what());
-	//}
-}
+//	//}
+//	//catch(std::exception &e)
+//	//{
+//	//	std::cerr << "error : " << e.what() << std::endl;
+//	//	//Error::setError(e.what());
+//	//}
+//}

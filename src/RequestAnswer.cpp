@@ -3,7 +3,7 @@
 #include <fcntl.h>    // pour open
 #include <unistd.h>   // pour read, close
 #include <sys/stat.h> // pour stat
-#include "Config.hpp"
+//#include "Config.hpp"
 #include <dirent.h>
 #include <sstream>
 #include <fstream>
@@ -221,7 +221,7 @@ int	RequestAnswer::methodGet()
 		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
-			return (getIfFile(Config::getRoot() + '/' + index));	
+			return (getIfFile(request_.getServer().getRoot() + '/' + index));	
 			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
 		else if (loc_.getAutoindex() == true)
@@ -438,7 +438,7 @@ int	RequestAnswer::setAnswer()
 ////mettre le reponse dans une answer_
 	//code_ = 4754;
 	if (code_ > 400)
-		answer_ = Error::AnswerError(code_, message_, &loc_);
+		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
 	fullAnswer();
 	//std::cout << body_ << std::endl;
 	return 1;

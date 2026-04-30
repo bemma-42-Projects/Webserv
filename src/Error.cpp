@@ -1,6 +1,6 @@
 #include "Error.hpp"
 #include <sstream>
-#include "Config.hpp"
+//#include "Config.hpp"
 #include <fcntl.h>    // pour open
 #include <unistd.h> 
 #include <sys/stat.h>
@@ -11,7 +11,9 @@ Error::~Error(){}
 
 int         Error::code_ = 0;
 std::string Error::message_ = "";
-LocationConfig*	Error::loc_ = NULL;
+//LocationConfig*	Error::loc_ = NULL;
+std::map<int, std::string> Error::page_error_;
+
 
 std::string Error::Itoa(int nbr)
 {
@@ -24,12 +26,12 @@ std::string Error::Itoa(int nbr)
 
 std::string	Error::ErrorPage()
 {
-	if (loc_ != NULL)
+	if (page_error_.empty())
 	{
-		std::map<int, std::string>	error_loc = loc_->getErrorPage();
+		//std::map<int, std::string>	error_loc = loc_->getErrorPage();
 		//if (error_conf.find(400) != error_conf.end())
-		std::map<int, std::string>::const_iterator it = error_loc.find(code_);
-		if (it != error_loc.end())
+		std::map<int, std::string>::const_iterator it = page_error_.find(code_);
+		if (it != page_error_.end())
 		{
 			struct stat s;
 			if (stat(it->second.c_str(), &s) == 0 && S_ISREG(s.st_mode))
@@ -53,30 +55,30 @@ std::string	Error::ErrorPage()
 
 	}
 	
-	std::map<int, std::string>	error_conf = Config::getError();
-	//if (error_conf.find(400) != error_conf.end())
-	std::map<int, std::string>::const_iterator itr = error_conf.find(code_);
-	if (itr != error_conf.end())
-	{
-		struct stat s;
-		if (stat(itr->second.c_str(), &s) == 0 && S_ISREG(s.st_mode))
-		{
-			int	fd = open((itr->second).c_str(), O_RDONLY);
-			if (fd != -1)
-			{
-				std::string	res;
-				char buffer[4096];//taille de la reponse ([4096])
-				ssize_t	bite_read;
-				while ((bite_read = read(fd, buffer, sizeof(buffer))) > 0)
-				{
-					res.append(buffer, bite_read);
-				}
-				close(fd);
+	//std::map<int, std::string>	error_conf = Config::getError();
+	////if (error_conf.find(400) != error_conf.end())
+	//std::map<int, std::string>::const_iterator itr = error_conf.find(code_);
+	//if (itr != error_conf.end())
+	//{
+	//	struct stat s;
+	//	if (stat(itr->second.c_str(), &s) == 0 && S_ISREG(s.st_mode))
+	//	{
+	//		int	fd = open((itr->second).c_str(), O_RDONLY);
+	//		if (fd != -1)
+	//		{
+	//			std::string	res;
+	//			char buffer[4096];//taille de la reponse ([4096])
+	//			ssize_t	bite_read;
+	//			while ((bite_read = read(fd, buffer, sizeof(buffer))) > 0)
+	//			{
+	//				res.append(buffer, bite_read);
+	//			}
+	//			close(fd);
 		
-				return (res);
-			}
-		}	
-	}
+	//			return (res);
+	//		}
+	//	}	
+	//}
 	std::string	code_str = Itoa(code_);
 	return ("<html>"
 		"<head><title>" + code_str + " " + message_ + " </title></head>"
@@ -88,11 +90,13 @@ std::string	Error::ErrorPage()
 }
 
 
-std::string	Error::AnswerError(int code, std::string message, LocationConfig* loc)
+//cree et retourne une page error http
+std::string	Error::AnswerError(int code, std::string message, std::map<int, std::string> pageError)
 {
 	code_ = code;
 	message_ = message;
-	loc_ = loc;
+	//loc_ = loc;
+	page_error_ = pageError;
 	//(void)loc_;
 	std::string error_page = ErrorPage();
 	std::string header = "HTTP/1.1 " + Itoa(code_);

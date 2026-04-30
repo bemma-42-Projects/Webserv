@@ -191,29 +191,29 @@ void	Config::location()
 }
 
 
-//cherche la location par raport au path 
-//int	Request::parsingHttp()
-LocationConfig* Config::matchLocation(std::string requestPath) 
-{
-    LocationConfig* bestMatch = NULL;
-    size_t longestLen = 0;
-    std::vector<LocationConfig>::iterator it;
+////cherche la location par raport au path 
+////int	Request::parsingHttp()
+//LocationConfig* Config::matchLocation(std::string requestPath) 
+//{
+//    LocationConfig* bestMatch = NULL;
+//    size_t longestLen = 0;
+//    std::vector<LocationConfig>::iterator it;
 
-    for (it = location_.begin(); it != location_.end(); ++it)
-    {
-        std::string locPath = it->getPath();
+//    for (it = location_.begin(); it != location_.end(); ++it)
+//    {
+//        std::string locPath = it->getPath();
         
-        if (requestPath.find(locPath) == 0) 
-        {
-            if (locPath.length() > longestLen) 
-            {
-                longestLen = locPath.length();
-                bestMatch = &(*it);
-            }
-        }
-    }
-    return bestMatch;
-}
+//        if (requestPath.find(locPath) == 0) 
+//        {
+//            if (locPath.length() > longestLen) 
+//            {
+//                longestLen = locPath.length();
+//                bestMatch = &(*it);
+//            }
+//        }
+//    }
+//    return bestMatch;
+//}
 
 //le math avec l'url n'est pas bon
 //voir la fonction match et l'implementation de location 

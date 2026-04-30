@@ -8,7 +8,7 @@ class Request {
 
 	public:
 		Request();
-		Request(char *buffer);
+		Request(char *buffer, ServerConfig server);
 		~Request();
 		std::string 						getRequest() const;
 		std::string 						getMethod() const;
@@ -20,6 +20,7 @@ class Request {
 		int									getError() const;
 		std::string 						getErrorMessage() const;
 		LocationConfig						getLocation() const;
+		ServerConfig						getServer() const;
 		//int									requestHttp();							
 		int									parsingHttp();
 		bool								complete();
@@ -42,7 +43,8 @@ class Request {
 		std::string							body_;
 		int									error_;
 		std::string							message_error_;
-		LocationConfig							location_;
+		LocationConfig						location_;
+		ServerConfig 						server_;
 };
 
 std::ostream& operator<<(std::ostream& out, const Request& request);
