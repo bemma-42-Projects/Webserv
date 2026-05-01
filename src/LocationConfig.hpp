@@ -24,7 +24,7 @@ public:
 	const std::map<int, std::string>&			getErrorPage() const;
 
 	void										setPath(const std::string& path_loc);
-	void										setRootLoc(const std::string& str);
+	void										setRoot(const std::string& str);
 	void										setIndex(const std::vector<std::string>& index);
 	void										setClientMaxBodySize(size_t size);
 	void										setAllowedUpload(bool allow);

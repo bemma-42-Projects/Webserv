@@ -43,15 +43,16 @@ public:
 	void									addErrorPage(int code, const std::string& path);
 
 private:
-	std::vector<Listen>				listen_;
-	std::vector<std::string>		server_name_;
-	std::map<int, std::string>		error_page_;
-	std::string						root_;
-	size_t							client_max_body_size_;
-	std::vector<std::string>		index_;
-	std::pair<int, std::string>		return_;
-	std::vector<LocationConfig>		locations_;
-	bool							autoindex_;
+	std::vector<Listen>					listen_;
+	std::vector<std::string>			server_name_;
+	std::map<int, std::string>			error_page_;
+	std::string							root_;
+	size_t								client_max_body_size_;
+	std::vector<std::string>			index_;
+	std::pair<int, std::string>			return_;
+	std::vector<LocationConfig>			locations_;
+	bool								autoindex_;
+	// std::map<std::string, std::string>	cgi_handler_;
 
 };
 

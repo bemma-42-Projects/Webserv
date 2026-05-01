@@ -1,5 +1,6 @@
 #include "LocationConfig.hpp"
 
+
 LocationConfig::LocationConfig() {
 	autoindex_ = false;
 	allowed_upload_ = false;
@@ -55,7 +56,7 @@ void	LocationConfig::setPath(const std::string& path_loc) {
 	path_ = path_loc;
 }
 
-void	LocationConfig::setRootLoc(const std::string& str) {
+void	LocationConfig::setRoot(const std::string& str) {
 	this->root_ = str;
 }
 
@@ -97,6 +98,22 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	std::cout << std::endl;
 
 	stream << "Path: " << loc.getPath() << std::endl;
+
+	stream << "Error pages: ";
+	std::map<int, std::string>::const_iterator it;
+	for (it = loc.getErrorPage().begin(); it != loc.getErrorPage().end(); it++) {
+		stream << "Error:" << it->first << " Page:" << it->second << "  |  ";
+	}
+	stream << std::endl;
+
+	if (loc.getReturn().first != 0) { // On vérifie si un code est défini
+		stream << "Return: " << loc.getReturn().first;
+		if (!loc.getReturn().second.empty()) {
+			stream << " (" << loc.getReturn().second << ")";
+		}
+		stream << std::endl;
+	}
+
 	stream << "Auto index: " << loc.getAutoindex() << std::endl;
 	stream << "Client max body size: " << loc.getClientMaxBodySize() << std::endl;
 	if (!loc.getRoot().empty())

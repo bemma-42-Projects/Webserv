@@ -3,8 +3,8 @@
 ServerConfig::ServerConfig() {
 	autoindex_ = false;
 	client_max_body_size_ = 1048576;
-	Listen newlisten;
-	listen_.push_back(newlisten);
+	// Listen newlisten;
+	// listen_.push_back(newlisten);
 	
 }
 
@@ -96,13 +96,11 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 		stream << "Listen : ";
 		for (size_t i = 0; i < srv.getListen().size(); i++)
 		{
-			// stream << std::endl;
 			if (!srv.getListen()[i].ip.empty())
 				stream << "IP:" << srv.getListen()[i].ip << " ";
 			if (srv.getListen()[i].port >= 0 && srv.getListen()[i].port < 65536)
 				stream << "Port:" << srv.getListen()[i].port;
 			std::cout << " | ";
-			// stream << std::endl;
 		}
 		stream << std::endl;
 	}
@@ -115,6 +113,7 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 		}
 		stream << std::endl;
 	}
+
 	stream << "Error pages: ";
 	std::map<int, std::string>::const_iterator it;
 	for (it = srv.getErrorPage().begin(); it != srv.getErrorPage().end(); it++) {

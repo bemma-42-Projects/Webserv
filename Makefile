@@ -7,7 +7,8 @@ SRC_DIR = src
 
 SRC = $(SRC_DIR)/parsingconfig.cpp \
 		$(SRC_DIR)/LocationConfig.cpp \
-		$(SRC_DIR)/ServerConfig.cpp
+		$(SRC_DIR)/ServerConfig.cpp\
+		$(SRC_DIR)/validatespecificdir.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
