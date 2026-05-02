@@ -20,19 +20,20 @@ class ServerConfig {
 public:
 
 	ServerConfig();
-	const std::vector<Listen>&				getListen() const;
-	const std::vector<std::string>&			getServerName() const;
-	const std::map<int, std::string>&		getErrorPage() const;
-	const std::string&						getRoot() const;
-	size_t									getClientMaxBodySize() const;
-	const std::vector<std::string>&			getIndex() const;
-	const std::pair<int, std::string>&		getReturn() const;
-	const std::vector<LocationConfig>&		getLocations() const;
-	int										getAutoIndex() const;
-	LocationConfig&							getLastLocation();
-	const std::set<std::string>&			getAllowedMethods() const;
-	const std::string&						getUploadPath() const;
-	int										getAllowedUpload() const;
+	const std::vector<Listen>&							getListen() const;
+	const std::vector<std::string>&						getServerName() const;
+	const std::map<int, std::string>&					getErrorPage() const;
+	const std::string&									getRoot() const;
+	size_t												getClientMaxBodySize() const;
+	const std::vector<std::string>&						getIndex() const;
+	const std::pair<int, std::string>&					getReturn() const;
+	const std::vector<LocationConfig>&					getLocations() const;
+	int													getAutoIndex() const;
+	LocationConfig&										getLastLocation();
+	const std::set<std::string>&						getAllowedMethods() const;
+	const std::string&									getUploadPath() const;
+	int													getAllowedUpload() const;
+	const std::map<std::string, std::string>&			getCgiHandler() const;
 
 	void									setRoot(const std::string& str);
 	void									setIndex(const std::vector<std::string>& index);
@@ -43,6 +44,7 @@ public:
 	void									setAllowedMethods(const std::set<std::string>& methods);
 	void									setUploadPath(const std::string& upload_path);
 	void									setAllowedUpload(int allow);
+	void									setCgiHandler(const std::string& ext, const std::string& path);
 
 	void									addLocation(const LocationConfig& loc);
 	void									addListen(const std::string& ip, int port);
@@ -63,7 +65,7 @@ private:
 	std::pair<int, std::string>			return_;
 	std::vector<LocationConfig>			locations_;
 	int									autoindex_;
-	// std::map<std::string, std::string>	cgi_handler_;
+	std::map<std::string, std::string>	cgi_handler_;
 
 };
 

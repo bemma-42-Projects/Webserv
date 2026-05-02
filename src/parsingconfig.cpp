@@ -67,7 +67,7 @@ std::vector<std::string> tokenizeConfig(std::string str) {
 bool isSimpleDirective(std::string name) {
 	if (name == "listen" || name == "root" || name == "client_max_body_size" || name == "server_name"
 			|| name == "error_page" || name == "index" || name == "return" || name == "autoindex"
-			|| name == "allowed_methods" || name == "upload_path" || name == "allowed_upload")
+			|| name == "allowed_methods" || name == "upload_path" || name == "allowed_upload" || name == "cgi")
 		return (true);
 	return (false);
 }
@@ -75,11 +75,11 @@ bool isSimpleDirective(std::string name) {
 bool directiveIsAllowed(std::string name, State state) {
 	if (state == IN_SERVER && (name == "listen" || name == "root" || name == "client_max_body_size"
 			|| name == "server_name" || name == "error_page" || name == "allowed_methods" || name == "index" 
-			|| name == "return" || name == "autoindex" || name == "allowed_upload" || name == "upload_path"))
+			|| name == "return" || name == "autoindex" || name == "allowed_upload" || name == "upload_path" || name == "cgi"))
 		return (true);
 	else if (state == IN_LOCATION && (name == "root" || name == "index" || name == "autoindex"
 			|| name == "return" || name == "allowed_methods" || name == "upload_path"
-			|| name == "allowed_upload" || name == "client_max_body_size" || name == "error_page"))
+			|| name == "allowed_upload" || name == "client_max_body_size" || name == "error_page" || name == "cgi"))
 		return (true);
 	return (false);
 }

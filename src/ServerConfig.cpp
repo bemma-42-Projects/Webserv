@@ -63,6 +63,10 @@ int	ServerConfig::getAllowedUpload() const {
 	return (allowed_upload_);
 }
 
+const std::map<std::string, std::string>&	ServerConfig::getCgiHandler() const {
+	return (cgi_handler_);
+}
+
 void	ServerConfig::setRoot(const std::string& str) {
 	this->root_ = str;
 }
@@ -98,6 +102,10 @@ void	ServerConfig::setUploadPath(const std::string& upload_path) {
 
 void	ServerConfig::setAllowedUpload(int allow) {
 	allowed_upload_ = allow;
+}
+
+void	ServerConfig::setCgiHandler(const std::string& ext, const std::string& path) {
+	cgi_handler_[ext] = path;
 }
 
 void	ServerConfig::addLocation(const LocationConfig& loc) {
@@ -211,7 +219,14 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 	}
 	stream << std::endl;
 
-	if (srv.getReturn().first != 0) { // On vérifie si un code est défini
+	stream << "Cgi: ";
+	std::map<std::string, std::string>::const_iterator ite;
+	for (ite = srv.getCgiHandler().begin(); ite != srv.getCgiHandler().end(); ite++) {
+		stream << "Ext:" << ite->first << " Path:" << ite->second << "  |  ";
+	}
+	stream << std::endl;
+
+	if (srv.getReturn().first != 0) { // On vconst_érifie si un code est défini
 		stream << "Return: " << srv.getReturn().first;
 		if (!srv.getReturn().second.empty()) {
 			stream << " (" << srv.getReturn().second << ")";

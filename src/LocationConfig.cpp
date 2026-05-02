@@ -44,12 +44,12 @@ size_t	LocationConfig::getClientMaxBodySize() const {
 	return (client_max_body_size_);
 }
 
-const std::map<std::string, std::string>&	LocationConfig::getCgi() const {
-	return (cgi_);
-}
-
 const std::map<int, std::string>&	LocationConfig::getErrorPage() const {
 	return (error_page_);
+}
+
+const std::map<std::string, std::string>&	LocationConfig::getCgiHandler() const {
+	return (cgi_handler_);
 }
 
 void	LocationConfig::setPath(const std::string& path_loc) {
@@ -94,6 +94,10 @@ void	LocationConfig::addErrorPage(int code, const std::string& path) {
 	error_page_[code] = path;
 }
 
+void	LocationConfig::setCgiHandler(const std::string& ext, const std::string& path) {
+	cgi_handler_[ext] = path;
+}
+
 std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	std::cout << std::endl;
 
@@ -103,6 +107,13 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	std::map<int, std::string>::const_iterator it;
 	for (it = loc.getErrorPage().begin(); it != loc.getErrorPage().end(); it++) {
 		stream << "Error:" << it->first << " Page:" << it->second << "  |  ";
+	}
+	stream << std::endl;
+
+	stream << "Cgi: ";
+	std::map<std::string, std::string>::const_iterator ite;
+	for (ite = loc.getCgiHandler().begin(); ite != loc.getCgiHandler().end(); ite++) {
+		stream << "Ext:" << ite->first << " Path:" << ite->second << "  |  ";
 	}
 	stream << std::endl;
 

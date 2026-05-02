@@ -398,6 +398,35 @@ bool validateServerName(std::vector<std::string> args) {
 	return (true);
 }
 
+bool validateCgi(std::vector<std::string> args, ServerConfig& srv, State state) {
+	if (args.size() != 2)
+		return (false);
+
+	if (args[0].empty() || args[0][0] != '.')
+		return (false);
+
+	struct stat sb;
+	if (stat(args[1].c_str(), &sb) == -1)
+		return (false);
+
+	if (!(sb.st_mode & S_IXUSR))
+		return (false);
+	if (!S_ISREG(sb.st_mode))
+		return (false);
+	
+	if (state == IN_SERVER) {
+		srv.setCgiHandler(args[0], args[1]);
+		return (true);
+	}
+	else if (state == IN_LOCATION) {
+		if (!srv.getLocations().empty()) {
+			srv.getLastLocation().setCgiHandler(args[0], args[1]);
+			return (true);
+		}
+	}
+	return (false);
+}
+
 bool validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv) {
 	if (name == "listen")
 	{
@@ -534,6 +563,8 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 	else if (name == "upload_path")
 		return (validateUploadPath(args, srv, state));
 	
+	else if (name == "cgi")
+		return (validateCgi(args, srv, state));
 	return (false);
 	
 }
