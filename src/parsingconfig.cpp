@@ -74,8 +74,8 @@ bool isSimpleDirective(std::string name) {
 
 bool directiveIsAllowed(std::string name, State state) {
 	if (state == IN_SERVER && (name == "listen" || name == "root" || name == "client_max_body_size"
-			|| name == "server_name" || name == "error_page" || name == "index" || name == "return"
-			|| name == "autoindex"))
+			|| name == "server_name" || name == "error_page" || name == "allowed_methods" || name == "index" 
+			|| name == "return" || name == "autoindex"))
 		return (true);
 	else if (state == IN_LOCATION && (name == "root" || name == "index" || name == "autoindex"
 			|| name == "return" || name == "allowed_methods" || name == "upload_path"

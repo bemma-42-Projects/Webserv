@@ -282,86 +282,97 @@ bool validateIndex(std::vector<std::string> args) {
 bool validateAutoIndex(std::vector<std::string> args, State state, ServerConfig& srv) {
 	if (args.size() != 1)
 		return (false);
-	if (args[0] == "on" || args[0] == "off") {
-		if (state == IN_SERVER && args[0] == "on") {
-			srv.setAutoIndex(true);
-			return (true);
-		}
-		else if (state == IN_LOCATION && args[0] == "on") {
-			if (srv.getLocations().empty()) {
-				// std::cerr << "pas de location" << std::endl;
-				return (false);
-			}
-			srv.getLastLocation().setAutoIndex(true);
-			return (true);
-		}
-		else if (args[0] == "off")
-			return (true);
+	bool value;
+	if (args[0] == "on")
+		value = true;
+	else if (args[0] == "off")
+		value = false;
+	else
+		return (false);
+
+	if (state == IN_SERVER) {
+		srv.setAutoIndex(value);
+		return (true);
+	}
+	else if (state == IN_LOCATION) {
+		if (srv.getLocations().empty())
+			return (false);
+
+		srv.getLastLocation().setAutoIndex(value);
+		return (true);
 	}
 	return (false);
 }
 
-bool validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv) {
+bool validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, State state) {
 	if (args.size() < 1 || args.size() > 3)
 		return (false);
 	for (size_t i = 0; i < args.size(); i++) {
 		if (args[i] != "GET" && args[i] != "POST" && args[i] != "DELETE")
 			return (false);
 	}
-	if (!srv.getLocations().empty()) {
-		srv.getLastLocation().setAllowedMethods(args);
-		// std::cout << "AllowedMethods = good" << std::endl;
+	std::set<std::string> setMethods(args.begin(), args.end());
+	if (state == IN_SERVER) {
+		srv.setAllowedMethods(setMethods);
 		return (true);
 	}
-	return (false);
-}
-
-bool validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv) {
-	if (args.size() != 1)
-		return (false);
-	if (!srv.getLocations().empty()) {
-		if (args[0] == "on") {
-			srv.getLastLocation().setAllowedUpload(true);
-			return (true);
-		}
-		else if (args[0] == "off") {
+	else if (state == IN_LOCATION) {
+		if (!srv.getLocations().empty()) {
+			srv.getLastLocation().setAllowedMethods(setMethods);
 			return (true);
 		}
 	}
-	// std::cout << "AllowedUpload = good" << std::endl;
 	return (false);
 }
 
-bool validateUploadPath(std::vector<std::string> args,ServerConfig& srv) {
+bool validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, State state) {
 	if (args.size() != 1)
 		return (false);
-	if (args[0].empty())
+	bool value;
+	if (args[0] == "on")
+		value = true;
+	else if (args[0] == "off")
+		value = false;
+	else
 		return (false);
+	if (state == IN_SERVER) {
+		srv.setAllowedUpload(value);
+		return (true);
+	}
+	else if (state == IN_LOCATION) {
+		if (!srv.getLocations().empty()) {
+			srv.getLastLocation().setAllowedUpload(value);
+			return (true);
+		}
+	}
+	return (false);
+}
+
+bool validateUploadPath(std::vector<std::string> args,ServerConfig& srv, State state) {
+	if (args.size() != 1 || args[0].empty())
+		return (false);
+
 	if (access(args[0].c_str(), F_OK) == -1)
-	{
-		// std::cout << "le dossier n'existe pas" << std::endl;
 		return (false);
-	}
+
 	if (access(args[0].c_str(), W_OK) == -1)
-	{
-		// std::cout << "je n'arrive pas a lire " << std::endl;
 		return (false);
-	}
+
 	struct stat sb;
 	if (stat(args[0].c_str(), &sb) == -1)
-	{
-		// std::cout << "stat pas bon" << std::endl;
 		return (false);
-	}
 	if (!S_ISDIR(sb.st_mode))
-	{
-		// std::cout << "C'est pas un dossier" << std::endl;
 		return (false);
-	}
-	// std::cout << "UploadPath = good" << std::endl;
-	if (!srv.getLocations().empty()) {
-		srv.getLastLocation().setUploadPath(args[0]);
+
+	if (state == IN_SERVER) {
+		srv.setUploadPath(args[0]);
 		return (true);
+	}
+	else if (state == IN_LOCATION) {
+		if (!srv.getLocations().empty()) {
+			srv.getLastLocation().setUploadPath(args[0]);
+			return (true);
+		}
 	}
 	return (false);
 }
@@ -515,13 +526,13 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 		return (validateAutoIndex(args,state, srv));
 
 	else if (name == "allowed_methods")
-		return (validateAllowedMethods(args, srv));
+		return (validateAllowedMethods(args, srv, state));
 	
 	else if (name == "allowed_upload")
-		return (validateAllowedUpload(args, srv));
+		return (validateAllowedUpload(args, srv, state));
 	
 	else if (name == "upload_path")
-		return (validateUploadPath(args, srv));
+		return (validateUploadPath(args, srv, state));
 	
 	return (false);
 	

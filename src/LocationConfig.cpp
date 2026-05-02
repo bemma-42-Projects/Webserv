@@ -19,7 +19,7 @@ const std::vector<std::string>&	LocationConfig::getIndex() const {
 	return (index_);
 }
 
-bool	LocationConfig::getAutoindex() const {
+bool	LocationConfig::getAutoIndex() const {
 	return (autoindex_);
 }
 
@@ -27,7 +27,7 @@ const std::pair<int, std::string>&	LocationConfig::getReturn() const {
 	return (return_);
 }
 
-const std::vector<std::string>&	LocationConfig::getAllowedMethods() const {
+const std::set<std::string>&	LocationConfig::getAllowedMethods() const {
 	return (allowed_methods_);
 }
 
@@ -81,7 +81,7 @@ void	LocationConfig::setUploadPath(const std::string& upload_path) {
 	upload_path_ = upload_path;
 }
 
-void	LocationConfig::setAllowedMethods(const std::vector<std::string>& methods) {
+void	LocationConfig::setAllowedMethods(const std::set<std::string>& methods) {
 	allowed_methods_ = methods;
 }
 
@@ -114,7 +114,7 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 		stream << std::endl;
 	}
 
-	stream << "Auto index: " << loc.getAutoindex() << std::endl;
+	stream << "Auto index: " << loc.getAutoIndex() << std::endl;
 	stream << "Client max body size: " << loc.getClientMaxBodySize() << std::endl;
 	if (!loc.getRoot().empty())
 		stream << "Root: " << loc.getRoot() << std::endl;
@@ -130,9 +130,11 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	
 	if (!loc.getAllowedMethods().empty()) {
 		stream << "Allowed methods: ";
-		for (size_t i = 0; i < loc.getAllowedMethods().size(); i++)
+
+		std::set<std::string>::const_iterator it;
+		for (it = loc.getAllowedMethods().begin(); it != loc.getAllowedMethods().end(); it++)
 		{
-			stream << loc.getAllowedMethods()[i] << " ";
+			stream << *it << " ";
 		}
 		std::cout << std::endl;
 	}

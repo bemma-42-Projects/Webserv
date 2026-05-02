@@ -40,7 +40,7 @@ const std::vector<LocationConfig>& ServerConfig::getLocations() const {
 	return (locations_);
 }
 
-bool ServerConfig::getAutoindex() const {
+bool ServerConfig::getAutoIndex() const {
 	return (autoindex_);
 }
 
@@ -49,6 +49,18 @@ LocationConfig&	ServerConfig::getLastLocation() {
 		throw std::runtime_error("Tentative d'accès à une location dans un serveur vide !");
 	}
 	return (locations_.back());
+}
+
+const std::set<std::string>&	ServerConfig::getAllowedMethods() const {
+	return (allowed_methods_);
+}
+
+const std::string&	ServerConfig::getUploadPath() const {
+	return (upload_path_);
+}
+
+bool	ServerConfig::getAllowedUpload() const {
+	return (allowed_upload_);
 }
 
 void	ServerConfig::setRoot(const std::string& str) {
@@ -76,6 +88,18 @@ void	ServerConfig::setReturn(int code, const std::string& url) {
 	return_.second = url;
 }
 
+void	ServerConfig::setAllowedMethods(const std::set<std::string>& methods) {
+	allowed_methods_ = methods;
+}
+
+void	ServerConfig::setUploadPath(const std::string& upload_path) {
+	upload_path_ = upload_path;
+}
+
+void	ServerConfig::setAllowedUpload(bool allow) {
+	allowed_upload_ = allow;
+}
+
 void	ServerConfig::addLocation(const LocationConfig& loc) {
 	locations_.push_back(loc);
 }
@@ -89,6 +113,44 @@ void	ServerConfig::addListen(const std::string& ip, int port) {
 
 void	ServerConfig::addErrorPage(int code, const std::string& path) {
 	error_page_[code] = path;
+}
+
+void ServerConfig::finalize() {
+	// 1. D'abord, on fixe les défauts du serveur s'il est vide
+	if (this->root_.empty())
+		this->root_ = "/var/www/html";
+	// if (this->autoindex_ == -1)
+		// this->autoindex_ = 0; // off
+	// if (this->client_max_body_size_ == -1)
+		// this->client_max_body_size_ = 1000000; // 1Mo
+	if (this->allowed_methods_.empty()) {
+		this->allowed_methods_.insert("GET"); // Défaut minimal
+	}
+
+	// 2. Ensuite, on propage vers chaque location
+	for (size_t i = 0; i < locations_.size(); i++) {
+		LocationConfig &loc = locations_[i];
+
+		// Si la location n'a pas de root, elle prend celui du serveur
+		if (loc.getRoot().empty())
+			loc.setRoot(this->root_);
+
+		// // Héritage de l'autoindex
+		// if (loc.getAutoIndex() == -1)
+		// 	loc.setAutoIndex(this->autoindex_);
+
+		// // Héritage des méthodes autorisées
+		// if (loc.getAllowedMethods().empty())
+		// 	loc.setAllowedMethods(this->allowed_methods_);
+
+		// // Héritage du dossier d'upload
+		// if (loc.getUploadPath().empty())
+		// 	loc.setUploadPath(this->upload_path_);
+		
+		// // Héritage du client_max_body_size
+		// if (loc.getClientMaxBodySize() == -1)
+		// 	loc.setClientMaxBodySize(this->client_max_body_size_);
+	}
 }
 
 std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
@@ -129,7 +191,7 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 		stream << std::endl;
 	}
 
-	stream << "Auto index: " << srv.getAutoindex() << std::endl;
+	stream << "Auto index: " << srv.getAutoIndex() << std::endl;
 	stream << "Client max body size: " << srv.getClientMaxBodySize() << std::endl;
 	if (!srv.getRoot().empty())
 		stream << "Root: " << srv.getRoot() << std::endl;
@@ -140,6 +202,17 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 			stream << srv.getIndex()[i] << " ";
 		}
 		
+	}
+
+	if (!srv.getAllowedMethods().empty()) {
+		stream << "Allowed methods: ";
+
+		std::set<std::string>::const_iterator it;
+		for (it = srv.getAllowedMethods().begin(); it != srv.getAllowedMethods().end(); it++)
+		{
+			stream << *it << " ";
+		}
+		std::cout << std::endl;
 	}
 
 	if (!srv.getLocations().empty()) {
