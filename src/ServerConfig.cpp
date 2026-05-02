@@ -1,10 +1,10 @@
 #include "ServerConfig.hpp"
+#include "parsingconf.hpp"
 
 ServerConfig::ServerConfig() {
-	autoindex_ = false;
-	client_max_body_size_ = 1048576;
-	// Listen newlisten;
-	// listen_.push_back(newlisten);
+	autoindex_ = -1;
+	client_max_body_size_ = 0;
+	allowed_upload_ = -1;
 	
 }
 
@@ -40,7 +40,7 @@ const std::vector<LocationConfig>& ServerConfig::getLocations() const {
 	return (locations_);
 }
 
-bool ServerConfig::getAutoIndex() const {
+int ServerConfig::getAutoIndex() const {
 	return (autoindex_);
 }
 
@@ -59,7 +59,7 @@ const std::string&	ServerConfig::getUploadPath() const {
 	return (upload_path_);
 }
 
-bool	ServerConfig::getAllowedUpload() const {
+int	ServerConfig::getAllowedUpload() const {
 	return (allowed_upload_);
 }
 
@@ -71,7 +71,7 @@ void	ServerConfig::setIndex(const std::vector<std::string>& index) {
 	this->index_ = index;
 }
 
-void	ServerConfig::setAutoIndex(bool allow) {
+void	ServerConfig::setAutoIndex(int allow) {
 	autoindex_ = allow;
 }
 
@@ -96,7 +96,7 @@ void	ServerConfig::setUploadPath(const std::string& upload_path) {
 	upload_path_ = upload_path;
 }
 
-void	ServerConfig::setAllowedUpload(bool allow) {
+void	ServerConfig::setAllowedUpload(int allow) {
 	allowed_upload_ = allow;
 }
 
@@ -116,40 +116,68 @@ void	ServerConfig::addErrorPage(int code, const std::string& path) {
 }
 
 void ServerConfig::finalize() {
-	// 1. D'abord, on fixe les défauts du serveur s'il est vide
+
 	if (this->root_.empty())
-		this->root_ = "/var/www/html";
-	// if (this->autoindex_ == -1)
-		// this->autoindex_ = 0; // off
-	// if (this->client_max_body_size_ == -1)
-		// this->client_max_body_size_ = 1000000; // 1Mo
+		this->root_ = "./src/www";
+
+	if (this->autoindex_ == -1)
+		this->autoindex_ = false;
+
+	if (this->client_max_body_size_ == 0)
+		this->client_max_body_size_ = 1000000;
+
 	if (this->allowed_methods_.empty()) {
-		this->allowed_methods_.insert("GET"); // Défaut minimal
+		this->allowed_methods_.insert("GET");
+		// this->allowed_methods_.insert("POST"); a voir
 	}
 
-	// 2. Ensuite, on propage vers chaque location
+	if (this->allowed_upload_ == -1)
+		this->allowed_upload_ = false;
+
+	if (this->listen_.empty()) {
+		Listen newLis;
+		listen_.push_back(newLis);
+	}
+
+	if (this->index_.empty())
+		index_.push_back("index.html");
+
+	if (this->upload_path_.empty() && this->allowed_upload_ == true)
+		this->allowed_upload_ = false; 
+
+	// if (this->locations_.empty) a voir avec romane 
+
 	for (size_t i = 0; i < locations_.size(); i++) {
-		LocationConfig &loc = locations_[i];
 
-		// Si la location n'a pas de root, elle prend celui du serveur
-		if (loc.getRoot().empty())
-			loc.setRoot(this->root_);
+		if (locations_[i].getRoot().empty())
+			locations_[i].setRoot(combineRootUri(this->root_, locations_[i].getPath())[0]);
 
-		// // Héritage de l'autoindex
-		// if (loc.getAutoIndex() == -1)
-		// 	loc.setAutoIndex(this->autoindex_);
+		if (locations_[i].getAutoIndex() == -1)
+			locations_[i].setAutoIndex(this->autoindex_);
 
-		// // Héritage des méthodes autorisées
-		// if (loc.getAllowedMethods().empty())
-		// 	loc.setAllowedMethods(this->allowed_methods_);
+		if (locations_[i].getAllowedMethods().empty())
+			locations_[i].setAllowedMethods(this->allowed_methods_);
 
-		// // Héritage du dossier d'upload
-		// if (loc.getUploadPath().empty())
-		// 	loc.setUploadPath(this->upload_path_);
+		if (locations_[i].getAllowedUpload() == -1)
+			locations_[i].setAllowedUpload(this->allowed_upload_);
+
+		if (locations_[i].getUploadPath().empty()) {
+			locations_[i].setUploadPath(this->upload_path_);
+			if (locations_[i].getUploadPath().empty() && locations_[i].getAllowedUpload() == true)
+				locations_[i].setAllowedUpload(false);
+		}
+		if (locations_[i].getIndex().empty())
+			locations_[i].setIndex(this->index_);
+
+		if (locations_[i].getErrorPage().empty() && !this->error_page_.empty()) {
+			std::map<int, std::string>::const_iterator it;
+			for (it = this->error_page_.begin(); it != this->error_page_.end(); it++) {
+				locations_[i].addErrorPage(it->first, it->second);
+			}
+		}
 		
-		// // Héritage du client_max_body_size
-		// if (loc.getClientMaxBodySize() == -1)
-		// 	loc.setClientMaxBodySize(this->client_max_body_size_);
+		if (locations_[i].getClientMaxBodySize() == 0)
+			locations_[i].setClientMaxBodySize(this->client_max_body_size_);
 	}
 }
 
@@ -203,7 +231,7 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 		}
 		
 	}
-
+	stream << std::endl;
 	if (!srv.getAllowedMethods().empty()) {
 		stream << "Allowed methods: ";
 
@@ -218,7 +246,7 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 	if (!srv.getLocations().empty()) {
 		stream << std::endl;
 		stream << std::endl;
-		stream << "Location: ";
+		stream << "Locations: ";
 		for (size_t i = 0; i < srv.getLocations().size(); i++)
 		{
 			stream << srv.getLocations()[i] << " ";

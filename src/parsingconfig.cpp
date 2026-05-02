@@ -75,7 +75,7 @@ bool isSimpleDirective(std::string name) {
 bool directiveIsAllowed(std::string name, State state) {
 	if (state == IN_SERVER && (name == "listen" || name == "root" || name == "client_max_body_size"
 			|| name == "server_name" || name == "error_page" || name == "allowed_methods" || name == "index" 
-			|| name == "return" || name == "autoindex"))
+			|| name == "return" || name == "autoindex" || name == "allowed_upload" || name == "upload_path"))
 		return (true);
 	else if (state == IN_LOCATION && (name == "root" || name == "index" || name == "autoindex"
 			|| name == "return" || name == "allowed_methods" || name == "upload_path"
@@ -212,6 +212,9 @@ int main(int argc, char **argv) {
 	else 
 		std::cout << "Everything's good!" << std::endl;
 
+	for (size_t i = 0; i < all_configs.size(); i++) {
+		all_configs[i].finalize();
+	}
 	for (size_t i = 0; i < all_configs.size(); i++) {
 
 		std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;

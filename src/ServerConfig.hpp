@@ -28,21 +28,21 @@ public:
 	const std::vector<std::string>&			getIndex() const;
 	const std::pair<int, std::string>&		getReturn() const;
 	const std::vector<LocationConfig>&		getLocations() const;
-	bool									getAutoIndex() const;
+	int										getAutoIndex() const;
 	LocationConfig&							getLastLocation();
 	const std::set<std::string>&			getAllowedMethods() const;
 	const std::string&						getUploadPath() const;
-	bool									getAllowedUpload() const;
+	int										getAllowedUpload() const;
 
 	void									setRoot(const std::string& str);
 	void									setIndex(const std::vector<std::string>& index);
 	void									setClientMaxBodySize(size_t size);
-	void									setAutoIndex(bool allow);
+	void									setAutoIndex(int allow);
 	void									setServerName(const std::vector<std::string>& names);
 	void									setReturn(int code, const std::string& url);
 	void									setAllowedMethods(const std::set<std::string>& methods);
 	void									setUploadPath(const std::string& upload_path);
-	void									setAllowedUpload(bool allow);
+	void									setAllowedUpload(int allow);
 
 	void									addLocation(const LocationConfig& loc);
 	void									addListen(const std::string& ip, int port);
@@ -58,11 +58,11 @@ private:
 	size_t								client_max_body_size_;
 	std::vector<std::string>			index_;
 	std::set<std::string>				allowed_methods_;
-	bool								allowed_upload_;
+	int									allowed_upload_;
 	std::string							upload_path_;
 	std::pair<int, std::string>			return_;
 	std::vector<LocationConfig>			locations_;
-	bool								autoindex_;
+	int									autoindex_;
 	// std::map<std::string, std::string>	cgi_handler_;
 
 };

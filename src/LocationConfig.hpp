@@ -15,10 +15,10 @@ public:
 	const std::string&							getPath() const;
 	const std::string&							getRoot() const;
 	const std::vector<std::string>&				getIndex() const;
-	bool										getAutoIndex() const;
+	int										getAutoIndex() const;
 	const std::pair<int, std::string>&			getReturn() const;
 	const std::set<std::string>&				getAllowedMethods() const;
-	bool										getAllowedUpload() const;
+	int										getAllowedUpload() const;
 	const std::string&							getUploadPath() const;
 	const std::map<std::string, std::string>&	getCgi() const;
 	size_t										getClientMaxBodySize() const;
@@ -28,8 +28,8 @@ public:
 	void										setRoot(const std::string& str);
 	void										setIndex(const std::vector<std::string>& index);
 	void										setClientMaxBodySize(size_t size);
-	void										setAllowedUpload(bool allow);
-	void										setAutoIndex(bool allow);
+	void										setAllowedUpload(int allow);
+	void										setAutoIndex(int allow);
 	void										setUploadPath(const std::string& upload_path);
 	void										setAllowedMethods(const std::set<std::string>& methods);
 	void										setReturn(int code, const std::string& url);
@@ -39,10 +39,10 @@ private:
 	std::string							path_;
 	std::string							root_;
 	std::vector<std::string>			index_;
-	bool								autoindex_;
+	int									autoindex_;
 	std::pair<int, std::string>			return_;
 	std::set<std::string>				allowed_methods_;
-	bool								allowed_upload_;
+	int									allowed_upload_;
 	std::string							upload_path_;
 	std::map<std::string, std::string>	cgi_;
 	size_t								client_max_body_size_;

@@ -2,8 +2,8 @@
 
 
 LocationConfig::LocationConfig() {
-	autoindex_ = false;
-	allowed_upload_ = false;
+	autoindex_ = -1;
+	allowed_upload_ = -1;
 	client_max_body_size_ = 0;
 }
 
@@ -19,7 +19,7 @@ const std::vector<std::string>&	LocationConfig::getIndex() const {
 	return (index_);
 }
 
-bool	LocationConfig::getAutoIndex() const {
+int	LocationConfig::getAutoIndex() const {
 	return (autoindex_);
 }
 
@@ -31,7 +31,7 @@ const std::set<std::string>&	LocationConfig::getAllowedMethods() const {
 	return (allowed_methods_);
 }
 
-bool	LocationConfig::getAllowedUpload() const {
+int	LocationConfig::getAllowedUpload() const {
 	return (allowed_upload_);
 }
 
@@ -69,11 +69,11 @@ void	LocationConfig::setClientMaxBodySize(size_t size) {
 }
 
 
-void	LocationConfig::setAllowedUpload(bool allow) {
+void	LocationConfig::setAllowedUpload(int allow) {
 	allowed_upload_ = allow;
 }
 
-void	LocationConfig::setAutoIndex(bool allow) {
+void	LocationConfig::setAutoIndex(int allow) {
 	autoindex_ = allow;
 }
 
