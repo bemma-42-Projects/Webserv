@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/04 11:53:25 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/04 12:24:53 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,6 @@ void    CGIHandler::freeEnvp(char **envp)
 	}
 	delete[] envp;
 }
-
 
 // pour obtenir le Pid de l'interpreteur CGI
 // utile pour que le serveur puisse waitpid la réponse CGI
