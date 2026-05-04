@@ -224,7 +224,7 @@ int	RequestAnswer::methodGet()
 			return (getIfFile(request_.getServer()->getRoot() + '/' + index));	
 			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
-		else if (loc_.getAutoindex() == true)
+		else if (loc_.getAutoIndex() == true)
 			return (getIfDir());
 		else
 		{

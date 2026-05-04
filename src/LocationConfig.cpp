@@ -5,11 +5,13 @@
 LocationConfig::LocationConfig() {
 	path_ = "/src";
 	client_max_body_size_ = 0;
-	autoindex_ = false;
-	allowed_upload_ = false;//utiliser dans answerrequest
-	std::vector<std::string> methods;
-	methods.push_back("DELETE");
-	methods.push_back("POST");
+	//autoindex_ = false;
+	//allowed_upload_ = false;//utiliser dans answerrequest
+	autoindex_ = -1;
+	allowed_upload_ =-1;
+	std::set<std::string> methods;
+	methods.insert("DELETE");
+	methods.insert("POST");
 	allowed_methods_ = methods;
 	std::vector<std::string> index;
 	index.push_back("indexj.html"); 
@@ -24,7 +26,7 @@ LocationConfig::LocationConfig(ServerConfig conf) {
 	client_max_body_size_ = conf.getClientMaxBodySize();
 	root_ = conf.getRoot();
 	index_ = conf.getIndex();
-	autoindex_ = conf.getAutoindex();
+	autoindex_ = conf.getAutoIndex();
 	allowed_upload_ = false;//utiliser dans answerrequest
 	error_page_ = conf.getErrorPage();
 
@@ -46,7 +48,7 @@ const std::vector<std::string>&	LocationConfig::getIndex() const {
 	return (index_);
 }
 
-bool	LocationConfig::getAutoindex() const {
+int	LocationConfig::getAutoIndex() const {
 	return (autoindex_);
 }
 
@@ -54,11 +56,11 @@ const std::pair<int, std::string>&	LocationConfig::getReturn() const {
 	return (return_);
 }
 
-const std::vector<std::string>&	LocationConfig::getAllowedMethods() const {
+const std::set<std::string>&	LocationConfig::getAllowedMethods() const {
 	return (allowed_methods_);
 }
 
-bool	LocationConfig::getAllowedUpload() const {
+int	LocationConfig::getAllowedUpload() const {
 	return (allowed_upload_);
 }
 
@@ -73,19 +75,19 @@ size_t	LocationConfig::getClientMaxBodySize() const {
 	//return (Config::getBodySize());
 }
 
-const std::map<std::string, std::string>&	LocationConfig::getCgi() const {
-	return (cgi_);
-}
-
 const std::map<int, std::string>&	LocationConfig::getErrorPage() const {
 	return (error_page_);
+}
+
+const std::map<std::string, std::string>&	LocationConfig::getCgiHandler() const {
+	return (cgi_handler_);
 }
 
 void	LocationConfig::setPath(const std::string& path_loc) {
 	path_ = path_loc;
 }
 
-void	LocationConfig::setRootLoc(const std::string& str) {
+void	LocationConfig::setRoot(const std::string& str) {
 	this->root_ = str;
 }
 
@@ -98,11 +100,11 @@ void	LocationConfig::setClientMaxBodySize(size_t size) {
 }
 
 
-void	LocationConfig::setAllowedUpload(bool allow) {
+void	LocationConfig::setAllowedUpload(int allow) {
 	allowed_upload_ = allow;
 }
 
-void	LocationConfig::setAutoIndex(bool allow) {
+void	LocationConfig::setAutoIndex(int allow) {
 	autoindex_ = allow;
 }
 
@@ -110,7 +112,7 @@ void	LocationConfig::setUploadPath(const std::string& upload_path) {
 	upload_path_ = upload_path;
 }
 
-void	LocationConfig::setAllowedMethods(const std::vector<std::string>& methods) {
+void	LocationConfig::setAllowedMethods(const std::set<std::string>& methods) {
 	allowed_methods_ = methods;
 }
 
@@ -123,11 +125,38 @@ void	LocationConfig::addErrorPage(int code, const std::string& path) {
 	error_page_[code] = path;
 }
 
+void	LocationConfig::setCgiHandler(const std::string& ext, const std::string& path) {
+	cgi_handler_[ext] = path;
+}
+
 std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	std::cout << std::endl;
 
 	stream << "Path: " << loc.getPath() << std::endl;
-	stream << "Auto index: " << loc.getAutoindex() << std::endl;
+
+	stream << "Error pages: ";
+	std::map<int, std::string>::const_iterator it;
+	for (it = loc.getErrorPage().begin(); it != loc.getErrorPage().end(); it++) {
+		stream << "Error:" << it->first << " Page:" << it->second << "  |  ";
+	}
+	stream << std::endl;
+
+	stream << "Cgi: ";
+	std::map<std::string, std::string>::const_iterator ite;
+	for (ite = loc.getCgiHandler().begin(); ite != loc.getCgiHandler().end(); ite++) {
+		stream << "Ext:" << ite->first << " Path:" << ite->second << "  |  ";
+	}
+	stream << std::endl;
+
+	if (loc.getReturn().first != 0) { // On vérifie si un code est défini
+		stream << "Return: " << loc.getReturn().first;
+		if (!loc.getReturn().second.empty()) {
+			stream << " (" << loc.getReturn().second << ")";
+		}
+		stream << std::endl;
+	}
+
+	stream << "Auto index: " << loc.getAutoIndex() << std::endl;
 	stream << "Client max body size: " << loc.getClientMaxBodySize() << std::endl;
 	if (!loc.getRoot().empty())
 		stream << "Root: " << loc.getRoot() << std::endl;
@@ -143,9 +172,11 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	
 	if (!loc.getAllowedMethods().empty()) {
 		stream << "Allowed methods: ";
-		for (size_t i = 0; i < loc.getAllowedMethods().size(); i++)
+
+		std::set<std::string>::const_iterator it;
+		for (it = loc.getAllowedMethods().begin(); it != loc.getAllowedMethods().end(); it++)
 		{
-			stream << loc.getAllowedMethods()[i] << " ";
+			stream << *it << " ";
 		}
 		std::cout << std::endl;
 	}

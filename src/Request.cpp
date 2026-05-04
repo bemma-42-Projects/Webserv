@@ -239,7 +239,7 @@ int	Request::checkOfLocation()
 	std::cout << "test " << std::endl;
 	location_ = *loc;
 	 std::cout << location_.getPath() << std::endl;
-	std::vector<std::string> allowedMethods = location_.getAllowedMethods();
+	std::set<std::string> allowedMethods = location_.getAllowedMethods();
 	//std::cout << "Methods: ";
 	//for (size_t i = 0; i < allowedMethods.size(); ++i) {
 	//	std::cout << allowedMethods[i] << (i < allowedMethods.size() - 1 ? ", " : "");
