@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:14:03 by julien            #+#    #+#             */
-/*   Updated: 2026/04/28 13:52:52 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/04 11:53:34 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,9 @@ class   CGIHandler
         std::string getRawOutput() const;
 
     private:
+        std::string getAbsolutePath_() const;
+        void        setupStandardEnv_(std::vector<std::string> &env) const;
+        char        **vectorToCharArray_(const std::vector<std::string> &env) const;
         char		**getEnvp();
 		void		addHeadersToEnv(std::vector<std::string>& env_vector);
         void        freeEnvp(char **envp);

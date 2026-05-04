@@ -43,6 +43,10 @@ class   Server {
         void            handleClientWrite_(int client_fd);
         void            handleCgiRead_(int cgi_fd);
 
+        void            prepareForWriting_(int client_fd, Client &client);
+        void            setupCgiEpoll_(int client_fd, Client &client);
+        //void            removeCgi_(int cgi_fd);
+        void            cleanCgiData_(int cgi_fd, std::map<int, int>::iterator it);
         int server_socket_;
         int epoll_fd_;
         std::map<int, Client*> clients_;

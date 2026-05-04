@@ -2,7 +2,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string>
-#include <errno.h>
 #include <cstring>
 #include <iostream>
 #include <unistd.h>

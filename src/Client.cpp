@@ -3,8 +3,6 @@
 #include <cstring>
 
 // constructeur par défaut
-// on initialise aussi request_ et answer_ à NULL maintenant
-// 
 Client::Client() : socket_fd_(-1), state_(READING_REQUEST), last_activity_(time(NULL)), ip_address_(""), request_buffer_(), response_buffer_(), request_(), answer_() {
     memset(&addr_, 0, sizeof(addr_));
 }
@@ -98,10 +96,7 @@ void    Client::clearBuffers()
     this->last_activity_ = time(NULL);
 }
 
-// socket_fd_ représente la connexion réseau avec le navigateur web
-// il faut fermer la connexion réseau lorsque le client est détruit !
-Client::~Client() {
-    //if (this->socket_fd_ != -1)
-    //    close(this->socket_fd_);
-    //this->socket_fd_ = -1;
+Client::~Client()
+{
+
 }
