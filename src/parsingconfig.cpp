@@ -217,11 +217,11 @@ int main(int argc, char **argv) {
 
 	for (size_t i = 0; i < all_configs.size(); i++) 
 		all_configs[i].finalize();
-	//for (size_t i = 0; i < all_configs.size(); i++) {
+	for (size_t i = 0; i < all_configs.size(); i++) {
 
-	//	std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
-	//	std::cout << all_configs[i] << std::endl << std::endl;
-	//}
+		std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
+		std::cout << all_configs[i] << std::endl << std::endl;
+	}
 	std::cout << all_configs[1].getLocations()[1].getPath() << std::endl;
 
 	//Config::location();

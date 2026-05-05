@@ -3,12 +3,12 @@
 
 
 LocationConfig::LocationConfig() {
-	path_ = "/src";
+	autoindex_ = -1;
+	allowed_upload_ =-1;
+	/*path_ = "/src";
 	client_max_body_size_ = 0;
 	//autoindex_ = false;
 	//allowed_upload_ = false;//utiliser dans answerrequest
-	autoindex_ = -1;
-	allowed_upload_ =-1;
 	std::set<std::string> methods;
 	methods.insert("DELETE");
 	methods.insert("POST");
@@ -18,21 +18,21 @@ LocationConfig::LocationConfig() {
 	index.push_back("index.html");
 	index_ = index;
 	root_ = "/home/rmetge/cursus/github/webserv";
-	upload_path_ = "./data/tmp";
+	upload_path_ = "./data/tmp";*/
 }
 
-LocationConfig::LocationConfig(ServerConfig conf) {
+// LocationConfig::LocationConfig(ServerConfig conf) {
 	
-	client_max_body_size_ = conf.getClientMaxBodySize();
-	root_ = conf.getRoot();
-	index_ = conf.getIndex();
-	autoindex_ = conf.getAutoIndex();
-	allowed_upload_ = false;//utiliser dans answerrequest
-	error_page_ = conf.getErrorPage();
+// 	client_max_body_size_ = conf.getClientMaxBodySize();
+// 	root_ = conf.getRoot();
+// 	index_ = conf.getIndex();
+// 	autoindex_ = conf.getAutoIndex();
+// 	allowed_upload_ = false;//utiliser dans answerrequest
+// 	error_page_ = conf.getErrorPage();
 
 
-	//avec la configue
-}
+// 	//avec la configue
+// }
 
 const std::string&	LocationConfig::getPath() const {
 	std::cout << path_ << std::endl;
