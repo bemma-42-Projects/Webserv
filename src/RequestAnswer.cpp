@@ -94,7 +94,7 @@ int	RequestAnswer::getIfFile(std::string file)
 {
 	//std::cout << Config::getRoot() + file << std::endl;
 	//int	fd = open((request_.getLocation().getRoot() + '/' + file).c_str(), O_RDONLY);
-	std::cout << "dir" << std::endl;
+	// std::cout << "dir" << std::endl;
 	int	fd = open((file).c_str(), O_RDONLY);
 	if (fd == -1)
 		return 1;
@@ -325,7 +325,7 @@ int RequestAnswer::methodPost()
     }
 
     // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
-    std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
+    // std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
 
     std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
 
@@ -414,7 +414,7 @@ int	RequestAnswer::setAnswer()
 	}
 	else if (request_.getMethod() == "POST")
 	{
-		std::cout << "nous y est" << std::endl;
+		// std::cout << "nous y est" << std::endl;
 		methodPost();
 
 	//	std::string	url = request_.getUrlPath();

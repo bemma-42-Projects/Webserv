@@ -5,37 +5,13 @@
 LocationConfig::LocationConfig() {
 	autoindex_ = -1;
 	allowed_upload_ =-1;
-	/*path_ = "/src";
+
 	client_max_body_size_ = 0;
-	//autoindex_ = false;
-	//allowed_upload_ = false;//utiliser dans answerrequest
-	std::set<std::string> methods;
-	methods.insert("DELETE");
-	methods.insert("POST");
-	allowed_methods_ = methods;
-	std::vector<std::string> index;
-	index.push_back("indexj.html"); 
-	index.push_back("index.html");
-	index_ = index;
-	root_ = "/home/rmetge/cursus/github/webserv";
-	upload_path_ = "./data/tmp";*/
+
 }
 
-// LocationConfig::LocationConfig(ServerConfig conf) {
-	
-// 	client_max_body_size_ = conf.getClientMaxBodySize();
-// 	root_ = conf.getRoot();
-// 	index_ = conf.getIndex();
-// 	autoindex_ = conf.getAutoIndex();
-// 	allowed_upload_ = false;//utiliser dans answerrequest
-// 	error_page_ = conf.getErrorPage();
-
-
-// 	//avec la configue
-// }
-
 const std::string&	LocationConfig::getPath() const {
-	std::cout << path_ << std::endl;
+	// std::cout << path_ << std::endl;
 	return (path_);
 }
 
@@ -185,5 +161,5 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 
 	if (!loc.getUploadPath().empty())
 		stream << "Upload path: " << loc.getUploadPath() << std::endl;
-	return stream;
+	return (stream);
 }

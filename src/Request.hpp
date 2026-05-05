@@ -1,8 +1,9 @@
 #pragma once
 #include <string>
 #include <map>
-#include "Config.hpp"
+// #include "Config.hpp"
 //#include "LocationConfig.hpp"
+#include "ServerConfig.hpp"
 
 class Request {
 

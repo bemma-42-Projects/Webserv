@@ -125,7 +125,7 @@ bool	Request::complete()
 	//std::cout << "test" <<std::endl;
 
 	//std::cout << request_.substr(end) << std::endl;
-	std::cout << request_.size() - end << " < " << len << std::endl;
+	// std::cout << request_.size() - end << " < " << len << std::endl;
 	if (request_.size() - end < len)
 	{
 		//error_ = 413;
@@ -171,7 +171,7 @@ int	Request::initFistLine()
 int	Request::initHeader()
 {
 	size_t last = request_.find("\r\n\r\n");
-	std::cout << "1" << std::endl;
+	// std::cout << "1" << std::endl;
 	if (last == std::string::npos)
 		return 1;
 	size_t end = 0;
@@ -203,16 +203,16 @@ int	Request::initHeader()
 		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
 	
 	
-	std::cout << "\n\n\n\ntest" << std::endl;
-	const std::map<std::string, std::string>& headers = getHeaders();
-	std::map<std::string, std::string>::const_iterator i;
+	// std::cout << "\n\n\n\ntest" << std::endl;
+	// const std::map<std::string, std::string>& headers = getHeaders();
+	// std::map<std::string, std::string>::const_iterator i;
 
-	for (i = headers.begin(); i != headers.end(); ++i) {
-		std::cout << "	Header: " << i->first  // La clé (ex: "Content-Type")
-				<< " | Valeur: " << i->second // La valeur (ex: "text/html")
-				<< "\n";
-	}
-	std::cout << "\n\n\n\n" << std::endl;
+	// for (i = headers.begin(); i != headers.end(); ++i) {
+	// 	std::cout << "	Header: " << i->first  // La clé (ex: "Content-Type")
+	// 			<< " | Valeur: " << i->second // La valeur (ex: "text/html")
+	// 			<< "\n";
+	// }
+	// std::cout << "\n\n\n\n" << std::endl;
 	// out << "Body: " << request.getBody() << "\n";
     // return out;
 
@@ -247,13 +247,11 @@ int	Request::initBody()
 
 int	Request::checkOfLocation()
 {
-	std::cout << "test " << std::endl;
 	LocationConfig* loc = server_->matchLocation(url_path_);
 	if (loc == NULL)
 		return 1;
-	std::cout << "test " << std::endl;
 	location_ = *loc;
-	std::cout << location_.getPath() << std::endl;
+	// std::cout << location_.getPath() << std::endl;
 	std::set<std::string> allowedMethods = location_.getAllowedMethods();
 	//std::cout << "Methods: ";
 	//for (size_t i = 0; i < allowedMethods.size(); ++i) {
@@ -271,7 +269,6 @@ int	Request::parsingHttp()
 {
 	if (complete() == false)
 		return 2; //continuer la lecture
-	std::cout << "pb " << std::endl;
 	int res = initFistLine();
 	if (res == 1)
 	{
@@ -285,7 +282,6 @@ int	Request::parsingHttp()
 		message_error_ = "Not Implemented";
 		return 0;
 	}
-	std::cout << "pbtesttt " << std::endl;
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
@@ -299,14 +295,12 @@ int	Request::parsingHttp()
 		message_error_ = "Method Not Allowed";
 		return 0;
 	}
-	std::cout << "pb jsefkkdbgjhbrsgjvbdrjfugeshbvgsudfhshdvgjsuighvrs" << std::endl;
 	if (initHeader() == 1)
 	{
 		error_ = 400;
 		message_error_ = "Bad Request";
 		return 0 ;
 	}
-	std::cout << "pb " << std::endl;
 	int	body =  initBody();
 	if (body == 1)
 	{
@@ -320,9 +314,8 @@ int	Request::parsingHttp()
 		message_error_ = "Payload Too Large";
 		return 0;
 	}
-	std::cout << "pb " << std::endl;
 	path_ = location_.getRoot()/* + url_path_*/;//attention si / a la fin
-	std::cout << "\n--------------------------------------------------------\n" << std::endl;
+	// std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
 }
 

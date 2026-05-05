@@ -267,8 +267,6 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 			stream << srv.getLocations()[i] << " ";
 		}
 	}
-	
-	
 	return (stream);
 }
 
@@ -277,27 +275,19 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 //int	Request::parsingHttp()
 LocationConfig* ServerConfig::matchLocation(std::string requestPath) 
 {
-    LocationConfig* bestMatch = NULL;
-    size_t longestLen = 0;
-    std::vector<LocationConfig>::iterator it;
-
-	std::cout << requestPath << std::endl;
-    for (it = locations_.begin(); it != locations_.end(); ++it)
-    {
+	LocationConfig* bestMatch = NULL;
+	size_t longestLen = 0;
+	std::vector<LocationConfig>::iterator it;
+	for (it = locations_.begin(); it != locations_.end(); ++it)
+	{
 		std::string locPath = it->getPath();
-		std::cout << "test 1" << std::endl;
-		std::cout << requestPath << " = " << locPath << std::endl;
-		if (requestPath.find(locPath) == 0) 
-        {
-			std::cout << "test 2" << std::endl;
-            if (locPath.length() > longestLen) 
-            {
-                longestLen = locPath.length();
-                bestMatch = &(*it);
-				std::cout << bestMatch->getPath() << std::endl;
-            }
-        }
-    }
-	std::cout << "test 4 " << std::endl;
-    return bestMatch;
+
+		if (requestPath.find(locPath) == 0) {
+			if (locPath.length() > longestLen) {
+				longestLen = locPath.length();
+				bestMatch = &(*it);
+			}
+		}
+	}
+	return (bestMatch);
 }

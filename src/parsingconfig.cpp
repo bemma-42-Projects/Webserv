@@ -210,24 +210,25 @@ int main(int argc, char **argv) {
 	std::vector<ServerConfig> all_configs;
 	std::string text = readFile(argv[1]);
 	std::vector<std::string> res = tokenizeConfig(text);
-	if (validateStructure(res, all_configs) == false)
-		std::cout << "Erreur bad configuration" << std::endl;
+	if (validateStructure(res, all_configs) == false) {
+		// std::cout << "Erreur bad configuration" << std::endl;
+		return (1);
+	}
 	else 
 		std::cout << "Everything's good!" << std::endl;
 
 	for (size_t i = 0; i < all_configs.size(); i++) 
 		all_configs[i].finalize();
-	// for (size_t i = 0; i < all_configs.size(); i++) {
 
-	// 	std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
-	// 	std::cout << all_configs[i] << std::endl << std::endl;
-	// }
-	std::cout << "testtttt" << std::endl;
-	// if (all_configs[1].get)
-	std::cout << all_configs[0].getLocations()[0].getPath() << std::endl;
-	std::cout << "end" << std::endl;
 
-	//Config::location();
+	for (size_t i = 0; i < all_configs.size(); i++) {
+
+		std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
+		std::cout << all_configs[i] << std::endl << std::endl;
+	}
+
+	// std::cout << all_configs[0].getLocations()[0].getPath() << std::endl;
+
 	const char *buffer = 
 	"POST /upload HTTP/1.1\r\n"
 	"Host: localhost:8080\r\n"
@@ -241,10 +242,8 @@ int main(int argc, char **argv) {
 	"Ceci est le contenu de mon fichier !\r\n"
 	"--boundary123--";
 	
-	Request file((char *)buffer, all_configs[1]);
+	Request file((char *)buffer, all_configs[0]);
 	int result = file.parsingHttp();
-	std::cout << "request\n\n\n\n\n" << std::endl;
-	std::cout << file << std::endl;
 	if (result == 0)
 	{
 		std::cout << "error " << file.getError() << std::endl;
@@ -256,15 +255,9 @@ int main(int argc, char **argv) {
 		std::cout << "requette non complete" << std::endl;
 		return 0;
 	}
-	std::cout << "ou est le probleme?" << std::endl;
-	// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
 	// std::cout << file << std::endl;
-	// RequestAnswer answer(file);
-	// // std::cout << "test " << std::endl;
-	// if (answer.setAnswer() == 1)
-	// 	std::cout << "anser =" << answer.getAnswer() << std::endl;
+	RequestAnswer answer(file);
+	if (answer.setAnswer() == 1) {}
+		// std::cout << "anser =" << answer.getAnswer() << std::endl;
 
 }
-
-
-//probleme avec le getpath, ca segfault
