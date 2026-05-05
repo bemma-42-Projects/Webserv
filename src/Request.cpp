@@ -171,6 +171,7 @@ int	Request::initFistLine()
 int	Request::initHeader()
 {
 	size_t last = request_.find("\r\n\r\n");
+	std::cout << "1" << std::endl;
 	if (last == std::string::npos)
 		return 1;
 	size_t end = 0;
@@ -201,6 +202,20 @@ int	Request::initHeader()
 	if (headers_.find("Content-Type") == headers_.end())
 		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
 	
+	
+	std::cout << "\n\n\n\ntest" << std::endl;
+	const std::map<std::string, std::string>& headers = getHeaders();
+	std::map<std::string, std::string>::const_iterator i;
+
+	for (i = headers.begin(); i != headers.end(); ++i) {
+		std::cout << "	Header: " << i->first  // La clé (ex: "Content-Type")
+				<< " | Valeur: " << i->second // La valeur (ex: "text/html")
+				<< "\n";
+	}
+	std::cout << "\n\n\n\n" << std::endl;
+	// out << "Body: " << request.getBody() << "\n";
+    // return out;
+
 	return 0;
 }
 
@@ -238,7 +253,7 @@ int	Request::checkOfLocation()
 		return 1;
 	std::cout << "test " << std::endl;
 	location_ = *loc;
-	 std::cout << location_.getPath() << std::endl;
+	std::cout << location_.getPath() << std::endl;
 	std::set<std::string> allowedMethods = location_.getAllowedMethods();
 	//std::cout << "Methods: ";
 	//for (size_t i = 0; i < allowedMethods.size(); ++i) {
@@ -270,7 +285,7 @@ int	Request::parsingHttp()
 		message_error_ = "Not Implemented";
 		return 0;
 	}
-	std::cout << "pb " << std::endl;
+	std::cout << "pbtesttt " << std::endl;
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
@@ -284,7 +299,7 @@ int	Request::parsingHttp()
 		message_error_ = "Method Not Allowed";
 		return 0;
 	}
-	std::cout << "pb " << std::endl;
+	std::cout << "pb jsefkkdbgjhbrsgjvbdrjfugeshbvgsudfhshdvgjsuighvrs" << std::endl;
 	if (initHeader() == 1)
 	{
 		error_ = 400;
@@ -306,7 +321,7 @@ int	Request::parsingHttp()
 		return 0;
 	}
 	std::cout << "pb " << std::endl;
-	path_ = location_.getRoot() + url_path_;//attention si / a la fin
+	path_ = location_.getRoot()/* + url_path_*/;//attention si / a la fin
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return 1;
 }

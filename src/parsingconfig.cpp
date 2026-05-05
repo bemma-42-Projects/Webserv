@@ -217,16 +217,19 @@ int main(int argc, char **argv) {
 
 	for (size_t i = 0; i < all_configs.size(); i++) 
 		all_configs[i].finalize();
-	for (size_t i = 0; i < all_configs.size(); i++) {
+	// for (size_t i = 0; i < all_configs.size(); i++) {
 
-		std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
-		std::cout << all_configs[i] << std::endl << std::endl;
-	}
-	std::cout << all_configs[1].getLocations()[1].getPath() << std::endl;
+	// 	std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
+	// 	std::cout << all_configs[i] << std::endl << std::endl;
+	// }
+	std::cout << "testtttt" << std::endl;
+	// if (all_configs[1].get)
+	std::cout << all_configs[0].getLocations()[0].getPath() << std::endl;
+	std::cout << "end" << std::endl;
 
 	//Config::location();
 	const char *buffer = 
-	"GET /Makefile HTTP/1.1\r\n"
+	"POST /upload HTTP/1.1\r\n"
 	"Host: localhost:8080\r\n"
 	"Content-Type: multipart/form-data; boundary=boundary123\r\n"
 	"Content-Length: 162\r\n"
@@ -239,8 +242,9 @@ int main(int argc, char **argv) {
 	"--boundary123--";
 	
 	Request file((char *)buffer, all_configs[1]);
-	std::cout << "ou est le probleme?" << std::endl;
 	int result = file.parsingHttp();
+	std::cout << "request\n\n\n\n\n" << std::endl;
+	std::cout << file << std::endl;
 	if (result == 0)
 	{
 		std::cout << "error " << file.getError() << std::endl;
@@ -252,12 +256,13 @@ int main(int argc, char **argv) {
 		std::cout << "requette non complete" << std::endl;
 		return 0;
 	}
+	std::cout << "ou est le probleme?" << std::endl;
 	// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
 	// std::cout << file << std::endl;
-	RequestAnswer answer(file);
-	// std::cout << "test " << std::endl;
-	if (answer.setAnswer() == 1)
-		std::cout << "anser =" << answer.getAnswer() << std::endl;
+	// RequestAnswer answer(file);
+	// // std::cout << "test " << std::endl;
+	// if (answer.setAnswer() == 1)
+	// 	std::cout << "anser =" << answer.getAnswer() << std::endl;
 
 }
 

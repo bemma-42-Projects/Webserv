@@ -414,6 +414,7 @@ int	RequestAnswer::setAnswer()
 	}
 	else if (request_.getMethod() == "POST")
 	{
+		std::cout << "nous y est" << std::endl;
 		methodPost();
 
 	//	std::string	url = request_.getUrlPath();
