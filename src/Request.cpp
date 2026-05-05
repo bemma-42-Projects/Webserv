@@ -363,38 +363,44 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 
 	int res = initFistLine();
 
-	if (res != 0)
+	if (res == 1)
 	{
 		std::cout << "[DEBUG] Echec FirstLine. Code: " << res << std::endl;
-        if (res == 1)
-			this->error_ = 400;
-		else
-			this->error_ = 501;
+		this->error_ = 401;
+		return (PARSING_FAILED);
+	}
+	else if (res == 2)
+	{
+		std::cout << "[DEBUG] Echec FirstLine. Code: " << res << std::endl;
+		this->error_ = 501;
         return (PARSING_FAILED);
 	}
 	if (initHeader() == 1)
 	{
 		std::cout << "[DEBUG] Echec Headers" << std::endl;
-		this->error_ = 400;
+		this->error_ = 402;
 		return (PARSING_FAILED);
 	}
-	int	bodyRes = initBody();
-	if (bodyRes == 1)
+	int	body = initBody();
+	if (body == 1)
 	{
 		this->error_ = 413;
 		return (PARSING_FAILED);
 	}
-	if (bodyRes == 2)
+	if (body == 2)
         return (PARSING_INCOMPLETE);
 
 	int checkLoc = checkOfLocation();
-	if (checkLoc != 0)
+	if (checkLoc == 1)
 	{
 		std::cout << "[DEBUG] Echec Location. Code: " << checkLoc << std::endl;
-		if (checkLoc == 1)
-			this->error_ = 404;
-		else
-			this->error_ = 405;
+		this->error_ = 404;
+		return (PARSING_FAILED);
+	}
+	else if (checkLoc == 2)
+	{
+		std::cout << "[DEBUG] Echec Location. Code: " << checkLoc << std::endl;
+		this->error_ = 405;
 		return (PARSING_FAILED);
 	}
 	
