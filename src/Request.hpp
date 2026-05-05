@@ -14,7 +14,7 @@ class Request {
 
 	public:
 		Request();
-		Request(char *buffer);
+		Request(char *buffer, ServerConfig& server);
 		~Request();
 		std::string 						getRequest() const;
 		std::string 						getMethod() const;
@@ -24,7 +24,9 @@ class Request {
 		std::map<std::string, std::string>	getHeaders() const;
 		std::string 						getBody() const;
 		int									getError() const;
-		Location							getLocation() const;
+		std::string 						getErrorMessage() const;
+		LocationConfig						getLocation() const;
+		ServerConfig*						getServer() const;
 		std::string							getClientIP() const;
 		//int								requestHttp();							
 		ParsingStatus						parsingHttp(const std::string &raw_data);
@@ -56,10 +58,12 @@ class Request {
 		std::map<std::string, std::string>	headers_;
 		std::string							body_;
 		int									error_;
-		Location							location_;
+		std::string							message_error_;
+		LocationConfig						location_;
 		std::string							raw_uri_;
 		std::string							query_string_;
 		std::string							client_ip_;
+		ServerConfig*						server_;
 };
 
 std::ostream& operator<<(std::ostream& out, const Request& request);

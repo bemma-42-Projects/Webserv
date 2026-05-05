@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <map>
 
 class Location {
 
@@ -24,6 +25,7 @@ public:
 	// A SUPPRIMER POUR AJOUTER cgi_handlers
 	// AU CONSTRUCTEUR DE LOCATION
 	void								addCgiHandler(std::string ext, std::string interpreter);
+	std::map<int, std::string>	getError();
 
 private:
 
@@ -34,4 +36,5 @@ private:
     bool								autoindex_;			// true
     std::vector<std::string>			allowed_methods_;	// ["GET", "POST"]
 	std::map<std::string, std::string>	cgi_handlers_;		// .php /usr/bin/php-cgi;
+	std::map<int, std::string>	error_;
 };

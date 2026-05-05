@@ -1,8 +1,5 @@
 #include "Location.hpp"
-
-//Location::Location()
-//{
-//}
+//#include "Config.hpp"
 
 Location::Location() : path_(""), root_(""), autoindex_(false) {
 }
@@ -26,7 +23,9 @@ Location::Location(std::string path, std::string root,
 
 std::vector<std::string>	Location::getIndex() const
 {
-	return (this->index_);
+	//if (!index_.empty())
+	return index_;
+	//return Config::getIndex();
 }
 
 bool	Location::getAutoindex() const
@@ -46,15 +45,11 @@ std::string	Location::getPath() const
 
 std::vector<std::string>	Location::getAllowedMethods() const
 {
-	return (this->allowed_methods_);
+	return allowed_methods_;
 }
 
-void	Location::addCgiHandler(std::string ext, std::string interpreter)
+std::map<int, std::string>	Location::getError()
 {
-	this->cgi_handlers_[ext] = interpreter;
-}
-
-std::map<std::string, std::string>	Location::getCgiHandlers() const
-{
-	return (this->cgi_handlers_);
+    error_[404] = "./er.txt";
+	return error_;
 }

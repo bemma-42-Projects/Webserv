@@ -29,7 +29,7 @@ class RequestAnswer
 		const std::string		&getAnswer() const;
 		int						getError() const;
 		CGIHandler				*getCGIHandler() const;
-		std::string 			findIndex(Location loc);
+		std::string 			findIndex(LocationConfig loc);
 		std::string 			findContentType(const std::string& path);
 		int						fileName();
 		bool					isCgi();
@@ -37,10 +37,13 @@ class RequestAnswer
 		void					buildCGIResponse();
 		bool					isResponseFullySent() const;
 		void					eraseSentBytes(size_t bytes_sent);
-		void					clear();
+		void					clear();		std::string Itoa(int nbr);
+
 
 	private:
+		LocationConfig	loc_;
 		int				code_;
+		std::string 	message_;
 		int				error_;
 		Request			*request_;
 		CGIHandler		*cgi_handler_;

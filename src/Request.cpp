@@ -6,9 +6,10 @@
 //#include <fcntl.h>    // pour open
 //#include <unistd.h>   // pour read, close
 //#include <sys/stat.h> // pour stat
-#include "Config.hpp"
+//#include "Config.hpp"
 #include "RequestAnswer.hpp"
 #include "Error.hpp"
+#include "ServerConfig.hpp"
 #include "Location.hpp"
 //#include <dirent.h>
 
@@ -16,7 +17,7 @@
 Request::Request()
 {}
 
-Request::Request(char *buffer)
+Request::Request(char *buffer, ServerConfig& server) : server_(&server)
 {
 	this->request_ = buffer;
 	this->error_ = 0;
@@ -85,6 +86,12 @@ int	Request::getError() const
 {
 	return (this->error_);
 }
+
+std::string Request::getErrorMessage() const
+{
+	return message_error_;
+}
+
 
 Location	Request::getLocation() const
 {
@@ -160,6 +167,10 @@ void	Request::setClientIP(const std::string &ip)
 std::string	Request::getClientIP() const
 {
 	return (this->client_ip_);
+}
+ServerConfig*	Request::getServer() const
+{
+	return server_;
 }
 
 //verifie qu'il y a "\r\n\r\n" cad que la requet soit complete
@@ -276,13 +287,28 @@ int	Request::initHeader()
 		std::string value = this->request_.substr(begin, end - begin);
 		this->headers_.insert(std::pair<std::string, std::string>(key, value));
 	}
-	if (this->headers_.find("Host") == this->headers_.end() 
-		|| (this->method_ == "POST" && this->headers_.find("Content-Length") == this->headers_.end()))
-		return (1);
-	if (this->headers_.find("Content-Type") == this->headers_.end())
-		this->headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
+	if (headers_.find("Host") == headers_.end() 
+		|| (method_ == "POST" && headers_.find("Content-Length") == headers_.end() 
+		&& location_.getAllowedUpload() == false))
+		return 1;
+	if (headers_.find("Content-Type") == headers_.end())
+		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
 	
-	return (0);
+	
+	std::cout << "\n\n\n\ntest" << std::endl;
+	const std::map<std::string, std::string>& headers = getHeaders();
+	std::map<std::string, std::string>::const_iterator i;
+
+	for (i = headers.begin(); i != headers.end(); ++i) {
+		std::cout << "	Header: " << i->first  // La clé (ex: "Content-Type")
+				<< " | Valeur: " << i->second // La valeur (ex: "text/html")
+				<< "\n";
+	}
+	std::cout << "\n\n\n\n" << std::endl;
+	// out << "Body: " << request.getBody() << "\n";
+    // return out;
+
+	return 0;
 }
 
 //verifie que le body exist et initialise le body de la class
@@ -310,38 +336,38 @@ int	Request::initBody()
 	size_t				expected_len = 0;
 
 	std::string value = it->second;
-	std::stringstream	ss(value);
-	ss >> expected_len;
-
-	if (expected_len > Config::getBodySize())
-	{
-		std::cout << "[DEBUG] Body trop grand: " << expected_len << std::endl;
-		return (1);
-	}
-
-	size_t	received_len = this->request_.size() - body_start;
-	if (received_len < expected_len)
-	{
-		std::cout << "[DEBUG] Body incomplet: " << received_len << "/" << expected_len << std::endl;
-		return (2);
-	}
-	//while (this->request_[begin] == '\r' || this->request_[begin] == '\n')
-	//	++begin;
-	//if (this->request_.size() - begin != len)
-	//	return (1);
-	this->body_ = this->request_.substr(body_start, expected_len);
-	return (0);
+	size_t begin = request_.find("\r\n\r\n");
+	if (begin == std::string::npos)
+		return 1;
+	size_t	len;
+	std::stringstream ss(value);
+    ss >> len;
+	if (len > location_.getClientMaxBodySize())
+		return 2;
+	while (request_[begin] == '\r' || request_[begin] == '\n')
+		++begin;
+	if (request_.size() - begin != len)
+		return 1;
+	body_ = request_.substr(begin, len);
+	return 0;
 }
 
 int	Request::checkOfLocation()
 {
-	Location* loc = Config::matchLocation(this->url_path_);
+	std::cout << "test " << std::endl;
+	LocationConfig* loc = server_->matchLocation(url_path_);
 	if (loc == NULL)
-		return (1);
-	this->location_ = *loc;
-	// std::cout << location_.getPath() << std::endl;
-	std::vector<std::string> allowedMethods = this->location_.getAllowedMethods();
-	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->method_)
+		return 1;
+	std::cout << "test " << std::endl;
+	location_ = *loc;
+	std::cout << location_.getPath() << std::endl;
+	std::set<std::string> allowedMethods = location_.getAllowedMethods();
+	//std::cout << "Methods: ";
+	//for (size_t i = 0; i < allowedMethods.size(); ++i) {
+	//	std::cout << allowedMethods[i] << (i < allowedMethods.size() - 1 ? ", " : "");
+	//}
+	//std::cout << std::endl;
+	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
 			== allowedMethods.end())
 		return (2);
 	return (0);
@@ -351,128 +377,114 @@ int	Request::checkOfLocation()
 // pas le dernier morceau de requete
 ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
-	//this->request_ = raw_data;
-	this->request_ += raw_data;
-	
-	//if (complete() == false)
-	//	return (PARSING_INCOMPLETE); //continuer la lecture
-
-	size_t	header_end = this->request_.find("\r\n\r\n");
-	if (header_end == std::string::npos)
-		return (PARSING_INCOMPLETE);
-
+	if (complete() == false)
+		return 2; //continuer la lecture
+	std::cout << "pb " << std::endl;
 	int res = initFistLine();
 
 	if (res == 1)
 	{
-		std::cout << "[DEBUG] Echec FirstLine. Code: " << res << std::endl;
-		this->error_ = 401;
-		return (PARSING_FAILED);
+		error_ = 400;
+		message_error_ = "Bad Request";
+		return 0;
 	}
 	else if (res == 2)
 	{
-		std::cout << "[DEBUG] Echec FirstLine. Code: " << res << std::endl;
-		this->error_ = 501;
-        return (PARSING_FAILED);
+		error_ = 501;
+		message_error_ = "Not Implemented";
+		return 0;
 	}
-	if (initHeader() == 1)
-	{
-		std::cout << "[DEBUG] Echec Headers" << std::endl;
-		this->error_ = 402;
-		return (PARSING_FAILED);
-	}
-	int	body = initBody();
-	if (body == 1)
-	{
-		this->error_ = 413;
-		return (PARSING_FAILED);
-	}
-	if (body == 2)
-        return (PARSING_INCOMPLETE);
-
+	std::cout << "pbtesttt " << std::endl;
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
-		std::cout << "[DEBUG] Echec Location. Code: " << checkLoc << std::endl;
-		this->error_ = 404;
-		return (PARSING_FAILED);
+		error_ = 404;
+		message_error_ = "Not Found";
+		return 0;
 	}
 	else if (checkLoc == 2)
 	{
-		std::cout << "[DEBUG] Echec Location. Code: " << checkLoc << std::endl;
-		this->error_ = 405;
-		return (PARSING_FAILED);
+		error_ = 405;
+		message_error_ = "Method Not Allowed";
+		return 0;
 	}
-	
-	std::string	root = this->location_.getRoot();
-	if (!(this->url_path_.empty()) && this->url_path_[0] == '/')
-		this->path_ = root + this->url_path_;
-	else
-		this->path_ = root + "/" + this->url_path_;
-
-	if (this->path_[this->path_.length() - 1] == '/')
+	std::cout << "pb jsefkkdbgjhbrsgjvbdrjfugeshbvgsudfhshdvgjsuighvrs" << std::endl;
+	if (initHeader() == 1)
 	{
-		std::vector<std::string> indexes = this->location_.getIndex();
-		if (!indexes.empty())
-			this->path_ += indexes[0];
+		error_ = 400;
+		message_error_ = "Bad Request";
+		return 0 ;
 	}
-	//std::cout << "\n--------------------------------------------------------\n" << std::endl;
-	//std::cout << root << std::endl;
-	//std::cout << this->url_path_ << std::endl;
-	//std::cout << this->path_ << std::endl;
-	return (PARSING_SUCCESS);
+	std::cout << "pb " << std::endl;
+	int	body =  initBody();
+	if (body == 1)
+	{
+		error_ = 400;
+        message_error_ = "Bad Request";
+		return 0;
+	}
+	else if (body == 2)
+	{
+		error_ = 413;
+		message_error_ = "Payload Too Large";
+		return 0;
+	}
+	std::cout << "pb " << std::endl;
+	path_ = location_.getRoot()/* + url_path_*/;//attention si / a la fin
+	std::cout << "\n--------------------------------------------------------\n" << std::endl;
+	return 1;
 }
 
 //void	Request::setError(int error)
 //{
 //	error_ = error;
 //}
-/*
-int main()
-{
-	//try{
-		Config::location();
 
-		const char *buffer = 
-		"POST /uploads HTTP/1.1\r\n"
-		"Host: localhost:8080\r\n"
-		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
-		"Content-Length: 162\r\n"
-		"\r\n"
-		"--boundary123\r\n"
-		"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
-		"Content-Type: text/plain\r\n"
-		"\r\n"
-		"Ceci est le contenu de mon fichier !\r\n"
-		"--boundary123--";
+//int main()
+//{
+//	//try{
+//		Config::location();
+
+//		const char *buffer = 
+//		"GET /Makefile HTTP/1.1\r\n"
+//		"Host: localhost:8080\r\n"
+//		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
+//		"Content-Length: 162\r\n"
+//		"\r\n"
+//		"--boundary123\r\n"
+//		"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
+//		"Content-Type: text/plain\r\n"
+//		"\r\n"
+//		"Ceci est le contenu de mon fichier !\r\n"
+//		"--boundary123--";
 	
-		Request file((char *)buffer);
-		int res = file.parsingHttp();
-		if (res == 0)
-		{
-			std::cout << "error " << file.getError() << std::endl;
-			return 0;
-		}
-		else if (res == 2)
-		{
-			std::cout << "requette non complete" << std::endl;
-			return 0;
-		}
-		// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
-		// std::cout << file << std::endl;
-		RequestAnswer answer(file);
-		// std::cout << "test " << std::endl;
-		if (answer.setAnswer() == 1)
-			std::cout << "anser =" << answer.getAnswer() << std::endl;
+//		Request file((char *)buffer);
+//		int res = file.parsingHttp();
+//		if (res == 0)
+//		{
+//			std::cout << "error " << file.getError() << std::endl;
+//			std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), NULL);
+//			return 0;
+//		}
+//		else if (res == 2)
+//		{
+//			std::cout << "requette non complete" << std::endl;
+//			return 0;
+//		}
+//		// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
+//		// std::cout << file << std::endl;
+//		RequestAnswer answer(file);
+//		// std::cout << "test " << std::endl;
+//		if (answer.setAnswer() == 1)
+//			std::cout << "anser =" << answer.getAnswer() << std::endl;
 		
-	//}
-	//catch(std::exception &e)
-	//{
-	//	std::cerr << "error : " << e.what() << std::endl;
-	//	//Error::setError(e.what());
-	//}
-}
-*/
+//	//}
+//	//catch(std::exception &e)
+//	//{
+//	//	std::cerr << "error : " << e.what() << std::endl;
+//	//	//Error::setError(e.what());
+//	//}
+//}
 
 void	Request::clear()
 {

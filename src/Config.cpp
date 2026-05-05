@@ -1,64 +1,50 @@
 #include "Config.hpp"
 #include <iostream>
 
-std::vector<Location> Config::location_;
-size_t Config::body_size_ = 450;
-
-// Test Julien
-//std::string	Config::root_ = "/home/julien/Webserv/src/www";
-std::string	Config::root_ = "/home/juduchar/Common/Webserv";
-
-// Test Romane
-//std::string Config::root_ = "/home/rmetge/cursus/github/webserv/src/www";
+std::vector<LocationConfig> Config::location_;
 
 Config::Config()
 {
-	// 1. Configuration des méthodes autorisées
-	std::vector<std::string> methods;
-	methods.push_back("GET");
-	methods.push_back("POST");
+	{
+        LocationConfig loc;
+        std::vector<std::string> methods;
+        methods.push_back("DELETE");
+        
+        std::vector<std::string> index;
+        index.push_back("test.html");
 
-	// 2. Configuration des fichiers par défaut (index)
-	std::vector<std::string> indexFiles;
-	indexFiles.push_back("index.html");
-	indexFiles.push_back("index.php");
+        loc.setPath("/upload");
+        loc.setRootLoc("./src");
+        loc.setUploadPath("./src/tmp");
+        loc.setIndex(index);
+        loc.setAutoIndex(false);
+        loc.setAllowedMethods(methods);
+        
+        // On ajoute la location au vecteur statique de la classe
+        location_.push_back(loc);
+    }
 
-	// --- LOCATION CGI ---
-	Location cgiLoc("/cgi-bin", "./src/www", "/usr/bin/php-cgi", indexFiles, false, methods);
-	cgiLoc.addCgiHandler(".php", "/usr/bin/php-cgi");
+    // --- Configuration de la Location par défaut (/) ---
+    {
+        LocationConfig defaultLoc;
+        std::vector<std::string> methodsDef;
+        methodsDef.push_back("GET");
+        
+        std::vector<std::string> indexDef;
+        indexDef.push_back("test.html");
 
-	location_.push_back(cgiLoc);
+        defaultLoc.setPath("/");
+        defaultLoc.setRootLoc("./www");
+        defaultLoc.setUploadPath(""); // Vide si non utilisé
+        defaultLoc.setIndex(indexDef);
+        defaultLoc.setAutoIndex(false);
+        defaultLoc.setAllowedMethods(methodsDef);
 
-	// --- LOCATION ROOT ---
-	Location rootLoc("/", "./src/www", "", indexFiles, false, methods);
-	location_.push_back(rootLoc);
-
-	//"/downloads", "./data", "./data/tmp", "secret_list.html", true
-
-	// Test Romane
-    // C'est ici que le push_back est autorisé
-	/*
-	std::vector<std::string> methods;
-    methods.push_back("GET");
-    //methods.push_back("POST");
-	std::vector<std::string> index;
-	index.push_back("/index.html");
-	Location loc1("Makefile", "./data", "./data/tmp", index, true, methods);
-	std::vector<std::string> method;
-    method.push_back("DELETE");
-	std::vector<std::string> index2;
-	index2.push_back("test.html");
-	Location loc2("/upload", "./src", "./src/tmp", index2, false, method);
-	location_.push_back(loc2);
-	*/
-	// Fin test Romane
-
-	//std::vector<std::string> methodsDef;
-    //methodsDef.push_back("GET");
-	//std::vector<std::string> index3;
-	//index3.push_back("test.html");
-	//Location defaultLoc("/", "./www", "", index3, false, methodsDef);
-	//defaultLocation_ = defaultLoc;
+        // Si tu as une variable spécifique pour la location par défaut :
+        //defaultLocation_ = defaultLoc;
+        // Ou si elle va aussi dans le vecteur :
+        // location_.push_back(defaultLoc);
+    }
 }
 
 Config::~Config()
@@ -100,9 +86,18 @@ std::string	Config::getRoot()
 	return root_;
 }
 
-//std::string Config::index_ = "/index.html"; // rejoute un / devant pour que je puis direct l'utiliser
+std::map<int, std::string> Config::error_;
 
-//std::string	Config::getIndex()
+
+std::map<int, std::string>	Config::getError()
+{
+    error_[404] = "./error.txt";
+	return error_;
+}
+
+//std::vector<std::string> Config::index_ = "/index.html"; // rejoute un / devant pour que je puis direct l'utiliser
+
+//std::vector<std::string>	Config::getIndex()
 //{
 //	return index_;
 //}
@@ -110,122 +105,113 @@ std::string	Config::getRoot()
 //implemente des location, (test)
 void	Config::location()
 {
-	// 1. Configuration des méthodes autorisées
-	std::vector<std::string> methods;
-	methods.push_back("GET");
-	methods.push_back("POST");
+	//// --- LOCATION 1 : /src ---
+    //{
+    //    LocationConfig loc;
+    //    std::vector<std::string> methods;
+    //    methods.push_back("GET");
+    //    methods.push_back("POST");
 
-	// 2. Configuration des fichiers par défaut (index)
-	std::vector<std::string> indexFiles;
-	indexFiles.push_back("index.html");
-	indexFiles.push_back("index.php");
+    //    std::vector<std::string> index;
+    //    index.push_back("indexj.html");
 
-	// --- LOCATION CGI ---
-	// Note : Vérifie que ton constructeur de Location accepte bien ces paramètres
-	Location cgiLoc("/cgi-bin", "./src/www", "/usr/bin/php-cgi", indexFiles, false, methods);
-	cgiLoc.addCgiHandler(".php", "/usr/bin/php-cgi");
-	// Si tu veux aussi du Python :
-	// cgiLoc.addCgiHandler(".py", "/usr/bin/python3"); 
+    //    loc.setPath("/src");
+    //    loc.setRootLoc("/home/rmetge/cursus/github/webserv");
+    //    loc.setUploadPath("./data/tmp");
+    //    loc.setIndex(index);
+    //    loc.setAutoIndex(false);
+    //    loc.setAllowedMethods(methods);
 
-	location_.push_back(cgiLoc);
+    //    location_.push_back(loc);
+    //}
 
-	// --- LOCATION ROOT ---
-	Location rootLoc("/", "./src/www", "", indexFiles, false, methods);
-	location_.push_back(rootLoc);
-	/*
-	std::vector<std::string> methods;
-    methods.push_back("GET");
-    methods.push_back("POST");
-	std::vector<std::string> index;
-	index.push_back("index.html");
-	Location loc1("/src", "/home/juduchar/Common/Webserv", "./data/tmp", index, false, methods);
-	//Location loc1("/src", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methods);
-    location_.push_back(loc1);
-	std::vector<std::string> method;
-    method.push_back("POST");
-	std::vector<std::string> index2;
-	index2.push_back("test.html");
-	Location loc2("/uploads", "/home/juduchar/Common/Webserv", "/uploads", index2, false, method);
-	//Location loc2("/uploads", "/home/rmetge/cursus/github/webserv", "/uploads", index2, false, method);
-	location_.push_back(loc2);
-	std::vector<std::string> methode;
-    methode.push_back("GET");
-    methode.push_back("POST");
-	//std::vector<std::string> index3;
-	index.push_back("index.html");
-	Location loc3("/Makefile", "/home/juduchar/Common/Webserv", "./data/tmp", index, false, methode);
-	//Location loc3("/Makefile", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methode);
-    location_.push_back(loc3);
-
-	std::vector<std::string> methode2;
-    methode2.push_back("DELETE");
-    methode2.push_back("POST");
-	//std::vector<std::string> index4;
-	index.push_back("index.html");
-	Location loc4("/obj", "/home/juduchar/Common/Webserv", "./data/tmp", index, false, methode2);
-	//Location loc4("/obj", "/home/rmetge/cursus/github/webserv", "./data/tmp", index, false, methode2);
-    location_.push_back(loc4);
-
-	// on crée un vecteur pour lister les méthodes HTTP acceptées sur cette route
-	std::vector<std::string> cgi_methods;
-	// on autorise uniquement les requêtes GET (pour l'instant)
-	cgi_methods.push_back("GET");
-
-	// on crée un vecteur pour les fichiers à chercher si l'utilisateur demande le dossier cgi-bin
-	std::vector<std::string> cgi_index;
-	// si le client demande "http://localhost/cgi-bin/", le serveur cherchera le fichier test.php pour l'exécuter
-	cgi_index.push_back("test.php");
-
-	// on crée l'objet Location
-	// Paramètres :
-		// path : "/cgi-bin" : l'url tapée par le client (traduit en http://localhost/cgi-bin/)
-		// root : "/home/julien/Webserv/cgi-bin" : le chemin absolu du dossier cgi-bin sur le PC
-		// upload_path : "./data/tmp" : le dossier où stocker les uploads ou les fichiers temporaires
-		// index : "cgi_index" (voir plus haut) la liste de fichiers index par défaut (index.php)
-		// autoindex : "false" : l'auto-index est désactiver (indispensable pour un dossier CGI)
-		// allowed_methods : "cgi_methods" (voir plus haut) : liste des méthodes autorisées (GET)
-	
-	// on ajoute cette route à la liste des locations gérées par la classe Config
-	// matchLocation ira fouiller dans ce tableau
-	Location	locCgi("/cgi-bin", "/home/julien/Webserv", "./data/tmp", cgi_index, false, cgi_methods);
-
-	locCgi.addCgiHandler(".php", "/usr/bin/php-cgi");
-
-	location_.push_back(locCgi);
-	*/
-}
-
-
-//cherche la location par raport au path 
-Location* Config::matchLocation(std::string requestPath) 
-{
-    Location* bestMatch = NULL;
-    size_t longestLen = 0;
-    std::vector<Location>::iterator it;
-
-	//std::cout << "Request Path " << requestPath << std::endl;
-	//std::cout << "Location size " << 	location_.size() << std::endl;
-
-	
-
-    for (it = location_.begin(); it != location_.end(); ++it)
+    // --- LOCATION 2 : /uploads ---
     {
-        std::string locPath = it->getPath();
-        
-		//std::cout << "locPath : " << locPath << std::endl;
-	
-        if (requestPath.find(locPath) == 0) 
-        {
-			//std::cout << "locPath : " << locPath.length() << std::endl;
-            if (locPath.length() > longestLen) 
-            {
-                longestLen = locPath.length();
-                bestMatch = &(*it);
-            }
-        }
+        LocationConfig loc;
+        std::vector<std::string> methods;
+        methods.push_back("POST");
+
+        std::vector<std::string> index;
+        index.push_back("test.html");
+
+        loc.setPath("/uploads");
+        loc.setRootLoc("/home/rmetge/cursus/github/webserv");
+        loc.setUploadPath("/uploads");
+        loc.setIndex(index);
+        loc.setAutoIndex(false);
+        loc.setAllowedMethods(methods);
+
+        location_.push_back(loc);
     }
-    return bestMatch;
+
+    // --- LOCATION 3 : /Makefile ---
+    {
+        LocationConfig loc;
+        std::vector<std::string> methods;
+        methods.push_back("GET");
+        methods.push_back("POST");
+
+        std::vector<std::string> index;
+        index.push_back("indexj.html"); // Attention: dans ton code original tu réutilisais l'ancien index
+        index.push_back("index.html");
+
+        loc.setPath("/Makefile");
+        loc.setRootLoc("/home/rmetge/cursus/github/webserv");
+        loc.setUploadPath("./data/tmp");
+        loc.setIndex(index);
+        loc.setAutoIndex(false);
+        loc.setAllowedMethods(methods);
+
+        location_.push_back(loc);
+    }
+
+    // --- LOCATION 4 : /obj ---
+    {
+        LocationConfig loc;
+        std::vector<std::string> methods;
+        methods.push_back("DELETE");
+        methods.push_back("POST");
+
+        std::vector<std::string> index;
+        index.push_back("indexj.html"); 
+        index.push_back("index.html");
+        // index.push_back("index.html"); // Ajouté comme dans ton exemple
+
+        loc.setPath("/src");
+        loc.setRootLoc("/home/rmetge/cursus/github/webserv");
+        loc.setUploadPath("./data/tmp");
+        loc.setIndex(index);
+        loc.setAutoIndex(false);
+        loc.setAllowedMethods(methods);
+
+        location_.push_back(loc);
+    }
 }
+
+
+////cherche la location par raport au path 
+////int	Request::parsingHttp()
+//LocationConfig* Config::matchLocation(std::string requestPath) 
+//{
+//    LocationConfig* bestMatch = NULL;
+//    size_t longestLen = 0;
+//    std::vector<LocationConfig>::iterator it;
+
+//    for (it = location_.begin(); it != location_.end(); ++it)
+//    {
+//        std::string locPath = it->getPath();
+        
+//        if (requestPath.find(locPath) == 0) 
+//        {
+//            if (locPath.length() > longestLen) 
+//            {
+//                longestLen = locPath.length();
+//                bestMatch = &(*it);
+//            }
+//        }
+//    }
+//    return bestMatch;
+//}
 
 //le math avec l'url n'est pas bon
 //voir la fonction match et l'implementation de location 

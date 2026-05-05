@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include <sstream>
 #include <fstream>
+#include "Error.hpp"
 #include <map>
 #include <cstring>	// pour strcpy
 
@@ -23,6 +24,14 @@ RequestAnswer::RequestAnswer() : code_(200), error_(0), request_(NULL), cgi_hand
 	this->body_ = "";
 	this->post_file_name_ = "";
 	this->cgi_interpreter_ = "";
+}
+
+RequestAnswer::RequestAnswer(Request request)
+{
+	request_ = request;
+	answer_ = "";
+	code_ = 200;
+	//error_ = 0;
 }
 
 // constructeur par copie
@@ -53,7 +62,6 @@ RequestAnswer	&RequestAnswer::operator=(const RequestAnswer &rhs)
 	return (*this);
 }
 
-// destructeur
 RequestAnswer::~RequestAnswer()
 {
 	if (this->cgi_handler_ != NULL)
@@ -79,7 +87,7 @@ CGIHandler      *RequestAnswer::getCGIHandler() const
     return (cgi_handler_);
 }
 
-std::string itoa(int nbr)
+std::string RequestAnswer::Itoa(int nbr)
 {
 	std::stringstream ss;
     
@@ -144,7 +152,7 @@ AnswerStatus	RequestAnswer::getIfFile(std::string file)
 		return (ERROR);
 	}
 	std::string	res;
-	char buffer[2000];
+	char buffer[4096];
 	ssize_t	bytes_read;
 	while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0)
 	{
@@ -165,10 +173,11 @@ AnswerStatus	RequestAnswer::getIfDir()
 	DIR* dir = opendir(request_->getPath().c_str());
 	if (!dir)
 	{
-		// A verifier
-		std::cout << "error 403" << std::endl;
-		this->error_ = 403;
-		return (ERROR);
+		std::cout << "error 404" << std::endl;
+		//error_ = 404;
+		code_ = 404;
+		message_ = "Not Found";
+		return (ERROR);// Erreur 403 ou 404
 	} 
 
 	std::string body = "<html><head><title>Index of " + request_->getUrlPath() + "</title></head><body>";
@@ -192,7 +201,7 @@ AnswerStatus	RequestAnswer::getIfDir()
 		else
 		{
 			std::cout << "error 400" << std::endl;
-			this->error_ = 400;
+			//this->error_ = 400;
 			this->code_ = 400;
 			return (ERROR);
 		} 
@@ -201,8 +210,6 @@ AnswerStatus	RequestAnswer::getIfDir()
 	body += "</ul><hr></body></html>";
 	closedir(dir);
 
-	// A quoi sert ce bloc ?
-	// std::string	res;
 	//std::string header = "HTTP/1.1 200 OK\r\n";
 	//header += "Content-Type: text/html\r\n";
 	//header += "Content-Length: " + itoa(body.length()) + "\r\n"; // Il faudra une petite fonction pour convertir int en string
@@ -221,22 +228,19 @@ AnswerStatus	RequestAnswer::getIfDir()
 }
 
 //cherche un index qui existe et est lisible et on le renvoi
-std::string RequestAnswer::findIndex(Location loc)
+std::string RequestAnswer::findIndex(LocationConfig loc)
 {
+
     std::vector<std::string>::iterator it;
 	std::vector<std::string> index = loc.getIndex();
+	//if (!loc.getIndex().empty())
+	//	index = loc.getIndex();
+	//else
+	//	index = Config::getIndex();
     for (it = index.begin(); it != index.end(); ++it)
 	{
 		const std::string root = loc.getRoot();
-		// std::cout << "test1" << std::endl;
-		// std::cout << root << std::endl;
-
-		// std::cout << "it = " << *it << std::endl;
-
-		std::string fullPath = root + '/' + *it;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		
-		// std::cout << "test2" << std::endl;
-        
+		std::string fullPath = root + '/' + *it;
         // On utilise la fonction access() de <unistd.h> 
         // pour vérifier si le fichier existe et est lisible
         if (access(fullPath.c_str(), R_OK) == 0)
@@ -253,17 +257,16 @@ AnswerStatus	RequestAnswer::methodGet()
 	if (stat(request_->getPath().c_str(), &info) != 0)
 	{
 		std::cerr << "error 404" << std::endl;
-		this->error_ = 404;
+		//this->error_ = 404;
 		this->code_ = 404;
 		return (ERROR);
 	}
-	//std::string res;
+	std::string res;
 	// si c'est un REGULAR FILE
 	if (S_ISREG(info.st_mode))
 	{
 		// si c'est un CGI
 		if (this->isCgi())
-
 			return (this->methodCGI());
 		return (getIfFile(request_->getPath()));
 	}
@@ -271,120 +274,35 @@ AnswerStatus	RequestAnswer::methodGet()
 	// ...
 	else if (S_ISDIR(info.st_mode))
 	{
-		Location	loc = request_->getLocation();
+		//LocationConfig	loc = request_.getLocation();
 		//divier la fontion
 		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
 		// std::cout << "dir" << std::endl;
-		std::string index = findIndex(loc);
+		std::string index = findIndex(loc_);
+		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
-			return (getIfFile(Config::getRoot() + '/' + index));
+			return (getIfFile(request_->getServer()->getRoot() + '/' + index));	
+			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
-		else if (loc.getAutoindex() == true)
+		else if (loc_.getAutoIndex() == true)
 			return (getIfDir());
 		else
 		{
-			this->error_ = 403;
+			//this->error_ = 403;
 			this->code_ = 403;
+			message_ = "Forbidden";
 		}
 	}
 	return (ERROR);
 }
 
-AnswerStatus	RequestAnswer::methodPost()
-{
-	Location	loc = request_->getLocation();
-
-	if (this->isCgi())
-    {
-        std::cout << "[DEBUG] Detection CGI reussie, interpreteur : " << this->cgi_interpreter_ << std::endl;
-        
-        try {
-            // Nettoyage de sécurité si un handler existait déjà
-            if (this->cgi_handler_)
-                delete this->cgi_handler_;
-
-            // On utilise l'interpréteur trouvé par isCgi() !
-            this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
-            this->cgi_handler_->execute();
-            return (CGI_IN_PROGRESS);
-        } catch (const std::exception& e) {
-            std::cerr << "[CGI Error] " << e.what() << std::endl;
-            this->error_ = 500;
-            return (ERROR);
-        }
-    }
-
-	std::string root = loc.getRoot() + loc.getPath();
-	struct stat s;
-	if (stat(root.c_str(), &s) == 0 && S_ISDIR(s.st_mode))
-	{
-		//std::cout << "deb" << std::endl;
-		std::cout << "[DEBUG] Tentative d'upload dans le dossier : " << root << std::endl;
-
-		struct stat p;
-		stat(request_->getPath().c_str(), &p);
-		if (stat(request_->getPath().c_str(), &p) == 0 && S_ISREG(p.st_mode))
-		{
-			post_file_name_ = request_->getPath();
-			//std::cout << post_file_name_ << std::endl;
-			return (ERROR);
-		}
-		//bool	quote = false;
-		std::string body = request_->getBody();
-		size_t		id = body.find("Content-Disposition:");
-		if (id == std::string::npos)
-			return (READY_TO_SEND);
-		size_t start = body.find("filename=", id);
-		if (start == std::string::npos)
-			return (READY_TO_SEND);
-		start += 9;
-
-		while (body[start] == ' ')
-			++start;
-		bool	quote = false;
-		if (body[start] == '\"')
-		{
-			++start;
-			quote = true;
-		}
-		size_t end = body.find("\r\n", start);
-		if (end == std::string::npos)
-			return (READY_TO_SEND);
-		//while (quote == true)
-		//{
-		//	if (body[end - 1] == '\"')
-		//		quote = false;
-		//	--end;
-		//}
-		if (quote && body[end - 1] == '\"')
-			--end;
-		
-		size_t	s = body.find_last_of('/', end);
-		if (s != std::string::npos && s >= start)
-			start = s + 1;
-		std::string file_name = body.substr(start, end - start);
-		//std::cout << "file name = " << file_name << std::endl;
-		// struct stat f;
-		std::string full_dest_path = root + '/' + file_name;
-		
-		struct stat b;
-		if (stat(full_dest_path.c_str(), &b) == 0 && S_ISREG(b.st_mode))
-		{
-			post_file_name_ = full_dest_path;
-			return (ERROR);
-		}
-	}
-	std::cout << "error" << std::endl;
-	return (READY_TO_SEND);
-}
-
 //recupere le path du file name pour upload les fichier
 int RequestAnswer::fileName()
 {
-    Location    loc = this->request_->getLocation();
-    std::string root_path = loc.getRoot() + loc.getPath(); // Chemin dossier sur disque
-    std::string url_path = this->request_->getPath();           // Chemin demandé dans l'URL
+    //LocationConfig    loc = request_.getLocation();
+    std::string root_path = loc_.getRoot() + loc_.getPath(); // Chemin dossier sur disque
+    std::string url_path = request_->getPath();           // Chemin demandé dans l'URL
 
     struct stat s;
     bool is_directory = false;
@@ -404,10 +322,8 @@ int RequestAnswer::fileName()
     if (is_directory) {
         std::string body = this->request_->getBody();
         size_t id = body.find("Content-Disposition:");
-        if (id == std::string::npos) return 1;
-
-
-
+        if (id == std::string::npos)
+			return 1;
 		size_t start = body.find("filename=", id);
 		if (start == std::string::npos)
 			return 1;
@@ -450,18 +366,70 @@ int RequestAnswer::fileName()
     if (last_slash != std::string::npos) {
         std::string dir_to_check = this->post_file_name_.substr(0, last_slash);
         if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) {
-            std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
+            //std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
             return (1);
         }
     }
-
-    std::cout << "Fichier final retenu : " << this->post_file_name_ << std::endl;
-    return (0);
+    //std::cout << "Fichier final retenu : " << post_file_name_ << std::endl;
+    return 0;
 }
 
+int RequestAnswer::methodPost()
+{
+    if (fileName() == 1) 
+    {
+        //error_ = 400;
+        code_ = 400;
+		message_ = "Bad Request";
+        return 1;
+    }
+
+    // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
+    std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
+
+    std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
+
+    if (!outfile.is_open()) {
+        std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
+        //error_ = 500;
+		code_ = 500;
+		message_ = "Internal Server Error";
+        return 1;
+    }
+
+    const std::string& body = request_->getBody();
+    size_t startPos = body.find("\r\n\r\n");
+
+    // Correction de la condition : on veut entrer ici si on A TROUVÉ \r\n\r\n
+    if (startPos != std::string::npos) 
+	{
+        startPos += 4; // On saute les deux \r\n\r\n
+        
+        size_t endPos = body.find("\r\n--", startPos); 
+        size_t fileSize;
+
+        if (endPos == std::string::npos)
+            fileSize = body.size() - startPos;
+        else 
+            fileSize = endPos - startPos;
+
+        outfile.write(&body[startPos], fileSize);
+    } 
+    else
+        // Cas où ce n'est pas du multipart (données brutes)
+        outfile.write(body.c_str(), body.size());
+
+    
+    outfile.close();
+    code_ = 201; 
+    return 0;
+}
+
+//faire la reponse avec le header
+//int	RequestAnswer::setAnswer()
 void	RequestAnswer::fullAnswer()
 {
-	std::string header = request_->getVersion() + ' ' + itoa(code_);
+	std::string header = request_->getVersion() + ' ' + Itoa(code_);
 	if (this->code_ == 200)
 		header += " OK\r\n";
 	else if (this->code_ == 201)
@@ -474,31 +442,30 @@ void	RequestAnswer::fullAnswer()
 		this->content_type_ = "text/html";
 	}
 	header += "Content-Type: " + content_type_ + "\r\n";
-	header += "Content-Length: " + itoa(body_.length()) + "\r\n";
+	header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
 	header += "\r\n";
-	//header += "Connection: close\r\n";
-	this->answer_ = header + this->body_;
+
+	//std::cout << "header = " << header << std::endl;
+
+	answer_ = header + this->body_;
+	//std::cout << answer_ << std::endl;
 }
 
 AnswerStatus	RequestAnswer::setAnswer(Request &request)
 {
-	this->request_ = &request;
-	this->answer_.clear();
+	LocationConfig	loc_ = request_->getLocation();
+	answer_.clear();
 	AnswerStatus	status = ERROR;
-
-	if (this->request_->getMethod() == "GET")
-	{
-
+	if (request_->getMethod() == "GET")
 		status = methodGet();
-	}
 
 	else if (this->request_->getMethod() == "DELETE")
 	{
 		if (unlink(this->request_->getPath().c_str()) != 0)
 		{
 			std::cout << "error 404 error supression"  << std::endl;
-			error_ = 404;
 			code_ = 404;
+			message_ = "Not Found";
 			status = (ERROR);
 		}
 		else
@@ -515,6 +482,8 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 		return (status);
 
 	}
+	if (code_ > 400)
+		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
 	fullAnswer();
 	return (status);
 }
@@ -631,3 +600,94 @@ void	RequestAnswer::clear()
 	this->post_file_name_.clear();
 	this->cgi_interpreter_.clear();
 }
+
+/*
+METHOD POST JULIEN A MERGE
+AnswerStatus	RequestAnswer::methodPost()
+{
+	Location	loc = request_->getLocation();
+
+	if (this->isCgi())
+    {
+        std::cout << "[DEBUG] Detection CGI reussie, interpreteur : " << this->cgi_interpreter_ << std::endl;
+        
+        try {
+            // Nettoyage de sécurité si un handler existait déjà
+            if (this->cgi_handler_)
+                delete this->cgi_handler_;
+
+            // On utilise l'interpréteur trouvé par isCgi() !
+            this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
+            this->cgi_handler_->execute();
+            return (CGI_IN_PROGRESS);
+        } catch (const std::exception& e) {
+            std::cerr << "[CGI Error] " << e.what() << std::endl;
+            this->error_ = 500;
+            return (ERROR);
+        }
+    }
+
+	std::string root = loc.getRoot() + loc.getPath();
+	struct stat s;
+	if (stat(root.c_str(), &s) == 0 && S_ISDIR(s.st_mode))
+	{
+		//std::cout << "deb" << std::endl;
+		std::cout << "[DEBUG] Tentative d'upload dans le dossier : " << root << std::endl;
+
+		struct stat p;
+		stat(request_->getPath().c_str(), &p);
+		if (stat(request_->getPath().c_str(), &p) == 0 && S_ISREG(p.st_mode))
+		{
+			post_file_name_ = request_->getPath();
+			//std::cout << post_file_name_ << std::endl;
+			return (ERROR);
+		}
+		//bool	quote = false;
+		std::string body = request_->getBody();
+		size_t		id = body.find("Content-Disposition:");
+		if (id == std::string::npos)
+			return (READY_TO_SEND);
+		size_t start = body.find("filename=", id);
+		if (start == std::string::npos)
+			return (READY_TO_SEND);
+		start += 9;
+
+		while (body[start] == ' ')
+			++start;
+		bool	quote = false;
+		if (body[start] == '\"')
+		{
+			++start;
+			quote = true;
+		}
+		size_t end = body.find("\r\n", start);
+		if (end == std::string::npos)
+			return (READY_TO_SEND);
+		//while (quote == true)
+		//{
+		//	if (body[end - 1] == '\"')
+		//		quote = false;
+		//	--end;
+		//}
+		if (quote && body[end - 1] == '\"')
+			--end;
+		
+		size_t	s = body.find_last_of('/', end);
+		if (s != std::string::npos && s >= start)
+			start = s + 1;
+		std::string file_name = body.substr(start, end - start);
+		//std::cout << "file name = " << file_name << std::endl;
+		// struct stat f;
+		std::string full_dest_path = root + '/' + file_name;
+		
+		struct stat b;
+		if (stat(full_dest_path.c_str(), &b) == 0 && S_ISREG(b.st_mode))
+		{
+			post_file_name_ = full_dest_path;
+			return (ERROR);
+		}
+	}
+	std::cout << "error" << std::endl;
+	return (READY_TO_SEND);
+}
+*/

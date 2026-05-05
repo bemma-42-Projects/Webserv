@@ -4,7 +4,7 @@ CXX = c++
 FLAGS = -Wall -Wextra -Werror -std=c++98 -g 	
 OBJDIR = obj
 
-SOURCES = ./CGIHandler.cpp ./CGISubprocess.cpp ./Client.cpp ./Config.cpp ./Error.cpp ./LocationConfig.cpp ./Location.cpp ./main.cpp ./parsingconfig.cpp ./RequestAnswer.cpp ./Request.cpp ./ServerConfig.cpp ./Server.cpp ./utils.cpp 
+SOURCES = ./Request.cpp ./ServerConfig.cpp ./RequestAnswer.cpp ./LocationConfig.cpp ./Error.cpp ./parsingconfig.cpp ./validatespecificdir.cpp
 OBJS = $(patsubst ./%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
 all: $(NAME)
