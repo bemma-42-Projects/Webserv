@@ -416,25 +416,28 @@ void    Server::handleCgiRead_(int cgi_fd)
         return (cleanCgiData_(cgi_fd, it));
 
     int client_fd = it->second;
-    if (this->clients_.count(client_fd) == 0 || this->clients_[client_fd]->getState() == Client::DISCONNECTED)
-        return (cleanCgiData_(cgi_fd, it));
+    //if (this->clients_.count(client_fd) == 0 || this->clients_[client_fd]->getState() == Client::DISCONNECTED)
+    //    return (cleanCgiData_(cgi_fd, it));
 
     Client  *client = clients_[client_fd];
     char    buffer[4096];
     ssize_t bytes_read = read(cgi_fd, buffer, sizeof(buffer));
 
     if (bytes_read > 0)
+    {
         client->getAnswer().getCGIHandler()->appendOutput(std::string(buffer, bytes_read));
-    else if (bytes_read == 0)
+        return ;
+    }
+    if (bytes_read == 0)
     {
         int status;
-        waitpid(client->getAnswer().getCGIHandler()->getPid(), &status, WNOHANG);
-        cleanCgiData_(cgi_fd, it);
+        waitpid(client->getAnswer().getCGIHandler()->getPid(), &status, 0);
         client->getAnswer().buildCGIResponse();
+        cleanCgiData_(cgi_fd, it);
+        this->prepareForWriting_(client_fd, *client);
     }
     else
         cleanCgiData_(cgi_fd, it);
-    this->prepareForWriting_(client_fd, *client);
 }
 
 // lance la boucle d'évènements principale du serveur

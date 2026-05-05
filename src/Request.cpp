@@ -291,24 +291,45 @@ int	Request::initBody()
 	std::map<std::string, std::string>::const_iterator it = this->headers_.find("Content-Length");
 	if (it == this->headers_.end())
 	{
-		this->body_ = "\0";
+		//this->body_ = "\0";
+		this->body_ = "";
 		return (0);
 	}
-	std::string value = it->second;
-	size_t begin = this->request_.find("\r\n\r\n");
-	if (begin == std::string::npos)
-		return (1);
-	size_t				len;
-	std::stringstream	ss(value);
-	ss >> len;
+	// s'il n'y a pas de Content-Length, on considère qu'il n'y a pas de corps
+	if (it == this->headers_.end())
+	{
+		this->body_ = "";
+		return (0);
+	}
 
-	if (len > Config::getBodySize())
+	//size_t begin = this->request_.find("\r\n\r\n");
+	//if (begin == std::string::npos)
+	size_t	header_end = this->request_.find("\r\n\r\n");
+	size_t	body_start = header_end + 4;
+
+	size_t				expected_len = 0;
+
+	std::string value = it->second;
+	std::stringstream	ss(value);
+	ss >> expected_len;
+
+	if (expected_len > Config::getBodySize())
+	{
+		std::cout << "[DEBUG] Body trop grand: " << expected_len << std::endl;
 		return (1);
-	while (this->request_[begin] == '\r' || this->request_[begin] == '\n')
-		++begin;
-	if (this->request_.size() - begin != len)
-		return (1);
-	this->body_ = this->request_.substr(begin, len);
+	}
+
+	size_t	received_len = this->request_.size() - body_start;
+	if (received_len < expected_len)
+	{
+		std::cout << "[DEBUG] Body incomplet: " << received_len << "/" << expected_len << std::endl;
+		return (2);
+	}
+	//while (this->request_[begin] == '\r' || this->request_[begin] == '\n')
+	//	++begin;
+	//if (this->request_.size() - begin != len)
+	//	return (1);
+	this->body_ = this->request_.substr(body_start, expected_len);
 	return (0);
 }
 
@@ -330,49 +351,59 @@ int	Request::checkOfLocation()
 // pas le dernier morceau de requete
 ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
-	this->request_ = raw_data;
+	//this->request_ = raw_data;
+	this->request_ += raw_data;
+	
+	//if (complete() == false)
+	//	return (PARSING_INCOMPLETE); //continuer la lecture
 
-	if (complete() == false)
-		return (PARSING_INCOMPLETE); //continuer la lecture
+	size_t	header_end = this->request_.find("\r\n\r\n");
+	if (header_end == std::string::npos)
+		return (PARSING_INCOMPLETE);
 
 	int res = initFistLine();
-	if (res == 1)
+
+	if (res != 0)
 	{
-		this->error_ = 401;
-		return (PARSING_FAILED);
-	}
-	else if (res == 2)
-	{
-		this->error_ = 501;
-		return (PARSING_FAILED);
+		std::cout << "[DEBUG] Echec FirstLine. Code: " << res << std::endl;
+        if (res == 1)
+			this->error_ = 400;
+		else
+			this->error_ = 501;
+        return (PARSING_FAILED);
 	}
 	if (initHeader() == 1)
 	{
-		this->error_ = 402;
+		std::cout << "[DEBUG] Echec Headers" << std::endl;
+		this->error_ = 400;
 		return (PARSING_FAILED);
 	}
-	int	body = initBody();
-	if (body == 1)
+	int	bodyRes = initBody();
+	if (bodyRes == 1)
 	{
 		this->error_ = 413;
 		return (PARSING_FAILED);
 	}
+	if (bodyRes == 2)
+        return (PARSING_INCOMPLETE);
+
 	int checkLoc = checkOfLocation();
-	if (checkLoc == 1)
+	if (checkLoc != 0)
 	{
-		this->error_ = 404;
+		std::cout << "[DEBUG] Echec Location. Code: " << checkLoc << std::endl;
+		if (checkLoc == 1)
+			this->error_ = 404;
+		else
+			this->error_ = 405;
 		return (PARSING_FAILED);
 	}
-	else if (checkLoc == 2)
-	{
-		this->error_ = 405;
-		return (PARSING_FAILED);
-	}
+	
 	std::string	root = this->location_.getRoot();
 	if (!(this->url_path_.empty()) && this->url_path_[0] == '/')
 		this->path_ = root + this->url_path_;
 	else
 		this->path_ = root + "/" + this->url_path_;
+
 	if (this->path_[this->path_.length() - 1] == '/')
 	{
 		std::vector<std::string> indexes = this->location_.getIndex();

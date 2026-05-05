@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/04 12:24:53 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/05 13:33:33 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -135,8 +135,19 @@ char	**CGIHandler::vectorToCharArray_(const std::vector<std::string> &env) const
 // sont les variables d'environnement
 char		**CGIHandler::getEnvp()
 {
-	std::vector<std::string>	env;	
+	std::vector<std::string>	env;
+
+	this->setupStandardEnv_(env);
 	this->addHeadersToEnv(env);
+
+	// --- LOGS DE DEBUG ---
+    std::cout << "\n--- [DEBUG CGI ENV] ---" << std::endl;
+    for (size_t i = 0; i < env.size(); ++i) {
+        std::cout << "Env[" << i << "]: " << env[i] << std::endl;
+    }
+    std::cout << "-----------------------\n" << std::endl;
+    // ---------------------
+
 	return (this->vectorToCharArray_(env));
 }
 
@@ -180,10 +191,26 @@ void    CGIHandler::execute()
     char    **envp = this->getEnvp();
     try {
 		this->subprocess_.createSubprocess(this->request_.getPath(), this->interpreter_, envp);
-		if (this->request_.getMethod() == "GET")
-            close(this->subprocess_.getWriteFd());
+		
+		if (this->request_.getMethod() == "POST")
+		{
+			std::string body = this->request_.getBody();
+			std::cout << "[CGI] Envoi du body au pipe (Taille: " << body.size() << " octets)" << std::endl;
+
+			if (!body.empty())
+			{
+				ssize_t	bytesWritten = write(this->subprocess_.getWriteFd(), body.c_str(), body.size());
+				std::cout << "[CGI] Octets reellement ecrits: " << bytesWritten << std::endl;
+			}
+		}
+		if (this->subprocess_.getWriteFd() != -1)
+		{
+			std::cout << "[CGI] Fermeture du WriteFd (Envoi EOF)" << std::endl;
+			close(this->subprocess_.getWriteFd());
+		}
     }
 	catch (const std::exception& e) {
+		std::cerr << "[CGI] ERREUR: " << e.what() << std::endl;
         this->freeEnvp(envp);
             throw;
     }

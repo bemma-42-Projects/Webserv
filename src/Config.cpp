@@ -16,6 +16,7 @@ Config::Config()
 	// 1. Configuration des méthodes autorisées
 	std::vector<std::string> methods;
 	methods.push_back("GET");
+	methods.push_back("POST");
 
 	// 2. Configuration des fichiers par défaut (index)
 	std::vector<std::string> indexFiles;
@@ -112,6 +113,7 @@ void	Config::location()
 	// 1. Configuration des méthodes autorisées
 	std::vector<std::string> methods;
 	methods.push_back("GET");
+	methods.push_back("POST");
 
 	// 2. Configuration des fichiers par défaut (index)
 	std::vector<std::string> indexFiles;

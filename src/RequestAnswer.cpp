@@ -294,34 +294,55 @@ AnswerStatus	RequestAnswer::methodGet()
 AnswerStatus	RequestAnswer::methodPost()
 {
 	Location	loc = request_->getLocation();
+
+	if (this->isCgi())
+    {
+        std::cout << "[DEBUG] Detection CGI reussie, interpreteur : " << this->cgi_interpreter_ << std::endl;
+        
+        try {
+            // Nettoyage de sécurité si un handler existait déjà
+            if (this->cgi_handler_)
+                delete this->cgi_handler_;
+
+            // On utilise l'interpréteur trouvé par isCgi() !
+            this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
+            this->cgi_handler_->execute();
+            return (CGI_IN_PROGRESS);
+        } catch (const std::exception& e) {
+            std::cerr << "[CGI Error] " << e.what() << std::endl;
+            this->error_ = 500;
+            return (ERROR);
+        }
+    }
+
 	std::string root = loc.getRoot() + loc.getPath();
 	struct stat s;
 	if (stat(root.c_str(), &s) == 0 && S_ISDIR(s.st_mode))
 	{
-		std::cout << "deb" << std::endl;
+		//std::cout << "deb" << std::endl;
+		std::cout << "[DEBUG] Tentative d'upload dans le dossier : " << root << std::endl;
+
 		struct stat p;
 		stat(request_->getPath().c_str(), &p);
-		if (p.st_mode & S_IFREG)
+		if (stat(request_->getPath().c_str(), &p) == 0 && S_ISREG(p.st_mode))
 		{
-			post_file_name_ =  request_->getPath();
-			std::cout << post_file_name_ << std::endl;
+			post_file_name_ = request_->getPath();
+			//std::cout << post_file_name_ << std::endl;
 			return (ERROR);
 		}
-		bool	quote = false;
+		//bool	quote = false;
 		std::string body = request_->getBody();
-		size_t	id = body.find("Content-Disposition:");
+		size_t		id = body.find("Content-Disposition:");
 		if (id == std::string::npos)
-		{
 			return (READY_TO_SEND);
-		}
 		size_t start = body.find("filename=", id);
 		if (start == std::string::npos)
-		{
 			return (READY_TO_SEND);
-		}
 		start += 9;
+
 		while (body[start] == ' ')
 			++start;
+		bool	quote = false;
 		if (body[start] == '\"')
 		{
 			++start;
@@ -329,31 +350,28 @@ AnswerStatus	RequestAnswer::methodPost()
 		}
 		size_t end = body.find("\r\n", start);
 		if (end == std::string::npos)
-		{
 			return (READY_TO_SEND);
-		}
-		while (quote == true)
-		{
-			if (body[end - 1] == '\"')
-				quote = false;
+		//while (quote == true)
+		//{
+		//	if (body[end - 1] == '\"')
+		//		quote = false;
+		//	--end;
+		//}
+		if (quote && body[end - 1] == '\"')
 			--end;
-		}
-
+		
 		size_t	s = body.find_last_of('/', end);
-		if (s != std::string::npos)
+		if (s != std::string::npos && s >= start)
 			start = s + 1;
 		std::string file_name = body.substr(start, end - start);
 		//std::cout << "file name = " << file_name << std::endl;
 		// struct stat f;
-		std::string test = root + '/' + file_name;
-		std::cout << "test = " << test << std::endl;
-
+		std::string full_dest_path = root + '/' + file_name;
+		
 		struct stat b;
-		stat(test.c_str(), &b);
-		if (b.st_mode & S_IFREG)
+		if (stat(full_dest_path.c_str(), &b) == 0 && S_ISREG(b.st_mode))
 		{
-			post_file_name_ =  test;
-			std::cout << " file name = " << post_file_name_ << std::endl;
+			post_file_name_ = full_dest_path;
 			return (ERROR);
 		}
 	}
@@ -457,8 +475,8 @@ void	RequestAnswer::fullAnswer()
 	}
 	header += "Content-Type: " + content_type_ + "\r\n";
 	header += "Content-Length: " + itoa(body_.length()) + "\r\n";
-	header += "\r\n\r\n";
-
+	header += "\r\n";
+	//header += "Connection: close\r\n";
 	this->answer_ = header + this->body_;
 }
 
