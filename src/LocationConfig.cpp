@@ -5,8 +5,8 @@
 LocationConfig::LocationConfig() {
 	autoindex_ = -1;
 	allowed_upload_ =-1;
-	/*path_ = "/src";
 	client_max_body_size_ = 0;
+	/*path_ = "/src";
 	//autoindex_ = false;
 	//allowed_upload_ = false;//utiliser dans answerrequest
 	std::set<std::string> methods;
@@ -35,7 +35,6 @@ LocationConfig::LocationConfig() {
 // }
 
 const std::string&	LocationConfig::getPath() const {
-	std::cout << path_ << std::endl;
 	return (path_);
 }
 

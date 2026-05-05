@@ -10,6 +10,7 @@
 #include "RequestAnswer.hpp"
 #include "Error.hpp"
 #include "ServerConfig.hpp"
+#include "parsingconf.hpp"
 //#include <dirent.h>
 
 
@@ -20,7 +21,6 @@ Request::Request(char *buffer, ServerConfig& server) : server_(&server)
 {
 	request_ = buffer;
 	error_ = 0;
-	//server_ = server;
 }
 
 Request::~Request(){}
@@ -110,7 +110,6 @@ bool	Request::complete()
 	size_t	end = request_.find("\r\n\r\n");
 	if (end == std::string::npos)
 		return false;//requette non complet
-	// std::cout << "test" <<std::endl;
 	size_t it = request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
@@ -119,19 +118,9 @@ bool	Request::complete()
 	size_t	len;
 	std::stringstream ss(tmp);
     ss >> len;
-	//while (request_[end] == '\r' || request_[end] == '\n')
-	//	++end;
-	end += 4;
-	//std::cout << "test" <<std::endl;
-
-	//std::cout << request_.substr(end) << std::endl;
-	std::cout << request_.size() - end << " < " << len << std::endl;
+	end += 4;;
 	if (request_.size() - end < len)
-	{
-		//error_ = 413;
 		return false;
-	}
-	// std::cout << "test" <<std::endl;
 	return true;
 }
 
@@ -158,8 +147,6 @@ int	Request::initFistLine()
 	if (it == std::string::npos || it >= last)
 		return 1;
 	url_path_ = request_.substr(begin, it - begin);
-	// std::cout << url_path_ << std::endl;
-	//path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
 	begin = request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
 		return 1;
@@ -171,7 +158,7 @@ int	Request::initFistLine()
 int	Request::initHeader()
 {
 	size_t last = request_.find("\r\n\r\n");
-	std::cout << "1" << std::endl;
+	// std::cout << "1" << std::endl;
 	if (last == std::string::npos)
 		return 1;
 	size_t end = 0;
@@ -201,21 +188,6 @@ int	Request::initHeader()
 		return 1;
 	if (headers_.find("Content-Type") == headers_.end())
 		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
-	
-	
-	std::cout << "\n\n\n\ntest" << std::endl;
-	const std::map<std::string, std::string>& headers = getHeaders();
-	std::map<std::string, std::string>::const_iterator i;
-
-	for (i = headers.begin(); i != headers.end(); ++i) {
-		std::cout << "	Header: " << i->first  // La clé (ex: "Content-Type")
-				<< " | Valeur: " << i->second // La valeur (ex: "text/html")
-				<< "\n";
-	}
-	std::cout << "\n\n\n\n" << std::endl;
-	// out << "Body: " << request.getBody() << "\n";
-    // return out;
-
 	return 0;
 }
 
@@ -247,19 +219,11 @@ int	Request::initBody()
 
 int	Request::checkOfLocation()
 {
-	std::cout << "test " << std::endl;
 	LocationConfig* loc = server_->matchLocation(url_path_);
 	if (loc == NULL)
 		return 1;
-	std::cout << "test " << std::endl;
 	location_ = *loc;
-	std::cout << location_.getPath() << std::endl;
 	std::set<std::string> allowedMethods = location_.getAllowedMethods();
-	//std::cout << "Methods: ";
-	//for (size_t i = 0; i < allowedMethods.size(); ++i) {
-	//	std::cout << allowedMethods[i] << (i < allowedMethods.size() - 1 ? ", " : "");
-	//}
-	//std::cout << std::endl;
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
 			== allowedMethods.end())
 		return 2;
@@ -271,7 +235,6 @@ int	Request::parsingHttp()
 {
 	if (complete() == false)
 		return 2; //continuer la lecture
-	std::cout << "pb " << std::endl;
 	int res = initFistLine();
 	if (res == 1)
 	{
@@ -285,7 +248,6 @@ int	Request::parsingHttp()
 		message_error_ = "Not Implemented";
 		return 0;
 	}
-	std::cout << "pbtesttt " << std::endl;
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
@@ -299,14 +261,12 @@ int	Request::parsingHttp()
 		message_error_ = "Method Not Allowed";
 		return 0;
 	}
-	std::cout << "pb jsefkkdbgjhbrsgjvbdrjfugeshbvgsudfhshdvgjsuighvrs" << std::endl;
 	if (initHeader() == 1)
 	{
 		error_ = 400;
 		message_error_ = "Bad Request";
 		return 0 ;
 	}
-	std::cout << "pb " << std::endl;
 	int	body =  initBody();
 	if (body == 1)
 	{
@@ -320,9 +280,7 @@ int	Request::parsingHttp()
 		message_error_ = "Payload Too Large";
 		return 0;
 	}
-	std::cout << "pb " << std::endl;
-	path_ = location_.getRoot()/* + url_path_*/;//attention si / a la fin
-	std::cout << "\n--------------------------------------------------------\n" << std::endl;
+	path_ = combineRootUri(location_.getRoot(), url_path_);
 	return 1;
 }
 

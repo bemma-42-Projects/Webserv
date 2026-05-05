@@ -94,7 +94,7 @@ int	RequestAnswer::getIfFile(std::string file)
 {
 	//std::cout << Config::getRoot() + file << std::endl;
 	//int	fd = open((request_.getLocation().getRoot() + '/' + file).c_str(), O_RDONLY);
-	std::cout << "dir" << std::endl;
+	// std::cout << "dir" << std::endl;
 	int	fd = open((file).c_str(), O_RDONLY);
 	if (fd == -1)
 		return 1;
@@ -120,7 +120,7 @@ int	RequestAnswer::getIfDir()
 	DIR* dir = opendir(request_.getPath().c_str());
 	if (!dir)
 	{
-		std::cout << "error 404" << std::endl;
+		// std::cout << "error 404" << std::endl;
 		//error_ = 404;
 		code_ = 404;
 		message_ = "Not Found";
@@ -148,7 +148,7 @@ int	RequestAnswer::getIfDir()
 		}
 		else
 		{
-			std::cout << "error 400" << std::endl;
+			// std::cout << "error 400" << std::endl;
 			//error_ = 400;
 			code_ = 400;
 			return 1;
@@ -325,7 +325,7 @@ int RequestAnswer::methodPost()
     }
 
     // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
-    std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
+    // std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
 
     std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
 
@@ -362,7 +362,38 @@ int RequestAnswer::methodPost()
     
     outfile.close();
     code_ = 201; 
+	content_type_ = findContentType(post_file_name_);
     return 0;
+}
+
+void	RequestAnswer::methodDelete()
+{
+	std::string	path = request_.getPath();
+	struct stat fileStat;
+
+	if (stat(path.c_str(), &fileStat) != 0) 
+    {
+        code_ = 404;
+        message_ = "Not Found";
+    }
+	else if (S_ISDIR(fileStat.st_mode))
+    {
+        code_ = 403;
+        message_ = "Forbidden";
+    }
+    else 
+    {
+        if (unlink(path.c_str()) == 0)
+        {
+            code_ = 204;
+            // message_ = "No Content";
+        }
+        else
+        {
+            code_ = 403;
+            message_ = "Forbidden";
+        }
+    }
 }
 
 //faire la reponse avec le header
@@ -374,6 +405,8 @@ void	RequestAnswer::fullAnswer()
 		header += " OK\r\n";
 	else if (code_ == 201)
 		header += " Created\r\n";
+	else if (code_ == 204)
+		header += " No Content\r\n";
 	else if (code_ == 301)
 		header += " Moved\r\n";
 	else
@@ -381,14 +414,11 @@ void	RequestAnswer::fullAnswer()
 		header += " Not Found\r\n";
 		content_type_ = "text/html";
 	}
-	header += "Content-Type: " + content_type_ + "\r\n";
+	if (!content_type_.empty())
+		header += "Content-Type: " + content_type_ + "\r\n";
 	header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
 	header += "\r\n";
-
-	//std::cout << "header = " << header << std::endl;
-
 	answer_ = header + body_;
-	//std::cout << answer_ << std::endl;
 }
 
 //envoie les fonction par rapport au methode (get, post, delete)
@@ -401,47 +431,22 @@ int	RequestAnswer::setAnswer()
 
 	else if (request_.getMethod() == "DELETE")
 	{
-		if (unlink(request_.getPath().c_str()) != 0)
-		{
-			std::cout << "error 404 error supression"  << std::endl;
-			code_ = 404;
-			message_ = "Not Found";
-		}
-		//else 
-		//	code_ = 200;
-		//	return (2);//delete
-		//Utilise unlink() pour supprimer le fichier
+		methodDelete();
 	}
 	else if (request_.getMethod() == "POST")
 	{
-		std::cout << "nous y est" << std::endl;
-		methodPost();
-
-	//	std::string	url = request_.getUrlPath();
-	//	if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
-	//		|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
-	//		|| url.substr(url.size() - 3) == ".pl")*/)
-	//	{
-
-	//		//CGI
-	//		//Si CGI → fork + pipe + execve avec body_ en entrée
-	//	}
-	//	else
-	//	{
-			
-
-	//		//upload
-	//		//Si upload → ouvrir un fichier sur path_ et y écrire body_
-	//		//Si succès → construire une réponse 201 Created
-	//		//Si échec → remplir error_ et retourner 0 comme tu fais déjà
-		//}
+		if (loc_.getAllowedUpload() == true)
+			methodPost();
+		else 
+		{
+			code_ = 403;
+			message_ = "Forbidden";
+		}
 	}
-////mettre le reponse dans une answer_
-	//code_ = 4754;
 	if (code_ > 400)
 		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+	// content_type_ = findContentType(request_.getPath());
 	fullAnswer();
-	//std::cout << body_ << std::endl;
 	return 1;
 }
 
