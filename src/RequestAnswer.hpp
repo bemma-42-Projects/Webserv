@@ -23,6 +23,7 @@ class RequestAnswer
 		AnswerStatus			setAnswer(Request &request);
 		AnswerStatus			methodGet();
 		AnswerStatus			methodPost();
+		void		methodDelete();
 		void					fullAnswer();
 		AnswerStatus			getIfFile(std::string file);
 		AnswerStatus			getIfDir();

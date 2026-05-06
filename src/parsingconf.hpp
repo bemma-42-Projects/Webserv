@@ -38,6 +38,8 @@ bool	validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, St
 bool	validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, State state);
 bool	validateUploadPath(std::vector<std::string> args,ServerConfig& srv, State state);
 bool	validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv);
+std::string combineRootUri(std::string root, std::string uri);
 
-std::vector<std::string> combineRootUri(std::string root, std::string uri);
+
+// std::vector<std::string> combineRootUri(std::string root, std::string uri);
 

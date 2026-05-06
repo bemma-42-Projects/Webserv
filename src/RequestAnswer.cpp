@@ -135,8 +135,8 @@ std::string RequestAnswer::findContentType(const std::string& path)
 AnswerStatus	RequestAnswer::getIfFile(std::string file)
 {
 	//std::cout << Config::getRoot() + file << std::endl;
-	//int	fd = open((request_->getLocation().getRoot() + '/' + file).c_str(), O_RDONLY);
-	//std::cout << "dir" << std::endl;
+	//int	fd = open((request_.getLocation().getRoot() + '/' + file).c_str(), O_RDONLY);
+	// std::cout << "dir" << std::endl;
 	int	fd = open((file).c_str(), O_RDONLY);
 	if (fd == -1)
 	{
@@ -164,7 +164,7 @@ AnswerStatus	RequestAnswer::getIfDir()
 	DIR* dir = opendir(request_->getPath().c_str());
 	if (!dir)
 	{
-		std::cout << "error 404" << std::endl;
+		// std::cout << "error 404" << std::endl;
 		//error_ = 404;
 		code_ = 404;
 		message_ = "Not Found";
@@ -191,7 +191,7 @@ AnswerStatus	RequestAnswer::getIfDir()
 		}
 		else
 		{
-			std::cout << "error 400" << std::endl;
+			//std::cout << "error 400" << std::endl;
 			//this->error_ = 400;
 			this->code_ = 400;
 			return (ERROR);
@@ -397,7 +397,7 @@ AnswerStatus RequestAnswer::methodPost()
     }
 
     // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
-    std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
+    // std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
 
     std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
 
@@ -434,7 +434,38 @@ AnswerStatus RequestAnswer::methodPost()
     
     outfile.close();
     code_ = 201; 
+	content_type_ = findContentType(post_file_name_);
     return (READY_TO_SEND);
+}
+
+void	RequestAnswer::methodDelete()
+{
+	std::string	path = request_.getPath();
+	struct stat fileStat;
+
+	if (stat(path.c_str(), &fileStat) != 0) 
+    {
+        code_ = 404;
+        message_ = "Not Found";
+    }
+	else if (S_ISDIR(fileStat.st_mode))
+    {
+        code_ = 403;
+        message_ = "Forbidden";
+    }
+    else 
+    {
+        if (unlink(path.c_str()) == 0)
+        {
+            code_ = 204;
+            // message_ = "No Content";
+        }
+        else
+        {
+            code_ = 403;
+            message_ = "Forbidden";
+        }
+    }
 }
 
 //faire la reponse avec le header
@@ -446,14 +477,17 @@ void	RequestAnswer::fullAnswer()
 		header += " OK\r\n";
 	else if (this->code_ == 201)
 		header += " Created\r\n";
-	else if (this->code_ == 301)
+	else if (code_ == 204)
+		header += " No Content\r\n";
+	else if (code_ == 301)
 		header += " Moved\r\n";
 	else
 	{
 		header += " Not Found\r\n";
 		this->content_type_ = "text/html";
 	}
-	header += "Content-Type: " + content_type_ + "\r\n";
+	if (!content_type_.empty())
+		header += "Content-Type: " + content_type_ + "\r\n";
 	header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
 	header += "\r\n";
 
@@ -473,29 +507,21 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 
 	else if (this->request_->getMethod() == "DELETE")
 	{
-		if (unlink(this->request_->getPath().c_str()) != 0)
-		{
-			std::cout << "error 404 error supression"  << std::endl;
-			code_ = 404;
-			message_ = "Not Found";
-			status = (ERROR);
-		}
-		else
-		{
-			status = READY_TO_SEND;
-		}
+		methodDelete();
 	}
 	else if (request_->getMethod() == "POST")
 	{
-		status = methodPost();
-	}
-	if (status == CGI_IN_PROGRESS)
-	{
-		return (status);
-
+		if (loc_.getAllowedUpload() == true)
+			methodPost();
+		else 
+		{
+			code_ = 403;
+			message_ = "Forbidden";
+		}
 	}
 	if (code_ > 400)
 		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+	// content_type_ = findContentType(request_.getPath());
 	fullAnswer();
 	return (status);
 }

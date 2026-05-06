@@ -101,8 +101,8 @@ bool validateListen(std::vector<std::string> args, State state, ServerConfig& sr
 	return (true);
 }
 
-std::vector<std::string> combineRootUri(std::string root, std::string uri) {
-	std::vector<std::string> res;
+std::string combineRootUri(std::string root, std::string uri) {
+	std::string res;
 	if (root.empty())
 		return (res);
 	if (uri.empty())
@@ -117,7 +117,7 @@ std::vector<std::string> combineRootUri(std::string root, std::string uri) {
 	if (uri[0] != '/') {
 		uri = "/" + uri;
 	}
-	res.push_back(root + uri);
+	res = root + uri;
 	return (res);
 }
 
@@ -447,11 +447,11 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 				// std::cerr << "pas de location" << std::endl;
 				return (false);
 			}
-			std::vector<std::string> res = combineRootUri(args[0], srv.getLastLocation().getPath());
-			if (validateRoot(res)) {
-				srv.getLastLocation().setRoot(res[0]);
+			// std::vector<std::string> res = combineRootUri(args[0], srv.getLastLocation().getPath());
+			// if (validateRoot(args)) {
+				srv.getLastLocation().setRoot(args[0]);
 				return (true);
-			}
+			// }
 		}
 	 }
 		// std::cout << "ROOT:" << std::endl;

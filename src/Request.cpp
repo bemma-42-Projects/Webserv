@@ -11,6 +11,7 @@
 #include "Error.hpp"
 #include "ServerConfig.hpp"
 //#include "Location.hpp"
+#include "parsingconf.hpp"
 //#include <dirent.h>
 
 
@@ -188,20 +189,10 @@ bool	Request::complete()
 	size_t	len;
 	std::stringstream ss(tmp);
     ss >> len;
-	//while (request_[end] == '\r' || request_[end] == '\n')
-	//	++end;
 	end += 4;
-	//std::cout << "test" <<std::endl;
-
-	//std::cout << request_.substr(end) << std::endl;
-	//std::cout << this->request_.size() - end << " < " << len << std::endl;
-	if (this->request_.size() - end < len)
-	{
-		//error_ = 413;
-		return (false);
-	}
-	// std::cout << "test" <<std::endl;
-	return (true);
+	if (request_.size() - end < len)
+		return false;
+	return true;
 }
 
 
@@ -292,21 +283,6 @@ int	Request::initHeader()
 		return 1;
 	if (headers_.find("Content-Type") == headers_.end())
 		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
-	
-	
-	std::cout << "\n\n\n\ntest" << std::endl;
-	const std::map<std::string, std::string>& headers = getHeaders();
-	std::map<std::string, std::string>::const_iterator i;
-
-	for (i = headers.begin(); i != headers.end(); ++i) {
-		std::cout << "	Header: " << i->first  // La clé (ex: "Content-Type")
-				<< " | Valeur: " << i->second // La valeur (ex: "text/html")
-				<< "\n";
-	}
-	std::cout << "\n\n\n\n" << std::endl;
-	// out << "Body: " << request.getBody() << "\n";
-    // return out;
-
 	return 0;
 }
 
@@ -342,15 +318,8 @@ int	Request::checkOfLocation()
 	const LocationConfig* loc = server_->matchLocation(url_path_);
 	if (loc == NULL)
 		return 1;
-	std::cout << "test " << std::endl;
 	location_ = *loc;
-	std::cout << location_.getPath() << std::endl;
 	std::set<std::string> allowedMethods = location_.getAllowedMethods();
-	//std::cout << "Methods: ";
-	//for (size_t i = 0; i < allowedMethods.size(); ++i) {
-	//	std::cout << allowedMethods[i] << (i < allowedMethods.size() - 1 ? ", " : "");
-	//}
-	//std::cout << std::endl;
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
 			== allowedMethods.end())
 		return (2);
@@ -436,8 +405,8 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 		message_error_ = "Payload Too Large";
 		return (PARSING_FAILED);
 	}
+	path_ = combineRootUri(location_.getRoot(), url_path_);
 	std::cout << "[DEBUG-REQ] 5. Recuperation du path depuis location_..." << std::endl;
-    path_ = location_.getRoot(); // attention si / a la fin
     std::cout << "[DEBUG-REQ] Path final resolu : " << path_ << std::endl;
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return (PARSING_SUCCESS);
