@@ -250,6 +250,7 @@ AnswerStatus	RequestAnswer::methodGet()
 		std::cerr << "error 404" << std::endl;
 		//this->error_ = 404;
 		this->code_ = 404;
+		this->message_ = "Not Found";
 		return (ERROR);
 	}
 	std::string res;
@@ -440,7 +441,7 @@ AnswerStatus RequestAnswer::methodPost()
 
 void	RequestAnswer::methodDelete()
 {
-	std::string	path = request_.getPath();
+	std::string	path = request_->getPath();
 	struct stat fileStat;
 
 	if (stat(path.c_str(), &fileStat) != 0) 
@@ -519,10 +520,15 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 			message_ = "Forbidden";
 		}
 	}
-	if (code_ > 400)
+	
+	if (code_ < 400)
+	{
+
+		fullAnswer();
+	}
+	else 
 		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
 	// content_type_ = findContentType(request_.getPath());
-	fullAnswer();
 	return (status);
 }
 

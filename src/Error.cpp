@@ -26,7 +26,7 @@ std::string Error::Itoa(int nbr)
 
 std::string	Error::ErrorPage()
 {
-	if (page_error_.empty())
+	if (!page_error_.empty())
 	{
 		//std::map<int, std::string>	error_loc = loc_->getErrorPage();
 		//if (error_conf.find(400) != error_conf.end())
@@ -94,7 +94,10 @@ std::string	Error::ErrorPage()
 std::string	Error::AnswerError(int code, std::string message, std::map<int, std::string> pageError)
 {
 	code_ = code;
-	message_ = message;
+	if (!message.empty())
+		message_ = message;
+	else
+		message_ = "ERROR";
 	//loc_ = loc;
 	page_error_ = pageError;
 	//(void)loc_;
@@ -107,7 +110,7 @@ std::string	Error::AnswerError(int code, std::string message, std::map<int, std:
 	header += "Content-Length: " + Itoa(error_page.length()) + "\r\n";
 	header += "\r\n";
 
-	//std::cout << "header = " << header << std::endl;
+	std::cout << "header = " << header << error_page << std::endl;
 
 	//answer_error = header + error_page;
 	return (header + error_page);
