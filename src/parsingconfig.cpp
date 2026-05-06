@@ -10,9 +10,7 @@ std::string readFile(const char *path) {
 	int fd = open(path, O_RDONLY);
 
 	if (fd == -1)
-	{
-		return ("fail");
-	}
+		throw std::runtime_error("Impossible d'ouvrir le fichier");
 
 	char buffer[1024];
 	ssize_t bytes = read(fd, buffer, 1024);
@@ -26,7 +24,7 @@ std::string readFile(const char *path) {
 	if (bytes < 0)
 	{
 		close(fd);
-		return ("fail");
+		throw std::runtime_error("Impossible d'ouvrir le fichier");
 	}
 	close(fd);
 	return (result);
@@ -113,7 +111,10 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 	if (i >= tokens.size() || tokens[i] != ";")
 		return (false);
 	if (validateSpecificDirective(name, args, state, srv) == false)
+	{
+		std::cout << "[DEBUG] Echec de validation sur la directive : " << name << std::endl;
 		return (false);
+	}
 	return (true);
 }
 
@@ -121,8 +122,13 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 // fonction qui valide la structure du fichier de config (pour l'instant elle check si le 
 // nb d'accolade est bon, si les blocs sont bien fait qu'il n'y a pas de location dans location
 // etc, je ne check pas pour l'instant les directives et les ;)
-bool validateStructure(std::vector<std::string> tokens, std::vector<ServerConfig> &all_servers) {
+bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
 
+	std::cout << "--> DEBUG PARSING: Nombre de tokens trouves = " << tokens.size() << std::endl;
+    for (size_t i = 0; i < tokens.size(); i++) {
+        std::cout << "[" << tokens[i] << "] ";
+    }
+    std::cout << std::endl;
 	State state = OUTSIDE;
 	std::stack<std::string> context;
 	for (size_t i = 0; i < tokens.size() ; i++)
@@ -204,16 +210,23 @@ bool validateStructure(std::vector<std::string> tokens, std::vector<ServerConfig
 	return (false);
 }
 
+
+
+
+/*
 int main(int argc, char **argv) {
-	(void)argc;
+	if (argc != 2)
+		return (1);
 
 	std::vector<ServerConfig> all_configs;
 	std::string text = readFile(argv[1]);
 	std::vector<std::string> res = tokenizeConfig(text);
 	if (validateStructure(res, all_configs) == false)
+	{
 		std::cout << "Erreur bad configuration" << std::endl;
-	else 
-		std::cout << "Everything's good!" << std::endl;
+		return (1);
+	}
+	std::cout << "Everything's good!" << std::endl;
 
 	for (size_t i = 0; i < all_configs.size(); i++) 
 		all_configs[i].finalize();
@@ -223,6 +236,11 @@ int main(int argc, char **argv) {
 	// 	std::cout << all_configs[i] << std::endl << std::endl;
 	// }
 	std::cout << "testtttt" << std::endl;
+
+	if (all_configs.empty())
+		return (1);
+	if (all_configs[0].getLocations().empty())
+		return (1);
 	// if (all_configs[1].get)
 	std::cout << all_configs[0].getLocations()[0].getPath() << std::endl;
 	std::cout << "end" << std::endl;
@@ -241,14 +259,14 @@ int main(int argc, char **argv) {
 	"Ceci est le contenu de mon fichier !\r\n"
 	"--boundary123--";
 	
-	Request file((char *)buffer, all_configs[1]);
-	int result = file.parsingHttp();
+	Request file((char *)buffer, all_configs[0]);
+	int result = file.parsingHttp(buffer);
 	std::cout << "request\n\n\n\n\n" << std::endl;
 	std::cout << file << std::endl;
 	if (result == 0)
 	{
 		std::cout << "error " << file.getError() << std::endl;
-		std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), all_configs[1].getErrorPage());
+		std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), all_configs[0].getErrorPage());
 		return 0;
 	}
 	else if (result == 2)
@@ -265,6 +283,6 @@ int main(int argc, char **argv) {
 	// 	std::cout << "anser =" << answer.getAnswer() << std::endl;
 
 }
-
+*/
 
 //probleme avec le getpath, ca segfault

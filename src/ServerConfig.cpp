@@ -275,14 +275,15 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 
 //cherche la location par raport au path 
 //int	Request::parsingHttp()
-LocationConfig* ServerConfig::matchLocation(std::string requestPath) 
+const LocationConfig* ServerConfig::matchLocation(std::string requestPath) const
 {
-    LocationConfig* bestMatch = NULL;
+    const LocationConfig* bestMatch = NULL;
     size_t longestLen = 0;
-    std::vector<LocationConfig>::iterator it;
+    std::vector<LocationConfig>::const_iterator it;
 
 	std::cout << requestPath << std::endl;
-    for (it = locations_.begin(); it != locations_.end(); ++it)
+    
+	for (it = locations_.begin(); it != locations_.end(); ++it)
     {
 		std::string locPath = it->getPath();
 		std::cout << "test 1" << std::endl;

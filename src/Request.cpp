@@ -10,7 +10,7 @@
 #include "RequestAnswer.hpp"
 #include "Error.hpp"
 #include "ServerConfig.hpp"
-#include "Location.hpp"
+//#include "Location.hpp"
 //#include <dirent.h>
 
 
@@ -92,12 +92,10 @@ std::string Request::getErrorMessage() const
 	return message_error_;
 }
 
-
-Location	Request::getLocation() const
+const LocationConfig	&Request::getLocation() const
 {
 	return (this->location_);
 }
-
 
 std::string	Request::getRequestUri() const
 {
@@ -168,7 +166,8 @@ std::string	Request::getClientIP() const
 {
 	return (this->client_ip_);
 }
-ServerConfig*	Request::getServer() const
+
+const ServerConfig*	Request::getServer() const
 {
 	return server_;
 }
@@ -314,27 +313,12 @@ int	Request::initHeader()
 //verifie que le body exist et initialise le body de la class
 int	Request::initBody()
 {
-	std::map<std::string, std::string>::const_iterator it = this->headers_.find("Content-Length");
-	if (it == this->headers_.end())
+	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
+	if (it == headers_.end())
 	{
-		//this->body_ = "\0";
-		this->body_ = "";
-		return (0);
+		body_ = "\0";
+		return 0;
 	}
-	// s'il n'y a pas de Content-Length, on considère qu'il n'y a pas de corps
-	if (it == this->headers_.end())
-	{
-		this->body_ = "";
-		return (0);
-	}
-
-	//size_t begin = this->request_.find("\r\n\r\n");
-	//if (begin == std::string::npos)
-	size_t	header_end = this->request_.find("\r\n\r\n");
-	size_t	body_start = header_end + 4;
-
-	size_t				expected_len = 0;
-
 	std::string value = it->second;
 	size_t begin = request_.find("\r\n\r\n");
 	if (begin == std::string::npos)
@@ -355,7 +339,7 @@ int	Request::initBody()
 int	Request::checkOfLocation()
 {
 	std::cout << "test " << std::endl;
-	LocationConfig* loc = server_->matchLocation(url_path_);
+	const LocationConfig* loc = server_->matchLocation(url_path_);
 	if (loc == NULL)
 		return 1;
 	std::cout << "test " << std::endl;
@@ -373,66 +357,90 @@ int	Request::checkOfLocation()
 	return (0);
 }
 
+void	Request::setServerConfig(const ServerConfig *server)
+{
+	this->server_ = server;
+}
+
 // on parse tout ce qu'on a accumule jusqu'a present
 // pas le dernier morceau de requete
 ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
+	this->request_ += raw_data;
+
 	if (complete() == false)
-		return 2; //continuer la lecture
-	std::cout << "pb " << std::endl;
+		return (PARSING_INCOMPLETE); //continuer la lecture
+	std::cout << "\n[DEBUG-REQ] Requete complete recue. Debut du parsing." << std::endl;
+
+	std::cout << "[DEBUG-REQ] 1. Lancement de initFistLine()..." << std::endl;
+	
 	int res = initFistLine();
 
 	if (res == 1)
 	{
+		std::cout << "[ERROR-REQ] initFistLine() a echoue -> 400 Bad Request" << std::endl;
 		error_ = 400;
 		message_error_ = "Bad Request";
-		return 0;
+		return (PARSING_FAILED);
 	}
 	else if (res == 2)
 	{
+		std::cout << "[ERROR-REQ] Methode non implementee -> 501 Not Implemented" << std::endl;
 		error_ = 501;
 		message_error_ = "Not Implemented";
-		return 0;
+		return (PARSING_FAILED);
 	}
-	std::cout << "pbtesttt " << std::endl;
+	std::cout << "[DEBUG-REQ] initFistLine() OK." << std::endl;
+
+	std::cout << "[DEBUG-REQ] 2. Lancement de checkOfLocation()..." << std::endl;
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
 		error_ = 404;
 		message_error_ = "Not Found";
-		return 0;
+		return (PARSING_FAILED);
 	}
 	else if (checkLoc == 2)
 	{
+		std::cout << "[ERROR-REQ] Methode non autorisee -> 405 Method Not Allowed" << std::endl;
 		error_ = 405;
 		message_error_ = "Method Not Allowed";
-		return 0;
+		return (PARSING_FAILED);
 	}
-	std::cout << "pb jsefkkdbgjhbrsgjvbdrjfugeshbvgsudfhshdvgjsuighvrs" << std::endl;
+	std::cout << "[DEBUG-REQ] checkOfLocation() OK." << std::endl;
+	
+	std::cout << "[DEBUG-REQ] 3. Lancement de initHeader()..." << std::endl;
+
 	if (initHeader() == 1)
 	{
+		std::cout << "[ERROR-REQ] initHeader() a echoue -> 400 Bad Request" << std::endl;
 		error_ = 400;
 		message_error_ = "Bad Request";
-		return 0 ;
+		return (PARSING_FAILED);
 	}
-	std::cout << "pb " << std::endl;
+	std::cout << "[DEBUG-REQ] initHeader() OK." << std::endl;
+	
+	std::cout << "[DEBUG-REQ] 4. Lancement de initBody()..." << std::endl;
 	int	body =  initBody();
 	if (body == 1)
 	{
+		std::cout << "[ERROR-REQ] initBody() a echoue -> 400 Bad Request" << std::endl;
 		error_ = 400;
         message_error_ = "Bad Request";
-		return 0;
+		return (PARSING_FAILED);
 	}
 	else if (body == 2)
 	{
+		std::cout << "[ERROR-REQ] Payload trop large -> 413 Payload Too Large" << std::endl;
 		error_ = 413;
 		message_error_ = "Payload Too Large";
-		return 0;
+		return (PARSING_FAILED);
 	}
-	std::cout << "pb " << std::endl;
-	path_ = location_.getRoot()/* + url_path_*/;//attention si / a la fin
+	std::cout << "[DEBUG-REQ] 5. Recuperation du path depuis location_..." << std::endl;
+    path_ = location_.getRoot(); // attention si / a la fin
+    std::cout << "[DEBUG-REQ] Path final resolu : " << path_ << std::endl;
 	std::cout << "\n--------------------------------------------------------\n" << std::endl;
-	return 1;
+	return (PARSING_SUCCESS);
 }
 
 //void	Request::setError(int error)
@@ -496,7 +504,7 @@ void	Request::clear()
 	this->headers_.clear();
 	this->body_.clear();
 	this->error_ = 0;
-	this->location_ = Location();
+	//this->location_ = Location();
 	this->raw_uri_.clear();
 	this->query_string_.clear();
 	this->client_ip_.clear();

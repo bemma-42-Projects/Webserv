@@ -3,11 +3,11 @@
 #include <cstring>
 
 // constructeur par défaut
-Client::Client() : socket_fd_(-1), state_(READING_REQUEST), last_activity_(time(NULL)), ip_address_(""), request_buffer_(), response_buffer_(), request_(), answer_() {
+Client::Client() : socket_fd_(-1), state_(READING_REQUEST), last_activity_(time(NULL)), ip_address_(""), request_buffer_(), response_buffer_(), request_(), answer_(), config_() {
     memset(&addr_, 0, sizeof(addr_));
 }
 
-Client::Client(int socket_fd, struct sockaddr_storage addr) : socket_fd_(socket_fd), addr_(addr), state_(READING_REQUEST), last_activity_(time(NULL)),  ip_address_(""), request_buffer_(), response_buffer_(), request_(), answer_() {
+Client::Client(int socket_fd, struct sockaddr_storage addr, const ServerConfig *config) : socket_fd_(socket_fd), addr_(addr), state_(READING_REQUEST), last_activity_(time(NULL)),  ip_address_(""), request_buffer_(), response_buffer_(), request_(), answer_(), config_(config) {
     initIpAddress_(addr);
 }
 
@@ -44,6 +44,10 @@ time_t Client::getLastActivity() const {
 
 void Client::updateLastActivity() {
     this->last_activity_ = time(NULL);
+}
+
+const ServerConfig  *Client::getConfig() const {
+    return (this->config_);
 }
 
 std::string Client::getIp() const {

@@ -54,7 +54,7 @@ public:
 	void									addListen(const std::string& ip, int port);
 	void									addErrorPage(int code, const std::string& path);
 
-	LocationConfig* 						matchLocation(std::string requestPath);
+	const LocationConfig 					*matchLocation(std::string requestPath) const;
 	void									finalize();
 
 private:

@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/05 13:33:33 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/06 13:15:59 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,13 +97,19 @@ void	CGIHandler::setupStandardEnv_(std::vector<std::string> &env) const
 	ss_len << this->request_.getContentLength();
 	ss_port << this->request_.getPort();
 
+	/*
+	const LocationConfig	&loc = this->request_.getLocation();
+	std::string				document_root = loc.getRoot();
+	if (document_root.empty())
+		document_root = this->request_.getServer()->getRoot();
+	*/
 	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
 	env.push_back("REQUEST_METHOD=" + this->request_.getMethod());
 	env.push_back("REQUEST_URI=" + this->request_.getRequestUri());
 	env.push_back("SCRIPT_FILENAME=" + this->getAbsolutePath_());
 	env.push_back("PATH_TRANSLATED=" + this->request_.getPath());
-	env.push_back("DOCUMENT_ROOT=" + this->request_.getLocation().getRoot());
+	//env.push_back("DOCUMENT_ROOT=" + document_root);
 	env.push_back("SCRIPT_NAME=" + this->request_.getUrlPath());
     env.push_back("QUERY_STRING=" + this->request_.getQueryString());
 	env.push_back("CONTENT_TYPE=" + this->request_.getContentType());

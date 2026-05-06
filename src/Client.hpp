@@ -9,6 +9,7 @@
 
 # include "Request.hpp"
 # include "RequestAnswer.hpp"
+# include "ServerConfig.hpp"
 
 
 class Client {
@@ -21,7 +22,7 @@ class Client {
         };
 
         Client();
-        Client(int socket_fd, struct sockaddr_storage addr);
+        Client(int socket_fd, struct sockaddr_storage addr, const ServerConfig *config);
         ~Client();
 
         int                     getSocketFd() const;
@@ -30,8 +31,9 @@ class Client {
         time_t                  getLastActivity() const;
         Request                 &getRequest();
         RequestAnswer           &getAnswer();
-        void                    updateLastActivity();
+        const ServerConfig      *getConfig() const;
         std::string             getIp() const;
+        void                    updateLastActivity();
         void                    appendRequestData(const std::string &data);
         const std::string       &getRequestData() const;
         const std::string       &getResponseData() const;
@@ -51,6 +53,7 @@ class Client {
         std::string             response_buffer_;
         Request                 request_;
         RequestAnswer           answer_;
+        const ServerConfig      *config_;
 };
 
 #endif

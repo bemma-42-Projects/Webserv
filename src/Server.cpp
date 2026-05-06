@@ -12,22 +12,28 @@
 #include "utils.hpp"
 #include "RequestAnswer.hpp"
 
-#define PORT "8080"
+//#define PORT "8080"
 #define BACKLOG 128
 
 #define MAX_TIMEOUT 10
 
 // constructeur par défaut, qui initialise le socket serveur et le fd de epoll à -1
-Server::Server() : server_socket_(-1), epoll_fd_(-1) {
+Server::Server(const std::vector<ServerConfig> &configs) : epoll_fd_(-1), configs_(configs) {
     
 }
 
 // destructeur
 Server::~Server()
 {
-    if (server_socket_ != -1) {
-        close(server_socket_);
+    std::map<int, ServerConfig*>::iterator listen_it = listen_sockets_.begin();
+
+    while (listen_it != listen_sockets_.end())
+    {
+        close(listen_it->first);
+        ++listen_it;
     }
+    listen_sockets_.clear();
+
     if (epoll_fd_ != -1) {
         close(epoll_fd_);
     }
@@ -59,14 +65,14 @@ void    Server::initAddrinfoParams_(struct addrinfo &addrinfo_params) {
 
 // récupère les infos d'addresse système
 // list chainee d'interfaces réseau sur lesquelles le serveur peut se binder
-struct addrinfo *Server::getAddrInfo_(const std::string &port_str)
+struct addrinfo *Server::getAddrInfo_(const std::string &ip, const std::string &port_str)
 {
     struct addrinfo		addrinfo_params;
 	struct addrinfo		*res;
 	int					status;
 
     this->initAddrinfoParams_(addrinfo_params);
-    if ((status = getaddrinfo(NULL, port_str.c_str(), &addrinfo_params, &res)) != 0) {
+    if ((status = getaddrinfo(ip.c_str(), port_str.c_str(), &addrinfo_params, &res)) != 0) {
 		throw std::runtime_error(std::string("DNS/Setup Error") + gai_strerror(status));
 	}
 	//std::cout << "Booting up server on port " << port_str << "..." << std::endl;
@@ -98,60 +104,80 @@ void    Server::printInterface_(struct addrinfo *p, char *ip_buffer) {
 }
 
 // tente de créer un socket et configure ses options
-bool    Server::setupSocket_(struct addrinfo *p, const std::string &port_str) {
-    (void)port_str;
+int Server::setupSocket_(struct addrinfo *p) {
+    int fd;
     int yes = 1;
-    server_socket_ = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-	if (server_socket_ == -1) {
+
+    fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+	if (fd == -1) {
 	    std::cerr << "Failed to create socket. Moving to next..." << std::endl;
-	    return (false);
+	    return (-1);
 	}
 	//std::cout << "Socket successfully created!" << std::endl;
-    if (setsockopt(server_socket_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 	 	std::cerr << "Failed to set socket option to SO_REUSEADDR." << std::endl;
-	    return (false);
+	    close(fd);
+        return (-1);
 	}
 	//std::cout << "Attempting to bind to port " << port_str << "..." << std::endl;
-    if (bind(server_socket_, p->ai_addr, p->ai_addrlen) == -1) {
+    if (bind(fd, p->ai_addr, p->ai_addrlen) == -1) {
 		std::cerr << "Bind failed. Closing socket..." << std::endl;
-		close(server_socket_);
-        server_socket_ = -1;
-		return (false) ;
+		close(fd);
+		return (-1);
 	}
 	//std::cout << "Successfully bound to port " << port_str << "!" << std::endl;
-	return (true) ;
+	return (fd);
 }
 
 // boucle sur les interfaces réseau pour binder le serveur
-void    Server::bindSocketLoop_(struct addrinfo *res, const std::string &port_str) {
+int Server::bindSocketLoop_(struct addrinfo *res) {
     struct addrinfo		*p;
-    char				ip_buffer[INET6_ADDRSTRLEN];
+    //char				ip_buffer[INET6_ADDRSTRLEN];
+    int fd = -1;
 
     for (p = res; p != NULL; p = p->ai_next)
 	{
-		this->printInterface_(p, ip_buffer);
-        if (this->setupSocket_(p, port_str))
+		//this->printInterface_(p, ip_buffer);
+        fd = this->setupSocket_(p);
+        if (fd != -1)
             break ;
     }
     freeaddrinfo(res);
-	if (p == NULL)
-		throw std::runtime_error("Fatal error: Failed to bind to any of the local interfaces");
+
+	//if (p == NULL)
+	//	throw std::runtime_error("Fatal error: Failed to bind to any of the local interfaces");
+    return (fd);
 }
 
 // orchestre la création et le bind du socket principal
-void    Server::createAndBindSocket_(const std::string &port_str) {
+int Server::createAndBindSocket_(const std::string &ip, const std::string &port_str) {
     struct addrinfo *res;
 
-    res = getAddrInfo_(port_str);
-    bindSocketLoop_(res, port_str);
+    res = getAddrInfo_(ip, port_str);
+    int fd = bindSocketLoop_(res);
+    if (fd == -1)
+        throw std::runtime_error("Fatal: Failed to bind to " + ip + ":" + port_str);
+    return (fd);
 }
 
 // met le socket serveur en mode écoute
-void	Server::startListening_() {
+void	Server::startListening_(int fd) {
 	//std::cout << "Setting up the listener..." << std::endl;
-    if (listen(server_socket_, BACKLOG) == -1)
+    if (listen(fd, BACKLOG) == -1)
+    {
+        close(fd);
         throw std::runtime_error("Fatal error: listen() failed");
+    }
     //std::cout << "Server is now actively listening on port " << PORT << "! (Backlog: " << BACKLOG << ")" << std::endl;
+}
+
+void    Server::addListenSocketToEpoll_(int fd) {
+    struct epoll_event ev;
+	memset(&ev, 0, sizeof(ev));
+    ev.events = EPOLLIN;
+    ev.data.fd = fd;
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1)
+        throw std::runtime_error("Fatal error: epoll_ctl() failed on server_socket_");
 }
 
 // intialise l'instance epoll
@@ -159,21 +185,43 @@ void	Server::initEpoll_() {
 	epoll_fd_ = epoll_create(MAX_EVENTS);
     if (epoll_fd_ == -1) {
         throw std::runtime_error("Fatal error: epoll_create() failed");
-    }
-	struct epoll_event ev;
-	memset(&ev, 0, sizeof(ev));
-    ev.events = EPOLLIN;
-    ev.data.fd = server_socket_;
-    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, server_socket_, &ev) == -1)
-        throw std::runtime_error("Fatal error: epoll_ctl() failed on server_socket_");
+    }	
 }
 
 // initalise l'infrastructure réseau du serveur
 void    Server::init() {
-    this->createAndBindSocket_(PORT);
-	this->startListening_();
-	setNonBlocking(server_socket_);
-	this->initEpoll_();
+    std::cout << "--> DEBUG: Lancement de init()" << std::endl;
+    // on initialise l'instance epoll en premier
+    this->initEpoll_();
+    std::cout << "DEBUG: epoll_create OK. Nombre de serveurs : " << configs_.size() << std::endl;
+
+    // on boucle sur chaque bloc server de la configuration
+    for (size_t i = 0; i < configs_.size(); ++i)
+    {
+        // on récupère la liste des interfaces (host:port) pour ce serveur
+        const std::vector<Listen>   &listens = configs_[i].getListen();
+        for (size_t j = 0; j < listens.size(); ++j)
+        {
+            std::string host = listens[j].ip;
+            
+            std::stringstream	ss_port;
+	        ss_port << listens[j].port;
+            std::string port = ss_port.str();
+
+            std::cout << "--> DEBUG: Tentative de Bind sur " << host << ":" << port << std::endl;
+
+            int fd = this->createAndBindSocket_(listens[j].ip, port);
+
+            this->startListening_(fd);
+            setNonBlocking(fd);
+            
+            this->listen_sockets_[fd] = &configs_[i];
+            this->addListenSocketToEpoll_(fd);
+
+            std::cout << "[OK] Socket " << fd << " listening for " << listens[j].ip << ":" << port << std::endl;
+        }
+        std::cout << "--> DEBUG: Fin de init()" << std::endl;   
+    }
 }
 
 // déconnecte les clients inactifs
@@ -239,23 +287,26 @@ bool	Server::addClientToEpoll_(int client_fd) {
 }
 
 // accepte et configure une nouvelle connexion cliente
-void    Server::handleNewConnection_() {
+void    Server::handleNewConnection_(int listen_fd) {
     struct sockaddr_storage client_addr;
     socklen_t addr_size;
 	int client_fd;
 
 	addr_size = sizeof(client_addr);
-    client_fd = accept(server_socket_, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
+    client_fd = accept(listen_fd, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size);
     if (client_fd == -1) {
         return ;
     }
     setNonBlocking(client_fd);
 
-    Client  *new_client = new Client(client_fd, client_addr);
+    const   ServerConfig    *associated_config = this->listen_sockets_[listen_fd];
+
+    Client  *new_client = new Client(client_fd, client_addr, associated_config);
 
     new_client->updateLastActivity();
     new_client->setState(Client::READING_REQUEST);
     this->clients_[client_fd] = new_client;
+
     if (!addClientToEpoll_(client_fd)) {
         delete (new_client);
         this->clients_.erase(client_fd);
@@ -332,6 +383,8 @@ void	Server::handleClientRead_(int client_fd) {
     ssize_t bytes_received;
     bool    data_read = false;
 
+    Client  *client = clients_[client_fd];
+
     while (true)
     {
         memset(buffer, 0, sizeof(buffer));
@@ -339,7 +392,7 @@ void	Server::handleClientRead_(int client_fd) {
         if (bytes_received > 0)
         {
             std::string chunk(buffer, bytes_received);
-            clients_[client_fd]->appendRequestData(chunk);
+            client->appendRequestData(chunk);
             data_read = true;
         }
         else if (bytes_received == 0)
@@ -349,7 +402,9 @@ void	Server::handleClientRead_(int client_fd) {
 	}
     if (data_read)
     {
-        clients_[client_fd]->updateLastActivity();
+        client->updateLastActivity();
+        const ServerConfig  *config = client->getConfig();
+        client->getRequest().setServerConfig(config);
 	    processClientRequest_(client_fd);
     }
 }
@@ -459,8 +514,9 @@ void	Server::run() {
         }
         for (int i = 0; i < n_events; i++) {
             int fd = events[i].data.fd;
-            if (fd == this->server_socket_)
-                handleNewConnection_();
+
+            if (this->listen_sockets_.count(fd) > 0)
+                handleNewConnection_(fd);
             else if (this->clients_.count(fd) > 0)
             {
                 Client  *client = this->clients_[fd];

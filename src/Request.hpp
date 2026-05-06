@@ -1,8 +1,8 @@
 #pragma once
 #include <string>
 #include <map>
-#include "Config.hpp"
 #include "Location.hpp"
+#include "ServerConfig.hpp"
 
 enum	ParsingStatus {
 	PARSING_FAILED = 0,
@@ -25,8 +25,8 @@ class Request {
 		std::string 						getBody() const;
 		int									getError() const;
 		std::string 						getErrorMessage() const;
-		LocationConfig						getLocation() const;
-		ServerConfig*						getServer() const;
+		const LocationConfig				&getLocation() const;
+		const ServerConfig*					getServer() const;
 		std::string							getClientIP() const;
 		//int								requestHttp();							
 		ParsingStatus						parsingHttp(const std::string &raw_data);
@@ -35,6 +35,7 @@ class Request {
 		int									initHeader();
 		int									initBody();
 		int									checkOfLocation();
+		void								setServerConfig(const ServerConfig *server);
 		//void								setError(int error);
 
 		//std::string						answer();
@@ -63,7 +64,8 @@ class Request {
 		std::string							raw_uri_;
 		std::string							query_string_;
 		std::string							client_ip_;
-		ServerConfig*						server_;
+		const ServerConfig*						server_;
+
 };
 
 std::ostream& operator<<(std::ostream& out, const Request& request);

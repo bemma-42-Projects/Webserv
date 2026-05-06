@@ -8,7 +8,6 @@
 #include <sys/stat.h>	// pour stat
 #include <sys/wait.h>	// pour waitpid
 //#include <cstdlib>	// pour exit
-#include "Config.hpp"
 #include <dirent.h>
 #include <sstream>
 #include <fstream>
@@ -24,14 +23,6 @@ RequestAnswer::RequestAnswer() : code_(200), error_(0), request_(NULL), cgi_hand
 	this->body_ = "";
 	this->post_file_name_ = "";
 	this->cgi_interpreter_ = "";
-}
-
-RequestAnswer::RequestAnswer(Request request)
-{
-	request_ = request;
-	answer_ = "";
-	code_ = 200;
-	//error_ = 0;
 }
 
 // constructeur par copie
@@ -266,8 +257,8 @@ AnswerStatus	RequestAnswer::methodGet()
 	if (S_ISREG(info.st_mode))
 	{
 		// si c'est un CGI
-		if (this->isCgi())
-			return (this->methodCGI());
+		//if (this->isCgi())
+		//	return (this->methodCGI());
 		return (getIfFile(request_->getPath()));
 	}
 	// si c'est un DIRECTORY
@@ -374,14 +365,35 @@ int RequestAnswer::fileName()
     return 0;
 }
 
-int RequestAnswer::methodPost()
+AnswerStatus RequestAnswer::methodPost()
 {
     if (fileName() == 1) 
     {
         //error_ = 400;
         code_ = 400;
 		message_ = "Bad Request";
-        return 1;
+        return (ERROR);
+    }
+
+	if (this->isCgi())
+    {
+        std::cout << "[DEBUG] Detection CGI reussie, interpreteur : " << this->cgi_interpreter_ << std::endl;
+        
+        try {
+            // Nettoyage de sécurité si un handler existait déjà
+            if (this->cgi_handler_)
+			{
+                delete this->cgi_handler_;
+				this->cgi_handler_ = NULL;
+			}
+            this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
+            this->cgi_handler_->execute();
+            return (CGI_IN_PROGRESS);
+        } catch (const std::exception& e) {
+            std::cerr << "[CGI Error] " << e.what() << std::endl;
+            this->error_ = 500;
+            return (ERROR);
+        }
     }
 
     // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
@@ -394,7 +406,7 @@ int RequestAnswer::methodPost()
         //error_ = 500;
 		code_ = 500;
 		message_ = "Internal Server Error";
-        return 1;
+        return (ERROR);
     }
 
     const std::string& body = request_->getBody();
@@ -422,7 +434,7 @@ int RequestAnswer::methodPost()
     
     outfile.close();
     code_ = 201; 
-    return 0;
+    return (READY_TO_SEND);
 }
 
 //faire la reponse avec le header
@@ -453,8 +465,8 @@ void	RequestAnswer::fullAnswer()
 
 AnswerStatus	RequestAnswer::setAnswer(Request &request)
 {
-	LocationConfig	loc_ = request_->getLocation();
-	answer_.clear();
+	this->request_ = &request;
+	this->answer_.clear();
 	AnswerStatus	status = ERROR;
 	if (request_->getMethod() == "GET")
 		status = methodGet();
@@ -492,7 +504,7 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 // et pour stocker l'interpreter correspondant
 bool	RequestAnswer::isCgi()
 {
-	std::map<std::string, std::string>	cgi_handlers = request_->getLocation().getCgiHandlers();
+	std::map<std::string, std::string>	cgi_handlers = request_->getLocation().getCgiHandler();
 
 	std::string	url = request_->getUrlPath();
 

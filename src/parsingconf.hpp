@@ -21,6 +21,7 @@ enum State {
 	IN_LOCATION
 };
 
+
 int		validatePort(std::string port_str);
 bool	validateIP(std::string str);
 bool	validateOneArg(std::string str, ServerConfig& srv);
