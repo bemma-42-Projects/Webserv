@@ -31,11 +31,10 @@ bool	isErrorCode(std::string code);
 void	validateErrorPage(std::vector<std::string> args);
 void	isValidUrl(const std::string& url);
 void	validateReturn(std::vector<std::string> args);
-bool	validateIndex(std::vector<std::string> args);
-bool	validateAutoIndex(std::vector<std::string> args, State state, ServerConfig& srv);
-bool	validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, State state);
-bool	validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, State state);
-bool	validateUploadPath(std::vector<std::string> args,ServerConfig& srv, State state);
+void	validateIndex(std::vector<std::string> args);
+void	validateAutoIndex(std::vector<std::string> args, State state, ServerConfig& srv);
+void	validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, State state);
+void	validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, State state);
 bool	validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv);
 
 std::vector<std::string> combineRootUri(std::string root, std::string uri);
