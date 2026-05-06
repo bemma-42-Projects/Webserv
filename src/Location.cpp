@@ -1,8 +1,5 @@
 #include "Location.hpp"
-
-//Location::Location()
-//{
-//}
+//#include "Config.hpp"
 
 Location::Location() : path_(""), root_(""), autoindex_(false) {
 }
@@ -14,37 +11,45 @@ Location::Location(std::string path, std::string root,
 		std::string upload_path, std::vector<std::string> index, 
 		bool autoindex, std::vector<std::string> methods)
 {
-	path_ = path;
-	root_ = root;
-	upload_path_ = upload_path;
-	index_ = index;
-	autoindex_ = autoindex;
+	this->path_ = path;
+	this->root_ = root;
+	this->upload_path_ = upload_path;
+	this->index_ = index;
+	this->autoindex_ = autoindex;
 
 	// C'est ici que le push_back est autorisé
-	allowed_methods_ = methods;
+	this->allowed_methods_ = methods;
 }
 
-std::vector<std::string>	Location::getIndex()
+std::vector<std::string>	Location::getIndex() const
 {
+	//if (!index_.empty())
 	return index_;
+	//return Config::getIndex();
 }
 
-bool	Location::getAutoindex()
+bool	Location::getAutoindex() const
 {
-	return autoindex_;
+	return (this->autoindex_);
 }
 
-std::string	Location::getRoot()
+std::string	Location::getRoot() const
 {
-	return root_;
+	return (this->root_);
 }
 
-std::string	Location::getPath()
+std::string	Location::getPath() const
 {
-	return path_;
+	return (this->path_);
 }
 
-std::vector<std::string>	Location::getAllowedMethods()
+std::vector<std::string>	Location::getAllowedMethods() const
 {
 	return allowed_methods_;
+}
+
+std::map<int, std::string>	Location::getError()
+{
+    error_[404] = "./er.txt";
+	return error_;
 }

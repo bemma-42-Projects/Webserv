@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <map>
+#include <map>
 
 class Location {
 
@@ -11,18 +13,28 @@ public:
 		std::string upload_path, std::vector<std::string> index, 
 		bool autoindex, std::vector<std::string> methods);
 	~Location();
-	std::vector<std::string>	getIndex();
-	bool						getAutoindex();
-	std::string					getRoot();
-	std::string					getPath();
-	std::vector<std::string>	getAllowedMethods();
+	std::vector<std::string>			getIndex() const;
+	bool								getAutoindex() const;
+	std::string							getRoot() const;
+	std::string							getPath() const;
+	std::vector<std::string>			getAllowedMethods() const;
+
+	std::map<std::string, std::string>	getCgiHandlers() const;
+
+	// TEMPORAIRE
+	// A SUPPRIMER POUR AJOUTER cgi_handlers
+	// AU CONSTRUCTEUR DE LOCATION
+	void								addCgiHandler(std::string ext, std::string interpreter);
+	std::map<int, std::string>	getError();
 
 private:
 
-    std::string					path_;            // "/downloads"
-    std::string					root_;            // "./data"
-    std::string					upload_path_;    // "./data/tmp"
-    std::vector<std::string>	index_;           // "secret_list.html"
-    bool						autoindex_;       // true
-    std::vector<std::string>	allowed_methods_; // ["GET", "POST"]
+    std::string							path_;				// "/downloads"
+    std::string							root_;				// "./data"
+    std::string							upload_path_;		// "./data/tmp"
+    std::vector<std::string>			index_;				// "secret_list.html"
+    bool								autoindex_;			// true
+    std::vector<std::string>			allowed_methods_;	// ["GET", "POST"]
+	std::map<std::string, std::string>	cgi_handlers_;		// .php /usr/bin/php-cgi;
+	std::map<int, std::string>	error_;
 };

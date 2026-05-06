@@ -7,36 +7,53 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 
-class   Client {
-	public:
-		enum State {
-			READING_REQUEST,
-			PROCESSING,
-			WRITING_RESPONSE,
-			DISCONNECTED
-		};
-		Client();
-		Client(int socket_fd, struct sockaddr_storage addr);
-		Client(const Client &copy);
-		Client &operator=(const Client &src);
-		~Client();
+# include "Request.hpp"
+# include "RequestAnswer.hpp"
+# include "ServerConfig.hpp"
 
-		int             	getSocketFd() const;
-		State           	getState() const;
-		void            	setState(State state);
-		time_t          	getLastActivity() const;
-		void            	updateLastActivity();
-		std::string     	getIp() const;
 
-	private:
-		int						_socket_fd;
-		struct sockaddr_storage	_addr;
-		State					_state;
-		time_t					_last_activity;
-		std::string				_ip_address;
-		std::string		answer_;
-	
-		void    _initIpAddress(struct sockaddr_storage addr);
-	};
+class Client {
+    public:
+        enum State {
+            READING_REQUEST,    // Le client est en train d'envoyer sa requête
+            WAITING_CGI,        // Le serveur attend que le CGI génère sa réponse
+            WRITING_RESPONSE,   // Le serveur envoie la réponse au client
+            DISCONNECTED        // Le client a été déconnecté (timeout ou fermeture volontaire)
+        };
+
+        Client();
+        Client(int socket_fd, struct sockaddr_storage addr, const ServerConfig *config);
+        ~Client();
+
+        int                     getSocketFd() const;
+        State                   getState() const;
+        void                    setState(State state);
+        time_t                  getLastActivity() const;
+        Request                 &getRequest();
+        RequestAnswer           &getAnswer();
+        const ServerConfig      *getConfig() const;
+        std::string             getIp() const;
+        void                    updateLastActivity();
+        void                    appendRequestData(const std::string &data);
+        const std::string       &getRequestData() const;
+        const std::string       &getResponseData() const;
+        void                    clearBuffers();
+
+    private:
+        Client(const Client &src);
+        Client  &operator=(const Client &rhs);
+        void                    initIpAddress_(struct sockaddr_storage addr);
+
+        int                     socket_fd_;
+        struct sockaddr_storage addr_;
+        State                   state_;
+        time_t                  last_activity_;
+        std::string             ip_address_;
+        std::string             request_buffer_;
+        std::string             response_buffer_;
+        Request                 request_;
+        RequestAnswer           answer_;
+        const ServerConfig      *config_;
+};
 
 #endif

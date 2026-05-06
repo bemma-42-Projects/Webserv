@@ -1,31 +1,56 @@
 #pragma once
 #include <string>
 #include "Request.hpp"
+#include "CGISubprocess.hpp"
+
+#include "Location.hpp"
+#include "CGIHandler.hpp"
+
+enum	AnswerStatus
+{
+	ERROR = 0,
+	READY_TO_SEND = 1,
+	CGI_IN_PROGRESS = 2
+};
 
 class RequestAnswer
 {
 	public:
-		RequestAnswer(Request request);
+		RequestAnswer();
+		RequestAnswer(const RequestAnswer &src);
+		RequestAnswer			&operator=(const RequestAnswer &rhs);
 		~RequestAnswer();
-		int			setAnswer();
-		int			methodGet();
-		int			methodPost();
-		void		fullAnswer();
-		int			getIfFile(std::string file);
-		int			getIfDir();
-		std::string	getAnswer();
-		int			getError();
-		std::string findIndex(Location loc);
-		std::string findContentType(const std::string& path);
-		int			fileName();
+		AnswerStatus			setAnswer(Request &request);
+		AnswerStatus			methodGet();
+		AnswerStatus			methodPost();
+		void		methodDelete();
+		void					fullAnswer();
+		AnswerStatus			getIfFile(std::string file);
+		AnswerStatus			getIfDir();
+		const std::string		&getAnswer() const;
+		int						getError() const;
+		CGIHandler				*getCGIHandler() const;
+		std::string 			findIndex(LocationConfig loc);
+		std::string 			findContentType(const std::string& path);
+		int						fileName();
+		bool					isCgi();
+		AnswerStatus			methodCGI();
+		void					buildCGIResponse();
+		bool					isResponseFullySent() const;
+		void					eraseSentBytes(size_t bytes_sent);
+		void					clear();		std::string Itoa(int nbr);
 
 
 	private:
-		int			code_;//code de sorti ou error
-		std::string	content_type_;//type de retour (image txt...)
-		std::string	body_;
-		int			error_;
-		Request		request_;
-		std::string	answer_;//ne pas oublier la ligne vide
-		std::string	post_file_name_;
+		LocationConfig	loc_;
+		int				code_;
+		std::string 	message_;
+		int				error_;
+		Request			*request_;
+		CGIHandler		*cgi_handler_;
+		std::string		answer_;
+		std::string		content_type_;
+		std::string		body_;		
+		std::string		post_file_name_;
+		std::string		cgi_interpreter_;
 };
