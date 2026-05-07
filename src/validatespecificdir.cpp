@@ -563,7 +563,7 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 	else if (name == "upload_path")
 		return (validateUploadPath(args, srv, state));
 	
-	else if (name == "cgi")
+	else if (name == "cgi_handler")
 		return (validateCgi(args, srv, state));
 	return (false);
 	

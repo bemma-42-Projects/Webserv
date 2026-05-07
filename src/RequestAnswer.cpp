@@ -257,9 +257,8 @@ AnswerStatus	RequestAnswer::methodGet()
 	// si c'est un REGULAR FILE
 	if (S_ISREG(info.st_mode))
 	{
-		// si c'est un CGI
-		//if (this->isCgi())
-		//	return (this->methodCGI());
+		if (this->isCgi())
+			return (this->methodCGI());
 		return (getIfFile(request_->getPath()));
 	}
 	// si c'est un DIRECTORY
@@ -536,10 +535,8 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 // et pour stocker l'interpreter correspondant
 bool	RequestAnswer::isCgi()
 {
-	std::map<std::string, std::string>	cgi_handlers = request_->getLocation().getCgiHandler();
-
+	const std::map<std::string, std::string>	&cgi_handlers = request_->getServer()->getCgiHandler();
 	std::string	url = request_->getUrlPath();
-
 	size_t	last_point_position = url.find_last_of(".");
 	
 	if (last_point_position == std::string::npos)
@@ -547,14 +544,10 @@ bool	RequestAnswer::isCgi()
 
 	std::string	extension = url.substr(last_point_position);
 
-	std::map<std::string, std::string>::iterator it = cgi_handlers.find(extension);
+	std::map<std::string, std::string>::const_iterator it = cgi_handlers.find(extension);
 
 	if (it != cgi_handlers.end())
 	{
-		// DEBUG
-		//std::cout << "extension : " << it->first << std::endl;
-		//std::cout << "interpreter : " << it->second << std::endl;
-		//
 		this->cgi_interpreter_ = it->second;
 		return (true);
 	}
