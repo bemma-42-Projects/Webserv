@@ -352,6 +352,8 @@ int RequestAnswer::fileName()
     return 0;
 }
 
+
+
 AnswerStatus RequestAnswer::methodPost()
 {
 	if (this->isCgi())
@@ -372,6 +374,12 @@ AnswerStatus RequestAnswer::methodPost()
             return (ERROR);
         }
     }
+
+	// if (request_->getBody().empty()) {
+    //     code_ = 405; // No Content (ou 200 OK)
+	// 	message_ = "Method Not Allowed";
+    //     return (ERROR);
+    // }
 
     if (fileName() == 1) 
     {
@@ -394,20 +402,24 @@ AnswerStatus RequestAnswer::methodPost()
     }
 
     const std::string& body = request_->getBody();
-    size_t startPos = body.find("\r\n\r\n");
-    if (startPos != std::string::npos) 
+	if (!body.empty())
 	{
-        startPos += 4; 
-        size_t endPos = body.find("\r\n--", startPos); 
-        size_t fileSize;
-        if (endPos == std::string::npos)
-            fileSize = body.size() - startPos;
-        else 
-            fileSize = endPos - startPos;
-        outfile.write(&body[startPos], fileSize);
-    } 
-    else
-        outfile.write(body.c_str(), body.size());
+		size_t startPos = body.find("\r\n\r\n");
+		if (startPos != std::string::npos) 
+		{
+			startPos += 4; 
+			size_t endPos = body.find("\r\n--", startPos); 
+			size_t fileSize;
+			if (endPos == std::string::npos)
+				fileSize = body.size() - startPos;
+			else 
+				fileSize = endPos - startPos;
+			outfile.write(&body[startPos], fileSize);
+		} 
+		else
+			outfile.write(body.c_str(), body.size());
+
+	}
     outfile.close();
     code_ = 201; 
 	content_type_ = findContentType(post_file_name_);
@@ -498,16 +510,6 @@ void	RequestAnswer::fullAnswer()
 	}
 }
 
-void	RequestAnswer::setCode(int code)
-{
-	this->code_ = code;
-}
-
-void	RequestAnswer::setMessage(const std::string &message)
-{
-	this->message_ = message;
-}
-
 AnswerStatus	RequestAnswer::setAnswer(Request &request)
 {
 	request_ = &request;
@@ -522,14 +524,15 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 			status = methodDelete();
 		else if (request_->getMethod() == "POST")
 		{
+			std::cout << "test" << std::endl;
 			if (this->isCgi() == true)
 				status = methodPost();
 			else if (loc_.getAllowedUpload() == true)
 				status = methodPost();
 			else 
 			{
-				code_ = 403;
-				message_ = "Forbidden";
+				code_ = 405;
+				message_ = "Method Not Allowed";
 				status = ERROR;
 			}
 		}
@@ -551,6 +554,39 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 		// content_type_ = findContentType(request_.getPath());
 	return (status);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void	RequestAnswer::setCode(int code)
+{
+	this->code_ = code;
+}
+
+void	RequestAnswer::setMessage(const std::string &message)
+{
+	this->message_ = message;
+}
+
 
 void RequestAnswer::setFullAnswer(const std::string& full_response) {
     this->answer_ = full_response;

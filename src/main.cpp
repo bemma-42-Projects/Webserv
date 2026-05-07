@@ -33,6 +33,9 @@ int main(int argc, char **argv) {
 		if (validateStructure(res, all_configs) == false)
 		{
 			std::cout << "Fatal error: Invalid configuration file." << std::endl;
+			// for (size_t i = 0; i < all_configs.size(); ++i) {
+			// 	std::cout << all_configs[i] << std::endl;
+			// }
 			return (1);
 		}
 		std::cout << "Everything's good!" << std::endl;

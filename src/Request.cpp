@@ -278,7 +278,7 @@ int	Request::initHeader()
 	}
 	if (headers_.find("Host") == headers_.end() 
 		|| (method_ == "POST" && headers_.find("Content-Length") == headers_.end() 
-		&& location_.getAllowedUpload() == false))
+		/*&& location_.getAllowedUpload() == false*/))
 		return 1;
 	if (headers_.find("Content-Type") == headers_.end())
 		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
@@ -334,33 +334,27 @@ void	Request::setServerConfig(const ServerConfig *server)
 // pas le dernier morceau de requete
 ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
+	std::cout << raw_data << std::endl;
 	this->request_ += raw_data;
 
 	if (complete() == false)
 		return (PARSING_INCOMPLETE); //continuer la lecture
-	std::cout << "\n[DEBUG-REQ] Requete complete recue. Debut du parsing." << std::endl;
-
-	std::cout << "[DEBUG-REQ] 1. Lancement de initFistLine()..." << std::endl;
 	
 	int res = initFistLine();
 
 	if (res == 1)
 	{
-		std::cout << "[ERROR-REQ] initFistLine() a echoue -> 400 Bad Request" << std::endl;
 		error_ = 400;
 		message_error_ = "Bad Request";
 		return (PARSING_FAILED);
 	}
 	else if (res == 2)
 	{
-		std::cout << "[ERROR-REQ] Methode non implementee -> 501 Not Implemented" << std::endl;
 		error_ = 501;
 		message_error_ = "Not Implemented";
 		return (PARSING_FAILED);
 	}
-	std::cout << "[DEBUG-REQ] initFistLine() OK." << std::endl;
-
-	std::cout << "[DEBUG-REQ] 2. Lancement de checkOfLocation()..." << std::endl;
+	
 	int checkLoc = checkOfLocation();
 	if (checkLoc == 1)
 	{
@@ -370,45 +364,33 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 	}
 	else if (checkLoc == 2)
 	{
-		std::cout << "[ERROR-REQ] Methode non autorisee -> 405 Method Not Allowed" << std::endl;
 		error_ = 405;
 		message_error_ = "Method Not Allowed";
 		return (PARSING_FAILED);
 	}
-	std::cout << "[DEBUG-REQ] checkOfLocation() OK." << std::endl;
 	
-	std::cout << "[DEBUG-REQ] 3. Lancement de initHeader()..." << std::endl;
-
 	if (initHeader() == 1)
 	{
-		std::cout << "[ERROR-REQ] initHeader() a echoue -> 400 Bad Request" << std::endl;
 		error_ = 400;
 		message_error_ = "Bad Request";
 		return (PARSING_FAILED);
 	}
-	std::cout << "[DEBUG-REQ] initHeader() OK." << std::endl;
-	
-	std::cout << "[DEBUG-REQ] 4. Lancement de initBody()..." << std::endl;
 	int	body =  initBody();
 	if (body == 1)
 	{
-		std::cout << "[ERROR-REQ] initBody() a echoue -> 400 Bad Request" << std::endl;
 		error_ = 400;
         message_error_ = "Bad Request";
 		return (PARSING_FAILED);
 	}
 	else if (body == 2)
 	{
-		std::cout << "[ERROR-REQ] Payload trop large -> 413 Payload Too Large" << std::endl;
 		error_ = 413;
 		message_error_ = "Payload Too Large";
 		return (PARSING_FAILED);
 	}
 	path_ = combineRootUri(location_.getRoot(), url_path_);
-	std::cout << "[DEBUG-REQ] 5. Recuperation du path depuis location_..." << std::endl;
-    std::cout << "[DEBUG-REQ] Path final resolu : " << path_ << std::endl;
-	std::cout << "\n--------------------------------------------------------\n" << std::endl;
 	return (PARSING_SUCCESS);
+
 }
 
 //void	Request::setError(int error)

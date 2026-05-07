@@ -118,6 +118,7 @@ std::string	Error::AnswerError(int code, std::string message, std::map<int, std:
 
 	header += "Content-Type: " + content_type + "\r\n";
 	header += "Content-Length: " + Itoa(error_page.length()) + "\r\n";
+
 	header += "\r\n";
 
 	// std::cout << "header = " << header << error_page << std::endl;
