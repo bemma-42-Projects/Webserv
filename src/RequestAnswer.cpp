@@ -517,28 +517,47 @@ void	RequestAnswer::fullAnswer()
 	//std::cout << answer_ << std::endl;
 }
 
+void	RequestAnswer::setCode(int code)
+{
+	this->code_ = code;
+}
+
+void	RequestAnswer::setMessage(const std::string &message)
+{
+	this->message_ = message;
+}
+
 AnswerStatus	RequestAnswer::setAnswer(Request &request)
 {
 	this->request_ = &request;
 	this->answer_.clear();
 	AnswerStatus	status = ERROR;
-	if (request_->getMethod() == "GET")
-		status = methodGet();
 
-	else if (this->request_->getMethod() == "DELETE")
-		status = methodDelete();
-	else if (request_->getMethod() == "POST")
-	{
-		if (this->isCgi() == true)
-			status = methodPost();
-		else if (loc_.getAllowedUpload() == true)
-			status = methodPost();
-		else 
+	try {
+		if (request_->getMethod() == "GET")
+			status = methodGet();
+		else if (this->request_->getMethod() == "DELETE")
+			status = methodDelete();
+		else if (request_->getMethod() == "POST")
 		{
-			code_ = 403;
-			message_ = "Forbidden";
-			status = ERROR;
+			if (this->isCgi() == true)
+				status = methodPost();
+			else if (loc_.getAllowedUpload() == true)
+				status = methodPost();
+			else 
+			{
+				code_ = 403;
+				message_ = "Forbidden";
+				status = ERROR;
+			}
 		}
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << "[RequestAnswer] Critical Error: " << e.what() << std::endl;
+		code_ = 500;
+		message_ = "Internal Server Error";
+		status = ERROR;
 	}
 	if (status == CGI_IN_PROGRESS)
 		return (status);
@@ -547,8 +566,12 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 		fullAnswer();
 	else 
 		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
-	// content_type_ = findContentType(request_.getPath());
+		// content_type_ = findContentType(request_.getPath());
 	return (status);
+}
+
+void RequestAnswer::setFullAnswer(const std::string& full_response) {
+    this->answer_ = full_response;
 }
 
 // fonction pour déterminer si c'est un cgi

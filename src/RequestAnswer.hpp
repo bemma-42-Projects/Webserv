@@ -19,6 +19,8 @@ class RequestAnswer
 		RequestAnswer(const RequestAnswer &src);
 		RequestAnswer			&operator=(const RequestAnswer &rhs);
 		~RequestAnswer();
+		void					setCode(int code);
+		void					setMessage(const std::string &message);
 		AnswerStatus			setAnswer(Request &request);
 		AnswerStatus			methodGet();
 		AnswerStatus			methodPost();
@@ -38,7 +40,7 @@ class RequestAnswer
 		bool					isResponseFullySent() const;
 		void					eraseSentBytes(size_t bytes_sent);
 		void					clear();		std::string Itoa(int nbr);
-
+		void					setFullAnswer(const std::string& full_response);
 
 	private:
 		LocationConfig	loc_;

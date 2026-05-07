@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/07 10:49:42 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/07 12:25:36 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -192,10 +192,13 @@ void    CGIHandler::addHeadersToEnv(std::vector<std::string>& env_vector)
 // fonction pour exécuter le CGI
 void    CGIHandler::execute()
 {
+	if (access(this->interpreter_.c_str(), X_OK) == -1) {
+        throw std::runtime_error("CGI interpreter not found or not executable");
+    }
+
     char    **envp = this->getEnvp();
     try {
 		this->subprocess_.createSubprocess(this->request_.getPath(), this->interpreter_, envp);
-		
 		if (this->request_.getMethod() == "POST")
 		{
 			std::string body = this->request_.getBody();

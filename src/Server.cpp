@@ -11,6 +11,7 @@
 #include "Server.hpp"
 #include "utils.hpp"
 #include "RequestAnswer.hpp"
+#include "Error.hpp"
 
 //#define PORT "8080"
 #define BACKLOG 128
@@ -367,8 +368,13 @@ void	Server::processClientRequest_(int client_fd) {
     if (parsing_status == PARSING_INCOMPLETE)
         return ;
     if (parsing_status == PARSING_FAILED)
+    {
+        response.setCode(400);
+        response.setMessage("Bad Request");
+        response.setAnswer(request);
+        this->prepareForWriting_(client_fd, client);
         return ;
-    
+    }
     AnswerStatus answer_status = response.setAnswer(request);
 
     if (answer_status == READY_TO_SEND || answer_status == ERROR)
@@ -487,7 +493,18 @@ void    Server::handleCgiRead_(int cgi_fd)
     {
         int status;
         waitpid(client->getAnswer().getCGIHandler()->getPid(), &status, 0);
-        client->getAnswer().buildCGIResponse();
+        
+        if (client->getAnswer().getCGIHandler()->getRawOutput().empty())
+        {
+            std::cerr << "[ERROR] CGI output is empty. Sending 500." << std::endl;
+            client->getAnswer().setCode(500);
+            client->getAnswer().setMessage("Internal Server Error");
+            
+            std::string errorResponse = Error::AnswerError(500, "Internal Server Error", client->getConfig()->getErrorPage());
+            client->getAnswer().setFullAnswer(errorResponse);
+        }
+        else
+            client->getAnswer().buildCGIResponse();
         cleanCgiData_(cgi_fd, it);
         this->prepareForWriting_(client_fd, *client);
     }
