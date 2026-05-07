@@ -369,7 +369,6 @@ void    Server::setupCgiEpoll_(int client_fd, Client &client)
         client.getAnswer().setCode(500);
         client.getAnswer().setMessage("Internal Server Error");
         client.getAnswer().setAnswer(client.getRequest()); 
-        
         this->prepareForWriting_(client_fd, client);
     }
     else
@@ -381,25 +380,34 @@ void	Server::processClientRequest_(int client_fd) {
     Request         &request = client.getRequest();
     RequestAnswer   &response = client.getAnswer();
 
-    ParsingStatus   parsing_status = request.parsingHttp(client.getRequestData());
+    try {
+        ParsingStatus   parsing_status = request.parsingHttp(client.getRequestData());
 
-    
-    if (parsing_status == PARSING_INCOMPLETE)
-        return ;
-    if (parsing_status == PARSING_FAILED)
-    {
-        response.setCode(400);
-        response.setMessage("Bad Request");
-        response.setAnswer(request);
-        this->prepareForWriting_(client_fd, client);
-        return ;
+        if (parsing_status == PARSING_INCOMPLETE)
+           return ;
+        if (parsing_status == PARSING_FAILED)
+        {
+            response.setCode(400);
+            response.setMessage("Bad Request");
+            response.setAnswer(request);
+            this->prepareForWriting_(client_fd, client);
+            return ;
+        }
+        AnswerStatus answer_status = response.setAnswer(request);
+
+        if (answer_status == READY_TO_SEND || answer_status == ERROR)
+            this->prepareForWriting_(client_fd, client);
+        else if (answer_status == CGI_IN_PROGRESS)
+            this->setupCgiEpoll_(client_fd, client);
     }
-    AnswerStatus answer_status = response.setAnswer(request);
-
-    if (answer_status == READY_TO_SEND || answer_status == ERROR)
+    catch (const std::exception &e)
+    {
+        std::cerr << "[CRITICAL] Exception during request processing: " << e.what() << std::endl;
+        client.getAnswer().setCode(500);
+        client.getAnswer().setMessage("Internal Server Error");
+        client.getAnswer().setAnswer(client.getRequest()); 
         this->prepareForWriting_(client_fd, client);
-    else if (answer_status == CGI_IN_PROGRESS)
-        this->setupCgiEpoll_(client_fd, client);
+    }
 }
 
 // gère l'évènement de lecture sur un socket client
@@ -410,27 +418,35 @@ void	Server::handleClientRead_(int client_fd) {
 
     Client  *client = clients_[client_fd];
 
-    while (true)
+    try
     {
-        memset(buffer, 0, sizeof(buffer));
-	    bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-        if (bytes_received > 0)
+        while (true)
         {
-            std::string chunk(buffer, bytes_received);
-            client->appendRequestData(chunk);
-            data_read = true;
+            memset(buffer, 0, sizeof(buffer));
+	        bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+            if (bytes_received > 0)
+            {
+                std::string chunk(buffer, bytes_received);
+                client->appendRequestData(chunk);
+                data_read = true;
+            }
+            else if (bytes_received == 0)
+                return(handleClientDisconnect_(client_fd));
+            else
+                break ;
+	    }
+        if (data_read)
+        {
+            client->updateLastActivity();
+            const ServerConfig  *config = client->getConfig();
+            client->getRequest().setServerConfig(config);
+	        processClientRequest_(client_fd);
         }
-        else if (bytes_received == 0)
-            return(handleClientDisconnect_(client_fd));
-        else
-            break ;
-	}
-    if (data_read)
-    {
-        client->updateLastActivity();
-        const ServerConfig  *config = client->getConfig();
-        client->getRequest().setServerConfig(config);
-	    processClientRequest_(client_fd);
+    }
+    catch (const std::exception &e) {
+        std::cerr << "[CRITICAL] Exception during read/processing: " << e.what() << std::endl;
+        this->sendEmergencyError_(client_fd, 500, "Internal Server Error");
+        this->handleClientDisconnect_(client_fd);
     }
 }
 
@@ -496,9 +512,6 @@ void    Server::handleCgiRead_(int cgi_fd)
         return (cleanCgiData_(cgi_fd, it));
 
     int client_fd = it->second;
-    //if (this->clients_.count(client_fd) == 0 || this->clients_[client_fd]->getState() == Client::DISCONNECTED)
-    //    return (cleanCgiData_(cgi_fd, it));
-
     Client  *client = clients_[client_fd];
     char    buffer[4096];
     ssize_t bytes_read = read(cgi_fd, buffer, sizeof(buffer));
@@ -508,27 +521,26 @@ void    Server::handleCgiRead_(int cgi_fd)
         client->getAnswer().getCGIHandler()->appendOutput(std::string(buffer, bytes_read));
         return ;
     }
-    if (bytes_read == 0)
+
+    int status;
+    waitpid(client->getAnswer().getCGIHandler()->getPid(), &status, 0);
+
+    bool    error_detected = false;
+    if (bytes_read < 0 || client->getAnswer().getCGIHandler()->getRawOutput().empty())
+        error_detected = true;
+
+    if (error_detected)
     {
-        int status;
-        waitpid(client->getAnswer().getCGIHandler()->getPid(), &status, 0);
-        
-        if (client->getAnswer().getCGIHandler()->getRawOutput().empty())
-        {
-            std::cerr << "[ERROR] CGI output is empty. Sending 500." << std::endl;
-            client->getAnswer().setCode(500);
-            client->getAnswer().setMessage("Internal Server Error");
-            
-            std::string errorResponse = Error::AnswerError(500, "Internal Server Error", client->getConfig()->getErrorPage());
-            client->getAnswer().setFullAnswer(errorResponse);
-        }
-        else
-            client->getAnswer().buildCGIResponse();
-        cleanCgiData_(cgi_fd, it);
-        this->prepareForWriting_(client_fd, *client);
+        std::cerr << "[ERROR] CGI output is empty. Sending 500." << std::endl;
+        client->getAnswer().setCode(500);
+        client->getAnswer().setMessage("Internal Server Error");
+        std::string errorResponse = Error::AnswerError(500, "Internal Server Error", client->getConfig()->getErrorPage());
+        client->getAnswer().setFullAnswer(errorResponse);
     }
     else
-        cleanCgiData_(cgi_fd, it);
+        client->getAnswer().buildCGIResponse();
+    cleanCgiData_(cgi_fd, it);
+    this->prepareForWriting_(client_fd, *client);
 }
 
 // lance la boucle d'évènements principale du serveur
@@ -542,38 +554,49 @@ void	Server::run() {
     {
         handleTimeouts_();
 		n_events = epoll_wait(epoll_fd_, events, MAX_EVENTS, 1000);
-		if (n_events == -1)
+		
+        if (n_events == -1)
         {
             if (!g_running)
                 break ;
-            throw std::runtime_error("Fatal error: epoll_wait() failed.");
+            continue ;
         }
         for (int i = 0; i < n_events; i++) {
             int fd = events[i].data.fd;
 
-            if (this->listen_sockets_.count(fd) > 0)
-                handleNewConnection_(fd);
-            else if (this->clients_.count(fd) > 0)
-            {
-                Client  *client = this->clients_[fd];
+            try {
+                if (this->listen_sockets_.count(fd) > 0)
+                    handleNewConnection_(fd);
+                else if (this->clients_.count(fd) > 0)
+                {
+                    Client  *client = this->clients_[fd];
 
-                if (client->getState() == Client::DISCONNECTED)
-                    return ;
-                if (events[i].events & EPOLLIN)
-                {
-                    if (client->getState() == Client::READING_REQUEST)
-				        handleClientRead_(fd);
+                    if (client->getState() == Client::DISCONNECTED)
+                        continue ;
+                    if (events[i].events & EPOLLIN)
+                    {
+                        if (client->getState() == Client::READING_REQUEST)
+				            handleClientRead_(fd);
+                    }
+			        else if (events[i].events & EPOLLOUT)
+                    {
+                        if (client->getState() == Client::WRITING_RESPONSE)
+    				        handleClientWrite_(fd);
+                    }
                 }
-			    else if (events[i].events & EPOLLOUT)
-                {
-                    if (client->getState() == Client::WRITING_RESPONSE)
-    				    handleClientWrite_(fd);
-                }
+                else if (cgi_to_client_.count(fd) > 0)
+                    handleCgiRead_(fd);
+		    }
+            catch (const std::exception &e)
+            {
+                std::cerr << "[RUNTIME ERROR] Socket " << fd << ": " << e.what() << std::endl;
+                if (this->clients_.count(fd) > 0)
+                    sendEmergencyError_(fd, 500, "Internal Server Error");
+                else
+                    close(fd);
             }
-            else if (cgi_to_client_.count(fd) > 0)
-                handleCgiRead_(fd);
-		}
-	}
+	    }
+    }
 }
 
 void Server::sendEmergencyError_(int client_fd, int code, const std::string& message) {
