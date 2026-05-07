@@ -215,18 +215,18 @@ AnswerStatus	RequestAnswer::getIfDir()
 }
 
 //cherche un index qui existe et est lisible et on le renvoi
-std::string RequestAnswer::findIndex(LocationConfig loc)
+std::string RequestAnswer::findIndex(/*LocationConfig loc*/)
 {
 
     std::vector<std::string>::iterator it;
-	std::vector<std::string> index = loc.getIndex();
+	std::vector<std::string> index = loc_.getIndex();
 	//if (!loc.getIndex().empty())
 	//	index = loc.getIndex();
 	//else
 	//	index = Config::getIndex();
     for (it = index.begin(); it != index.end(); ++it)
 	{
-		const std::string root = loc.getRoot();
+		const std::string root = loc_.getRoot();
 		std::string fullPath = root + '/' + *it;
         // On utilise la fonction access() de <unistd.h> 
         // pour vérifier si le fichier existe et est lisible
@@ -266,7 +266,7 @@ AnswerStatus	RequestAnswer::methodGet()
 		//divier la fontion
 		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
 		// std::cout << "dir" << std::endl;
-		std::string index = findIndex(loc_);
+		std::string index = findIndex();
 		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
@@ -452,35 +452,38 @@ void	RequestAnswer::methodDelete()
 //int	RequestAnswer::setAnswer()
 void	RequestAnswer::fullAnswer()
 {
-	std::string header = request_->getVersion() + ' ' + Itoa(code_);
-	if (this->code_ == 200)
-		header += " OK\r\n";
-	else if (this->code_ == 201)
-		header += " Created\r\n";
-	else if (code_ == 204)
-		header += " No Content\r\n";
-	else if (code_ == 301)
-		header += " Moved\r\n";
-	else
-	{
-		header += " Not Found\r\n";
-		this->content_type_ = "text/html";
+	if (code_ > 400)
+		{std::cout << "error" << std::endl;
+		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());}
+	else{
+		std::string header = request_->getVersion() + ' ' + Itoa(code_);
+		if (this->code_ == 200)
+			header += " OK\r\n";
+		else if (this->code_ == 201)
+			header += " Created\r\n";
+		else if (code_ == 204)
+			header += " No Content\r\n";
+		else if (code_ == 301)
+			header += " Moved\r\n";
+		else
+		{
+			header += " Not Found\r\n";
+			this->content_type_ = "text/html";
+		}
+		if (!content_type_.empty())
+			header += "Content-Type: " + content_type_ + "\r\n";
+		header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
+		header += "\r\n";
+	
+		answer_ = header + this->body_;
 	}
-	if (!content_type_.empty())
-		header += "Content-Type: " + content_type_ + "\r\n";
-	header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
-	header += "\r\n";
-
-	//std::cout << "header = " << header << std::endl;
-
-	answer_ = header + this->body_;
-	//std::cout << answer_ << std::endl;
 }
 
 AnswerStatus	RequestAnswer::setAnswer(Request &request)
 {
-	this->request_ = &request;
-	this->answer_.clear();
+	request_ = &request;
+	answer_.clear();
+	loc_ = request_->getLocation();
 	AnswerStatus	status = ERROR;
 	if (request_->getMethod() == "GET")
 		status = methodGet();
@@ -499,15 +502,20 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 			message_ = "Forbidden";
 		}
 	}
-	
-	if (code_ < 400)
-	{
+	// code_ = 404;
+	// if (code_ < 400)
+	// {
 
-		fullAnswer();
-	}
-	else 
-		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+	fullAnswer();
+	// }
+	// else 
+	// {
+	// 	std::cout << loc_ << std::endl;
+	// 	answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+	// }
+
 	// content_type_ = findContentType(request_.getPath());
+	// std::cout << "answer= " <<  answer_ << "\nanwer fini" << std::endl;
 	return (status);
 }
 
