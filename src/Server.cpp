@@ -300,19 +300,30 @@ void    Server::handleNewConnection_(int listen_fd) {
     }
     setNonBlocking(client_fd);
 
-    const   ServerConfig    *associated_config = this->listen_sockets_[listen_fd];
+    Client  *new_client = NULL;
+    try {
+        const   ServerConfig    *associated_config = this->listen_sockets_[listen_fd];
 
-    Client  *new_client = new Client(client_fd, client_addr, associated_config);
+        new_client = new Client(client_fd, client_addr, associated_config);
 
-    new_client->updateLastActivity();
-    new_client->setState(Client::READING_REQUEST);
-    this->clients_[client_fd] = new_client;
+        new_client->updateLastActivity();
+        new_client->setState(Client::READING_REQUEST);
+    
+        if (!addClientToEpoll_(client_fd))
+            throw std::runtime_error("Epoll addition failed");
 
-    if (!addClientToEpoll_(client_fd)) {
-        delete (new_client);
-        this->clients_.erase(client_fd);
-        close(client_fd);
-        return ;
+        this->clients_[client_fd] = new_client;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "[CRITICAL] Failed to setup new connection: " << e.what() << std::endl;
+
+        sendEmergencyError_(client_fd, 500, "Internal Server Error");
+        
+        if (!new_client) {
+            delete (new_client);
+            this->clients_.erase(client_fd);
+        }
     }
 	//logNewConnection_(client_fd);
 }
@@ -353,7 +364,14 @@ void    Server::setupCgiEpoll_(int client_fd, Client &client)
     ev.data.fd = cgi_fd;
 
     if (epoll_ctl(this->epoll_fd_, EPOLL_CTL_ADD, cgi_fd, &ev) == -1)
-        std::cerr << "Error epoll_ctl CGI FD " << cgi_fd << std::endl;
+    {
+        std::cerr << "[CRITICAL] CGI epoll_ctl failed" << std::endl;
+        client.getAnswer().setCode(500);
+        client.getAnswer().setMessage("Internal Server Error");
+        client.getAnswer().setAnswer(client.getRequest()); 
+        
+        this->prepareForWriting_(client_fd, client);
+    }
     else
         this->cgi_to_client_[cgi_fd] = client_fd;
 }
@@ -365,6 +383,7 @@ void	Server::processClientRequest_(int client_fd) {
 
     ParsingStatus   parsing_status = request.parsingHttp(client.getRequestData());
 
+    
     if (parsing_status == PARSING_INCOMPLETE)
         return ;
     if (parsing_status == PARSING_FAILED)
@@ -555,4 +574,22 @@ void	Server::run() {
                 handleCgiRead_(fd);
 		}
 	}
+}
+
+void Server::sendEmergencyError_(int client_fd, int code, const std::string& message) {
+    std::stringstream ss;
+    std::stringstream ss_code;
+    ss_code << code;
+    std::string code_str = ss_code.str();
+    std::string body = "<html><body><h1>" + code_str + " " + message + "</h1></body></html>";
+    
+    ss << "HTTP/1.1 " << code << " " << message << "\r\n";
+    ss << "Content-Type: text/html\r\n";
+    ss << "Content-Length: " << body.length() << "\r\n";
+    ss << "Connection: close\r\n\r\n";
+    ss << body;
+    
+    std::string response = ss.str();
+    send(client_fd, response.c_str(), response.size(), 0);
+    close(client_fd);
 }
