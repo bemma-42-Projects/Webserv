@@ -508,16 +508,6 @@ void	RequestAnswer::setMessage(const std::string &message)
 	this->message_ = message;
 }
 
-void	RequestAnswer::setCode(int code)
-{
-	this->code_ = code;
-}
-
-void	RequestAnswer::setMessage(const std::string &message)
-{
-	this->message_ = message;
-}
-
 AnswerStatus	RequestAnswer::setAnswer(Request &request)
 {
 	request_ = &request;
