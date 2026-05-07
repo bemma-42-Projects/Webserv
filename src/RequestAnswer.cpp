@@ -367,13 +367,7 @@ int RequestAnswer::fileName()
 
 AnswerStatus RequestAnswer::methodPost()
 {
-    if (fileName() == 1) 
-    {
-        //error_ = 400;
-        code_ = 400;
-		message_ = "Bad Request";
-        return (ERROR);
-    }
+	std::cout << "METHOD POST" << std::endl;
 
 	if (this->isCgi())
     {
@@ -396,6 +390,13 @@ AnswerStatus RequestAnswer::methodPost()
         }
     }
 
+    if (fileName() == 1) 
+    {
+        //error_ = 400;
+        code_ = 400;
+		message_ = "Bad Request";
+        return (ERROR);
+    }
     // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
     // std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
 
@@ -438,7 +439,7 @@ AnswerStatus RequestAnswer::methodPost()
     return (READY_TO_SEND);
 }
 
-void	RequestAnswer::methodDelete()
+AnswerStatus	RequestAnswer::methodDelete()
 {
 	std::string	path = request_->getPath();
 	struct stat fileStat;
@@ -447,11 +448,13 @@ void	RequestAnswer::methodDelete()
     {
         code_ = 404;
         message_ = "Not Found";
+		return (ERROR);
     }
 	else if (S_ISDIR(fileStat.st_mode))
     {
         code_ = 403;
         message_ = "Forbidden";
+		return (ERROR);
     }
     else 
     {
@@ -459,11 +462,13 @@ void	RequestAnswer::methodDelete()
         {
             code_ = 204;
             // message_ = "No Content";
+			return (READY_TO_SEND);
         }
         else
         {
             code_ = 403;
             message_ = "Forbidden";
+			return (ERROR);
         }
     }
 }
@@ -506,25 +511,25 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 		status = methodGet();
 
 	else if (this->request_->getMethod() == "DELETE")
-	{
-		methodDelete();
-	}
+		status = methodDelete();
 	else if (request_->getMethod() == "POST")
 	{
-		if (loc_.getAllowedUpload() == true)
-			methodPost();
+		if (this->isCgi() == true)
+			status = methodPost();
+		else if (loc_.getAllowedUpload() == true)
+			status = methodPost();
 		else 
 		{
 			code_ = 403;
 			message_ = "Forbidden";
+			status = ERROR;
 		}
 	}
+	if (status == CGI_IN_PROGRESS)
+		return (status);
 	
 	if (code_ < 400)
-	{
-
 		fullAnswer();
-	}
 	else 
 		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
 	// content_type_ = findContentType(request_.getPath());

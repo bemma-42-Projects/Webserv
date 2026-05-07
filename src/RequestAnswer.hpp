@@ -3,7 +3,6 @@
 #include "Request.hpp"
 #include "CGISubprocess.hpp"
 
-#include "Location.hpp"
 #include "CGIHandler.hpp"
 
 enum	AnswerStatus
@@ -23,7 +22,7 @@ class RequestAnswer
 		AnswerStatus			setAnswer(Request &request);
 		AnswerStatus			methodGet();
 		AnswerStatus			methodPost();
-		void		methodDelete();
+		AnswerStatus			methodDelete();
 		void					fullAnswer();
 		AnswerStatus			getIfFile(std::string file);
 		AnswerStatus			getIfDir();

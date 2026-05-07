@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <map>
-#include "Location.hpp"
 #include "ServerConfig.hpp"
 
 enum	ParsingStatus {
