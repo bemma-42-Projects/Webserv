@@ -10,7 +10,6 @@
 #include "RequestAnswer.hpp"
 #include "Error.hpp"
 #include "ServerConfig.hpp"
-//#include "Location.hpp"
 #include "parsingconf.hpp"
 //#include <dirent.h>
 

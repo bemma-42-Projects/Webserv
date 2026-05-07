@@ -92,7 +92,6 @@ std::string RequestAnswer::findContentType(const std::string& path)
 {
     static std::map<std::string, std::string> mimeTypes;
 
-    // Initialisation au premier appel (static)
     if (mimeTypes.empty()) {
         // TEXTE
         mimeTypes[".html"] = "text/html";
@@ -127,7 +126,6 @@ std::string RequestAnswer::findContentType(const std::string& path)
 		return mimeTypes[ext];
 	return "application/octet-stream";
 
-    // Type par défaut si l'extension est inconnue ou absente
 }
 
 //recupere le contenue du fichier pour la methode get
@@ -182,8 +180,6 @@ AnswerStatus	RequestAnswer::getIfDir()
 		// On construit le chemin complet pour que stat puisse le trouver
 		std::string fullPath = request_->getPath() + "/" + name;
 		struct stat st;
-		
-		//std::string displayName = name;
 		if (stat(fullPath.c_str(), &st) == 0) // regarde si le fichier existe
 		{
 			if (S_ISDIR(st.st_mode))
@@ -219,18 +215,18 @@ AnswerStatus	RequestAnswer::getIfDir()
 }
 
 //cherche un index qui existe et est lisible et on le renvoi
-std::string RequestAnswer::findIndex(LocationConfig loc)
+std::string RequestAnswer::findIndex(/*LocationConfig loc*/)
 {
 
     std::vector<std::string>::iterator it;
-	std::vector<std::string> index = loc.getIndex();
+	std::vector<std::string> index = loc_.getIndex();
 	//if (!loc.getIndex().empty())
 	//	index = loc.getIndex();
 	//else
 	//	index = Config::getIndex();
     for (it = index.begin(); it != index.end(); ++it)
 	{
-		const std::string root = loc.getRoot();
+		const std::string root = loc_.getRoot();
 		std::string fullPath = root + '/' + *it;
         // On utilise la fonction access() de <unistd.h> 
         // pour vérifier si le fichier existe et est lisible
@@ -269,7 +265,7 @@ AnswerStatus	RequestAnswer::methodGet()
 		//divier la fontion
 		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
 		// std::cout << "dir" << std::endl;
-		std::string index = findIndex(loc_);
+		std::string index = findIndex();
 		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
@@ -297,19 +293,11 @@ int RequestAnswer::fileName()
 
     struct stat s;
     bool is_directory = false;
-
-    // ÉTAPE 1 : On vérifie si l'URL pointe vers un dossier existant
     if (stat(url_path.c_str(), &s) == 0) {
         if (S_ISDIR(s.st_mode)) {
             is_directory = true;
         }
-    } 
-    // Si le dossier finit par '/', on le force en is_directory même si stat échoue
-    // else if (!url_path.empty() && url_path[url_path.size() - 1] == '/') {
-    //     is_directory = true;
-    // }
-
-    // ÉTAPE 2 : Si c'est un dossier, on cherche obligatoirement dans le Body
+    }
     if (is_directory) {
         std::string body = this->request_->getBody();
         size_t id = body.find("Content-Disposition:");
@@ -361,7 +349,6 @@ int RequestAnswer::fileName()
             return (1);
         }
     }
-    //std::cout << "Fichier final retenu : " << post_file_name_ << std::endl;
     return 0;
 }
 
@@ -397,8 +384,8 @@ AnswerStatus RequestAnswer::methodPost()
     // std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
 
     std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
-
-    if (!outfile.is_open()) {
+    if (!outfile.is_open())
+	{
         std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
         //error_ = 500;
 		code_ = 500;
@@ -408,27 +395,19 @@ AnswerStatus RequestAnswer::methodPost()
 
     const std::string& body = request_->getBody();
     size_t startPos = body.find("\r\n\r\n");
-
-    // Correction de la condition : on veut entrer ici si on A TROUVÉ \r\n\r\n
     if (startPos != std::string::npos) 
 	{
-        startPos += 4; // On saute les deux \r\n\r\n
-        
+        startPos += 4; 
         size_t endPos = body.find("\r\n--", startPos); 
         size_t fileSize;
-
         if (endPos == std::string::npos)
             fileSize = body.size() - startPos;
         else 
             fileSize = endPos - startPos;
-
         outfile.write(&body[startPos], fileSize);
     } 
     else
-        // Cas où ce n'est pas du multipart (données brutes)
         outfile.write(body.c_str(), body.size());
-
-    
     outfile.close();
     code_ = 201; 
 	content_type_ = findContentType(post_file_name_);
@@ -492,29 +471,41 @@ AnswerStatus	RequestAnswer::methodDelete()
 //int	RequestAnswer::setAnswer()
 void	RequestAnswer::fullAnswer()
 {
-	std::string header = request_->getVersion() + ' ' + Itoa(code_);
-	if (this->code_ == 200)
-		header += " OK\r\n";
-	else if (this->code_ == 201)
-		header += " Created\r\n";
-	else if (code_ == 204)
-		header += " No Content\r\n";
-	else if (code_ == 301)
-		header += " Moved\r\n";
-	else
-	{
-		header += " Not Found\r\n";
-		this->content_type_ = "text/html";
+	if (code_ > 400)
+		{std::cout << "error" << std::endl;
+		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());}
+	else {
+		std::string header = request_->getVersion() + ' ' + Itoa(code_);
+		if (this->code_ == 200)
+			header += " OK\r\n";
+		else if (this->code_ == 201)
+			header += " Created\r\n";
+		else if (code_ == 204)
+			header += " No Content\r\n";
+		else if (code_ == 301)
+			header += " Moved\r\n";
+		else
+		{
+			header += " Not Found\r\n";
+			this->content_type_ = "text/html";
+		}
+		if (!content_type_.empty())
+			header += "Content-Type: " + content_type_ + "\r\n";
+		header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
+		header += "\r\n";
+	
+		answer_ = header + this->body_;
 	}
-	if (!content_type_.empty())
-		header += "Content-Type: " + content_type_ + "\r\n";
-	header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
-	header += "\r\n";
+}
 
-	//std::cout << "header = " << header << std::endl;
+void	RequestAnswer::setCode(int code)
+{
+	this->code_ = code;
+}
 
-	answer_ = header + this->body_;
-	//std::cout << answer_ << std::endl;
+void	RequestAnswer::setMessage(const std::string &message)
+{
+	this->message_ = message;
 }
 
 void	RequestAnswer::setCode(int code)
@@ -529,8 +520,9 @@ void	RequestAnswer::setMessage(const std::string &message)
 
 AnswerStatus	RequestAnswer::setAnswer(Request &request)
 {
-	this->request_ = &request;
-	this->answer_.clear();
+	request_ = &request;
+	answer_.clear();
+	loc_ = request_->getLocation();
 	AnswerStatus	status = ERROR;
 
 	try {
