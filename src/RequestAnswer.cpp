@@ -367,12 +367,8 @@ int RequestAnswer::fileName()
 
 AnswerStatus RequestAnswer::methodPost()
 {
-	std::cout << "METHOD POST" << std::endl;
-
 	if (this->isCgi())
-    {
-        std::cout << "[DEBUG] Detection CGI reussie, interpreteur : " << this->cgi_interpreter_ << std::endl;
-        
+    {   
         try {
             // Nettoyage de sécurité si un handler existait déjà
             if (this->cgi_handler_)
@@ -441,6 +437,25 @@ AnswerStatus RequestAnswer::methodPost()
 
 AnswerStatus	RequestAnswer::methodDelete()
 {
+	if (this->isCgi())
+	{
+		try {
+			if (this->cgi_handler_)
+			{
+				delete this->cgi_handler_;
+				this->cgi_handler_ = NULL;
+			}
+			this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
+			this->cgi_handler_->execute();
+			return (CGI_IN_PROGRESS);
+		}
+		catch (const std::exception &e) {
+			std::cerr << "[CGI Error] " << e.what() << std::endl;
+			this->error_ = 500;
+			this->code_ = 500;
+			return (ERROR);
+		}
+	}
 	std::string	path = request_->getPath();
 	struct stat fileStat;
 
@@ -642,94 +657,3 @@ void	RequestAnswer::clear()
 	this->post_file_name_.clear();
 	this->cgi_interpreter_.clear();
 }
-
-/*
-METHOD POST JULIEN A MERGE
-AnswerStatus	RequestAnswer::methodPost()
-{
-	Location	loc = request_->getLocation();
-
-	if (this->isCgi())
-    {
-        std::cout << "[DEBUG] Detection CGI reussie, interpreteur : " << this->cgi_interpreter_ << std::endl;
-        
-        try {
-            // Nettoyage de sécurité si un handler existait déjà
-            if (this->cgi_handler_)
-                delete this->cgi_handler_;
-
-            // On utilise l'interpréteur trouvé par isCgi() !
-            this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
-            this->cgi_handler_->execute();
-            return (CGI_IN_PROGRESS);
-        } catch (const std::exception& e) {
-            std::cerr << "[CGI Error] " << e.what() << std::endl;
-            this->error_ = 500;
-            return (ERROR);
-        }
-    }
-
-	std::string root = loc.getRoot() + loc.getPath();
-	struct stat s;
-	if (stat(root.c_str(), &s) == 0 && S_ISDIR(s.st_mode))
-	{
-		//std::cout << "deb" << std::endl;
-		std::cout << "[DEBUG] Tentative d'upload dans le dossier : " << root << std::endl;
-
-		struct stat p;
-		stat(request_->getPath().c_str(), &p);
-		if (stat(request_->getPath().c_str(), &p) == 0 && S_ISREG(p.st_mode))
-		{
-			post_file_name_ = request_->getPath();
-			//std::cout << post_file_name_ << std::endl;
-			return (ERROR);
-		}
-		//bool	quote = false;
-		std::string body = request_->getBody();
-		size_t		id = body.find("Content-Disposition:");
-		if (id == std::string::npos)
-			return (READY_TO_SEND);
-		size_t start = body.find("filename=", id);
-		if (start == std::string::npos)
-			return (READY_TO_SEND);
-		start += 9;
-
-		while (body[start] == ' ')
-			++start;
-		bool	quote = false;
-		if (body[start] == '\"')
-		{
-			++start;
-			quote = true;
-		}
-		size_t end = body.find("\r\n", start);
-		if (end == std::string::npos)
-			return (READY_TO_SEND);
-		//while (quote == true)
-		//{
-		//	if (body[end - 1] == '\"')
-		//		quote = false;
-		//	--end;
-		//}
-		if (quote && body[end - 1] == '\"')
-			--end;
-		
-		size_t	s = body.find_last_of('/', end);
-		if (s != std::string::npos && s >= start)
-			start = s + 1;
-		std::string file_name = body.substr(start, end - start);
-		//std::cout << "file name = " << file_name << std::endl;
-		// struct stat f;
-		std::string full_dest_path = root + '/' + file_name;
-		
-		struct stat b;
-		if (stat(full_dest_path.c_str(), &b) == 0 && S_ISREG(b.st_mode))
-		{
-			post_file_name_ = full_dest_path;
-			return (ERROR);
-		}
-	}
-	std::cout << "error" << std::endl;
-	return (READY_TO_SEND);
-}
-*/
