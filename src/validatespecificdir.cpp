@@ -448,7 +448,7 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 				}
 				srv.getLastLocation().setRoot(args[0]);
 				return (true);
-			// }
+			}
 		}
 
 		else if (name == "server_name") {
