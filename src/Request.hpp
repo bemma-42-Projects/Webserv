@@ -1,9 +1,13 @@
 #pragma once
 #include <string>
 #include <map>
-// #include "Config.hpp"
-//#include "LocationConfig.hpp"
 #include "ServerConfig.hpp"
+
+enum	ParsingStatus {
+	PARSING_FAILED = 0,
+	PARSING_SUCCESS = 1,
+	PARSING_INCOMPLETE = 2
+};
 
 class Request {
 
@@ -20,19 +24,30 @@ class Request {
 		std::string 						getBody() const;
 		int									getError() const;
 		std::string 						getErrorMessage() const;
-		LocationConfig						getLocation() const;
-		ServerConfig*						getServer() const;
-		//int									requestHttp();							
-		int									parsingHttp();
+		const LocationConfig				&getLocation() const;
+		const ServerConfig*					getServer() const;
+		std::string							getClientIP() const;
+		//int								requestHttp();							
+		ParsingStatus						parsingHttp(const std::string &raw_data);
 		bool								complete();
 		int									initFistLine();
 		int									initHeader();
 		int									initBody();
 		int									checkOfLocation();
+		void								setServerConfig(const ServerConfig *server);
 		//void								setError(int error);
 
-		//std::string							answer();
-		//std::string							methodGet();
+		//std::string						answer();
+		//std::string						methodGet();
+		void								splitUri_();
+		std::string							getRequestUri() const;
+		std::string							getQueryString() const;
+		std::string							getContentType() const;
+		std::string							getContentLength() const;
+		std::string							getHost() const;
+		std::string							getPort() const;
+		void								setClientIP(const std::string &ip);
+		void								clear();
 
 	private:
 		std::string							request_;
@@ -45,7 +60,11 @@ class Request {
 		int									error_;
 		std::string							message_error_;
 		LocationConfig						location_;
-		ServerConfig*						server_;
+		std::string							raw_uri_;
+		std::string							query_string_;
+		std::string							client_ip_;
+		const ServerConfig*						server_;
+
 };
 
 std::ostream& operator<<(std::ostream& out, const Request& request);

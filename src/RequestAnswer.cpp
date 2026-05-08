@@ -1,38 +1,82 @@
 #include "RequestAnswer.hpp"
+#include "CGIHandler.hpp"
+#include "CGISubprocess.hpp"
+
 #include <iostream>
-#include <fcntl.h>    // pour open
-#include <unistd.h>   // pour read, close
-#include <sys/stat.h> // pour stat
-//#include "Config.hpp"
+#include <fcntl.h>		// pour open
+#include <unistd.h>		// pour read, close, fork et execve
+#include <sys/stat.h>	// pour stat
+#include <sys/wait.h>	// pour waitpid
+//#include <cstdlib>	// pour exit
 #include <dirent.h>
 #include <sstream>
 #include <fstream>
 #include "Error.hpp"
+#include <map>
+#include <cstring>	// pour strcpy
 
-//initialise les variable
-RequestAnswer::RequestAnswer(Request request)
+// constructeur par défaut
+RequestAnswer::RequestAnswer() : code_(200), error_(0), request_(NULL), cgi_handler_(NULL)
 {
-	request_ = request;
-	answer_ = "";
-	code_ = 200;
-	//error_ = 0;
+	this->answer_ = "";
+	this->content_type_ = "";
+	this->body_ = "";
+	this->post_file_name_ = "";
+	this->cgi_interpreter_ = "";
+}
+
+// constructeur par copie
+RequestAnswer::RequestAnswer(const RequestAnswer &src) : cgi_handler_(NULL)
+{
+	*this = src;
+}
+
+RequestAnswer	&RequestAnswer::operator=(const RequestAnswer &rhs)
+{
+	if (this != &rhs)
+	{
+		if (this->cgi_handler_ != NULL)
+		{
+			delete (this->cgi_handler_);
+			this->cgi_handler_ = NULL;
+		}
+		this->code_ = rhs.code_;
+		this->error_ = rhs.error_;
+		this->request_ = rhs.request_;
+		this->answer_ = rhs.answer_;
+		this->content_type_ = rhs.content_type_;
+		this->body_ = rhs.body_;
+		this->post_file_name_ = rhs.post_file_name_;
+		this->cgi_interpreter_ = rhs.cgi_interpreter_;
+		this->cgi_handler_ = NULL;
+	}
+	return (*this);
 }
 
 RequestAnswer::~RequestAnswer()
-{}
-
-//return le reponse
-std::string	RequestAnswer::getAnswer()
 {
-	//std::cout << answer_ << std::endl;
-	return answer_;
+	if (this->cgi_handler_ != NULL)
+	{
+		delete (this->cgi_handler_);
+		this->cgi_handler_ = NULL;
+	}
+}
+
+const std::string	&RequestAnswer::getAnswer() const
+{
+	return (this->answer_);
 }
 
 //return l'error
-//int	RequestAnswer::getError()
-//{
-//	return error_;
-//}
+int	RequestAnswer::getError() const
+{
+	return (this->error_);
+}
+
+CGIHandler      *RequestAnswer::getCGIHandler() const
+{
+    return (cgi_handler_);
+}
 
 std::string RequestAnswer::Itoa(int nbr)
 {
@@ -48,7 +92,6 @@ std::string RequestAnswer::findContentType(const std::string& path)
 {
     static std::map<std::string, std::string> mimeTypes;
 
-    // Initialisation au premier appel (static)
     if (mimeTypes.empty()) {
         // TEXTE
         mimeTypes[".html"] = "text/html";
@@ -83,53 +126,51 @@ std::string RequestAnswer::findContentType(const std::string& path)
 		return mimeTypes[ext];
 	return "application/octet-stream";
 
-    // Type par défaut si l'extension est inconnue ou absente
 }
-
-
 
 //recupere le contenue du fichier pour la methode get
 //int	RequestAnswer::getMethode()
-int	RequestAnswer::getIfFile(std::string file)
+AnswerStatus	RequestAnswer::getIfFile(std::string file)
 {
 	//std::cout << Config::getRoot() + file << std::endl;
 	//int	fd = open((request_.getLocation().getRoot() + '/' + file).c_str(), O_RDONLY);
 	// std::cout << "dir" << std::endl;
 	int	fd = open((file).c_str(), O_RDONLY);
 	if (fd == -1)
-		return 1;
-	std::string	res;
-	char buffer[4096];//taille de la reponse ([4096])
-	ssize_t	bite_read;
-	while ((bite_read = read(fd, buffer, sizeof(buffer))) > 0)
 	{
-		res.append(buffer, bite_read);
+		return (ERROR);
+	}
+	std::string	res;
+	char buffer[4096];
+	ssize_t	bytes_read;
+	while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0)
+	{
+		res.append(buffer, bytes_read);
 	}
 	close(fd);
 	//std::cout << res << std::endl;
-	body_ = res;
-	code_ = 200;
-	content_type_ = findContentType(file);
-	return 0; 
+	this->body_ = res;
+	this->code_ = 200;
+	this->content_type_ = findContentType(file);
+	return (READY_TO_SEND);
 }
 
 //recupere le contenue du dossier pour la methode get
-int	RequestAnswer::getIfDir()
+AnswerStatus	RequestAnswer::getIfDir()
 {
 	// std::cout << "pd" << std::endl;
-	DIR* dir = opendir(request_.getPath().c_str());
+	DIR* dir = opendir(request_->getPath().c_str());
 	if (!dir)
 	{
-		std::cout << "error 404" << std::endl;
+		// std::cout << "error 404" << std::endl;
 		//error_ = 404;
 		code_ = 404;
 		message_ = "Not Found";
-		return 1;// Erreur 403 ou 404
+		return (ERROR);// Erreur 403 ou 404
 	} 
-	std::string	res;
 
-	std::string body = "<html><head><title>Index of " + request_.getUrlPath() + "</title></head><body>";
-	body += "<h1>Index of " + request_.getUrlPath() + "</h1><hr><ul>";
+	std::string body = "<html><head><title>Index of " + request_->getUrlPath() + "</title></head><body>";
+	body += "<h1>Index of " + request_->getUrlPath() + "</h1><hr><ul>";
 	struct dirent* entry;
 	while ((entry = readdir(dir)) != NULL) // reccupere fichier par fichier
 	{
@@ -137,10 +178,8 @@ int	RequestAnswer::getIfDir()
 		if (name == ".") // on ne dois pas annaliser le "." sinon on ouvre le dossier actuel et il faut qu'on le gere
 			continue;
 		// On construit le chemin complet pour que stat puisse le trouver
-		std::string fullPath = request_.getPath() + "/" + name;
+		std::string fullPath = request_->getPath() + "/" + name;
 		struct stat st;
-		
-		//std::string displayName = name;
 		if (stat(fullPath.c_str(), &st) == 0) // regarde si le fichier existe
 		{
 			if (S_ISDIR(st.st_mode))
@@ -148,16 +187,16 @@ int	RequestAnswer::getIfDir()
 		}
 		else
 		{
-			std::cout << "error 400" << std::endl;
-			//error_ = 400;
-			code_ = 400;
-			return 1;
+			//std::cout << "error 400" << std::endl;
+			//this->error_ = 400;
+			this->code_ = 400;
+			return (ERROR);
 		} 
-		// Le lien href doit être le nom, mais le texte affiché est displayName
 		body += "<li><a href=\"" + name + "\">" + name + "</a></li>\n";
 	}
 	body += "</ul><hr></body></html>";
 	closedir(dir);
+
 	//std::string header = "HTTP/1.1 200 OK\r\n";
 	//header += "Content-Type: text/html\r\n";
 	//header += "Content-Length: " + itoa(body.length()) + "\r\n"; // Il faudra une petite fonction pour convertir int en string
@@ -166,25 +205,28 @@ int	RequestAnswer::getIfDir()
 	//std::cout << res << std::endl;
 
 	//answer_ = res;
-	body_ = body;
-	code_ = 200;
-	content_type_ = "text/html";
-	return 0;
+	this->body_ = body;
+	this->code_ = 200;
+	this->content_type_ = "text/html";
+	// TODO : vérifier quand est appelé getIfDir et
+	// checker READY_TO_SEND, plus 0
+	return (READY_TO_SEND);
+	//return 0;
 }
 
 //cherche un index qui existe et est lisible et on le renvoi
-std::string RequestAnswer::findIndex(LocationConfig loc)
+std::string RequestAnswer::findIndex(/*LocationConfig loc*/)
 {
 
     std::vector<std::string>::iterator it;
-	std::vector<std::string> index = loc.getIndex();
+	std::vector<std::string> index = loc_.getIndex();
 	//if (!loc.getIndex().empty())
 	//	index = loc.getIndex();
 	//else
 	//	index = Config::getIndex();
     for (it = index.begin(); it != index.end(); ++it)
 	{
-		const std::string root = loc.getRoot();
+		const std::string root = loc_.getRoot();
 		std::string fullPath = root + '/' + *it;
         // On utilise la fonction access() de <unistd.h> 
         // pour vérifier si le fichier existe et est lisible
@@ -196,44 +238,50 @@ std::string RequestAnswer::findIndex(LocationConfig loc)
 
 //envoie les fonction pour la methode get (dossier ou fichier)
 //int	RequestAnswer::setAnswer()
-int	RequestAnswer::methodGet()
+AnswerStatus	RequestAnswer::methodGet()
 {
 	struct stat info;
-	if (stat(request_.getPath().c_str(), &info) != 0)
+	if (stat(request_->getPath().c_str(), &info) != 0)
 	{
-		std::cerr << "error  404" << std::endl;
-		//error_ = 404;
-		code_ = 404;
-		message_ = "Not Found";
-		return 1;
+		std::cerr << "error 404" << std::endl;
+		//this->error_ = 404;
+		this->code_ = 404;
+		this->message_ = "Not Found";
+		return (ERROR);
 	}
 	std::string res;
+	// si c'est un REGULAR FILE
 	if (S_ISREG(info.st_mode))
-		return (getIfFile(request_.getPath()));
-
+	{
+		if (this->isCgi())
+			return (this->methodCGI());
+		return (getIfFile(request_->getPath()));
+	}
+	// si c'est un DIRECTORY
+	// ...
 	else if (S_ISDIR(info.st_mode))
 	{
 		//LocationConfig	loc = request_.getLocation();
 		//divier la fontion
 		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
 		// std::cout << "dir" << std::endl;
-		std::string index = findIndex(loc_);
+		std::string index = findIndex();
 		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
-			return (getIfFile(request_.getServer()->getRoot() + '/' + index));	
+			return (getIfFile(request_->getServer()->getRoot() + '/' + index));	
 			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
 		else if (loc_.getAutoIndex() == true)
 			return (getIfDir());
 		else
 		{
-			//error_ = 403;
-			code_ = 403;
+			//this->error_ = 403;
+			this->code_ = 403;
 			message_ = "Forbidden";
 		}
 	}
-	return 1;
+	return (ERROR);
 }
 
 //recupere le path du file name pour upload les fichier
@@ -241,25 +289,17 @@ int RequestAnswer::fileName()
 {
     //LocationConfig    loc = request_.getLocation();
     std::string root_path = loc_.getRoot() + loc_.getPath(); // Chemin dossier sur disque
-    std::string url_path = request_.getPath();           // Chemin demandé dans l'URL
+    std::string url_path = request_->getPath();           // Chemin demandé dans l'URL
 
     struct stat s;
     bool is_directory = false;
-
-    // ÉTAPE 1 : On vérifie si l'URL pointe vers un dossier existant
     if (stat(url_path.c_str(), &s) == 0) {
         if (S_ISDIR(s.st_mode)) {
             is_directory = true;
         }
-    } 
-    // Si le dossier finit par '/', on le force en is_directory même si stat échoue
-    // else if (!url_path.empty() && url_path[url_path.size() - 1] == '/') {
-    //     is_directory = true;
-    // }
-
-    // ÉTAPE 2 : Si c'est un dossier, on cherche obligatoirement dans le Body
+    }
     if (is_directory) {
-        std::string body = request_.getBody();
+        std::string body = this->request_->getBody();
         size_t id = body.find("Content-Disposition:");
         if (id == std::string::npos)
 			return 1;
@@ -290,161 +330,371 @@ int RequestAnswer::fileName()
 		std::string file_name = body.substr(start, end - start);
 
         // On construit le chemin final : Dossier + / + Nom
-        post_file_name_ = url_path;
-        if (post_file_name_[post_file_name_.size() - 1] != '/')
-            post_file_name_ += '/';
-        post_file_name_ += file_name;
+        this->post_file_name_ = url_path;
+        if (this->post_file_name_[this->post_file_name_.size() - 1] != '/')
+            this->post_file_name_ += '/';
+        this->post_file_name_ += file_name;
     } 
     // ÉTAPE 3 : Si ce n'est pas un dossier, le nom est déjà dans l'URL
-    else
-        post_file_name_ = url_path;
+    else {
+        this->post_file_name_ = url_path;
+    }
 
     // ÉTAPE 4 : Vérification finale - Est-ce que le dossier parent existe ?
-    size_t last_slash = post_file_name_.find_last_of('/');
-    if (last_slash != std::string::npos) 
-	{
-        std::string dir_to_check = post_file_name_.substr(0, last_slash);
-        if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) 
-		{
+    size_t last_slash = this->post_file_name_.find_last_of('/');
+    if (last_slash != std::string::npos) {
+        std::string dir_to_check = this->post_file_name_.substr(0, last_slash);
+        if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) {
             //std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
-            return 1;
+            return (1);
         }
     }
-    //std::cout << "Fichier final retenu : " << post_file_name_ << std::endl;
     return 0;
 }
 
-int RequestAnswer::methodPost()
+
+
+AnswerStatus RequestAnswer::methodPost()
 {
+	if (this->isCgi())
+    {   
+        try {
+            // Nettoyage de sécurité si un handler existait déjà
+            if (this->cgi_handler_)
+			{
+                delete this->cgi_handler_;
+				this->cgi_handler_ = NULL;
+			}
+            this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
+            this->cgi_handler_->execute();
+            return (CGI_IN_PROGRESS);
+        } catch (const std::exception& e) {
+            std::cerr << "[CGI Error] " << e.what() << std::endl;
+            this->error_ = 500;
+            return (ERROR);
+        }
+    }
+
+	// if (request_->getBody().empty()) {
+    //     code_ = 405; // No Content (ou 200 OK)
+	// 	message_ = "Method Not Allowed";
+    //     return (ERROR);
+    // }
+
     if (fileName() == 1) 
     {
         //error_ = 400;
         code_ = 400;
 		message_ = "Bad Request";
-        return 1;
+        return (ERROR);
     }
-
     // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
     // std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
 
     std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
-
-    if (!outfile.is_open()) {
+    if (!outfile.is_open())
+	{
         std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
         //error_ = 500;
 		code_ = 500;
 		message_ = "Internal Server Error";
-        return 1;
+        return (ERROR);
     }
 
-    const std::string& body = request_.getBody();
-    size_t startPos = body.find("\r\n\r\n");
-
-    // Correction de la condition : on veut entrer ici si on A TROUVÉ \r\n\r\n
-    if (startPos != std::string::npos) 
+    const std::string& body = request_->getBody();
+	if (!body.empty())
 	{
-        startPos += 4; // On saute les deux \r\n\r\n
-        
-        size_t endPos = body.find("\r\n--", startPos); 
-        size_t fileSize;
+		size_t startPos = body.find("\r\n\r\n");
+		if (startPos != std::string::npos) 
+		{
+			startPos += 4; 
+			size_t endPos = body.find("\r\n--", startPos); 
+			size_t fileSize;
+			if (endPos == std::string::npos)
+				fileSize = body.size() - startPos;
+			else 
+				fileSize = endPos - startPos;
+			outfile.write(&body[startPos], fileSize);
+		} 
+		else
+			outfile.write(body.c_str(), body.size());
 
-        if (endPos == std::string::npos)
-            fileSize = body.size() - startPos;
-        else 
-            fileSize = endPos - startPos;
-
-        outfile.write(&body[startPos], fileSize);
-    } 
-    else
-        // Cas où ce n'est pas du multipart (données brutes)
-        outfile.write(body.c_str(), body.size());
-
-    
+	}
     outfile.close();
     code_ = 201; 
-    return 0;
+	content_type_ = findContentType(post_file_name_);
+    return (READY_TO_SEND);
+}
+
+AnswerStatus	RequestAnswer::methodDelete()
+{
+	if (this->isCgi())
+	{
+		try {
+			if (this->cgi_handler_)
+			{
+				delete this->cgi_handler_;
+				this->cgi_handler_ = NULL;
+			}
+			this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
+			this->cgi_handler_->execute();
+			return (CGI_IN_PROGRESS);
+		}
+		catch (const std::exception &e) {
+			std::cerr << "[CGI Error] " << e.what() << std::endl;
+			this->error_ = 500;
+			this->code_ = 500;
+			return (ERROR);
+		}
+	}
+	std::string	path = request_->getPath();
+	struct stat fileStat;
+
+	if (stat(path.c_str(), &fileStat) != 0) 
+    {
+        code_ = 404;
+        message_ = "Not Found";
+		return (ERROR);
+    }
+	else if (S_ISDIR(fileStat.st_mode))
+    {
+        code_ = 403;
+        message_ = "Forbidden";
+		return (ERROR);
+    }
+    else 
+    {
+        if (unlink(path.c_str()) == 0)
+        {
+            code_ = 204;
+            // message_ = "No Content";
+			return (READY_TO_SEND);
+        }
+        else
+        {
+            code_ = 403;
+            message_ = "Forbidden";
+			return (ERROR);
+        }
+    }
 }
 
 //faire la reponse avec le header
 //int	RequestAnswer::setAnswer()
 void	RequestAnswer::fullAnswer()
 {
-	std::string header = request_.getVersion() + ' ' + Itoa(code_);
-	if (code_ == 200)
-		header += " OK\r\n";
-	else if (code_ == 201)
-		header += " Created\r\n";
-	else if (code_ == 301)
-		header += " Moved\r\n";
+	if (code_ > 400)
+		{std::cout << "error" << std::endl;
+		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());}
+	else {
+		std::string header = request_->getVersion() + ' ' + Itoa(code_);
+		if (this->code_ == 200)
+			header += " OK\r\n";
+		else if (this->code_ == 201)
+			header += " Created\r\n";
+		else if (code_ == 204)
+			header += " No Content\r\n";
+		else if (code_ == 301)
+			header += " Moved\r\n";
+		else
+		{
+			header += " Not Found\r\n";
+			this->content_type_ = "text/html";
+		}
+		if (!content_type_.empty())
+			header += "Content-Type: " + content_type_ + "\r\n";
+		header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
+		header += "\r\n";
+	
+		answer_ = header + this->body_;
+	}
+}
+
+AnswerStatus	RequestAnswer::setAnswer(Request &request)
+{
+	request_ = &request;
+	answer_.clear();
+	loc_ = request_->getLocation();
+	AnswerStatus	status = ERROR;
+
+	try {
+		if (request_->getMethod() == "GET")
+			status = methodGet();
+		else if (this->request_->getMethod() == "DELETE")
+			status = methodDelete();
+		else if (request_->getMethod() == "POST")
+		{
+			std::cout << "test" << std::endl;
+			if (this->isCgi() == true)
+				status = methodPost();
+			else if (loc_.getAllowedUpload() == true)
+				status = methodPost();
+			else 
+			{
+				code_ = 405;
+				message_ = "Method Not Allowed";
+				status = ERROR;
+			}
+		}
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << "[RequestAnswer] Critical Error: " << e.what() << std::endl;
+		code_ = 500;
+		message_ = "Internal Server Error";
+		status = ERROR;
+	}
+	if (status == CGI_IN_PROGRESS)
+		return (status);
+	
+	if (code_ < 400)
+		fullAnswer();
+	else 
+		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+		// content_type_ = findContentType(request_.getPath());
+	return (status);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void	RequestAnswer::setCode(int code)
+{
+	this->code_ = code;
+}
+
+void	RequestAnswer::setMessage(const std::string &message)
+{
+	this->message_ = message;
+}
+
+
+void RequestAnswer::setFullAnswer(const std::string& full_response) {
+    this->answer_ = full_response;
+}
+
+// fonction pour déterminer si c'est un cgi
+// et pour stocker l'interpreter correspondant
+bool	RequestAnswer::isCgi()
+{
+	const std::map<std::string, std::string>	&cgi_handlers = request_->getServer()->getCgiHandler();
+	std::string	url = request_->getUrlPath();
+	size_t	last_point_position = url.find_last_of(".");
+	
+	if (last_point_position == std::string::npos)
+		return (false);
+
+	std::string	extension = url.substr(last_point_position);
+
+	std::map<std::string, std::string>::const_iterator it = cgi_handlers.find(extension);
+
+	if (it != cgi_handlers.end())
+	{
+		this->cgi_interpreter_ = it->second;
+		return (true);
+	}
+	return (false);
+}
+
+AnswerStatus	RequestAnswer::methodCGI()
+{
+	this->cgi_handler_ = new CGIHandler(*(this->request_), this->cgi_interpreter_);
+
+	try {
+		this->cgi_handler_->execute();
+		return (CGI_IN_PROGRESS);
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << "CGI Error : " << e.what() << std::endl;
+		this->error_ = 500;
+		this->code_ = 500;
+		return (ERROR);
+	}
+}
+
+// traducteur qui transforme la sortie brute du script CGI
+// en éléments exploitables
+// pour construire une vraie réponse HTTP
+// body, content type et code
+void	RequestAnswer::buildCGIResponse()
+{
+	std::string	raw = this->cgi_handler_->getRawOutput();
+	size_t	separator = raw.find("\r\n\r\n");
+	if (separator != std::string::npos)
+	{
+		std::string	headers = raw.substr(0, separator);
+		this->body_ = raw.substr(separator + 4);
+		size_t	start = headers.find("Content-type: ");
+		if (start == std::string::npos)
+			start = headers.find("Content-Type: ");
+		if (start != std::string::npos)
+		{
+			start += 14;
+			size_t end = headers.find("\r\n", start);
+			this->content_type_ = headers.substr(start, end - start);
+		}
+		else
+			this->content_type_ = "text/html";
+	}
 	else
 	{
-		header += " Not Found\r\n";
-		content_type_ = "text/html";
+		this->body_ = raw;
+		this->content_type_ = "text/html";
 	}
-	header += "Content-Type: " + content_type_ + "\r\n";
-	header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
-	header += "\r\n";
-
-	//std::cout << "header = " << header << std::endl;
-
-	answer_ = header + body_;
-	//std::cout << answer_ << std::endl;
+	this->code_ = 200;
+	this->fullAnswer();
 }
 
-//envoie les fonction par rapport au methode (get, post, delete)
-int	RequestAnswer::setAnswer()
+bool	RequestAnswer::isResponseFullySent() const
 {
-	LocationConfig	loc_ = request_.getLocation();
-	answer_.clear();
-	if (request_.getMethod() == "GET")
-		methodGet();
-
-	else if (request_.getMethod() == "DELETE")
-	{
-		if (unlink(request_.getPath().c_str()) != 0)
-		{
-			std::cout << "error 404 error supression"  << std::endl;
-			code_ = 404;
-			message_ = "Not Found";
-		}
-		//else 
-		//	code_ = 200;
-		//	return (2);//delete
-		//Utilise unlink() pour supprimer le fichier
-	}
-	else if (request_.getMethod() == "POST")
-	{
-		// std::cout << "nous y est" << std::endl;
-		methodPost();
-
-	//	std::string	url = request_.getUrlPath();
-	//	if (/*(url.size() >= 4 && url.substr(url.size() - 4) == ".php")
-	//		|| (url.size() >= 3 && (url.substr(url.size() - 3) == ".py")
-	//		|| url.substr(url.size() - 3) == ".pl")*/)
-	//	{
-
-	//		//CGI
-	//		//Si CGI → fork + pipe + execve avec body_ en entrée
-	//	}
-	//	else
-	//	{
-			
-
-	//		//upload
-	//		//Si upload → ouvrir un fichier sur path_ et y écrire body_
-	//		//Si succès → construire une réponse 201 Created
-	//		//Si échec → remplir error_ et retourner 0 comme tu fais déjà
-		//}
-	}
-////mettre le reponse dans une answer_
-	//code_ = 4754;
-	if (code_ > 400)
-		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
-	fullAnswer();
-	//std::cout << body_ << std::endl;
-	return 1;
+	return (this->answer_.empty());
 }
 
-//le fichier n'existe pas, je dois verifier le dossier
-//full ia, a comprendre
-//mais ne marche pas a chaque fois , differentier le dossier du fichier
+void	RequestAnswer::eraseSentBytes(size_t bytes_sent)
+{
+	if (bytes_sent <= this->answer_.length())
+	{
+		this->answer_.erase(0, bytes_sent);
+	}
+	else
+	{
+		this->answer_.clear();
+	}
+}
+
+void	RequestAnswer::clear()
+{
+	this->code_ = 200;
+	this->error_ = 200;
+	this->request_ = NULL;
+	if (this->cgi_handler_ != NULL)
+	{
+		delete (this->cgi_handler_);
+		this->cgi_handler_ = NULL;
+	}
+	this->answer_.clear();
+	this->content_type_.clear();
+	this->body_.clear();
+	this->post_file_name_.clear();
+	this->cgi_interpreter_.clear();
+}

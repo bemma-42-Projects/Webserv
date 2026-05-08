@@ -26,7 +26,15 @@ std::string Error::Itoa(int nbr)
 
 std::string	Error::ErrorPage()
 {
-	if (page_error_.empty())
+	// std::cout << "-------------------------\n" << code_ << "\n------------------\n" << std::endl;
+	// std::cout << "Error pages: ";
+	// std::map<int, std::string>::const_iterator it;
+	// for (it = page_error_.begin(); it != page_error_.end(); it++) {
+	// 	std::cout << "Error:" << it->first << " Page:" << it->second << "  |  ";
+	// }
+
+
+	if (!page_error_.empty())
 	{
 		//std::map<int, std::string>	error_loc = loc_->getErrorPage();
 		//if (error_conf.find(400) != error_conf.end())
@@ -94,9 +102,14 @@ std::string	Error::ErrorPage()
 std::string	Error::AnswerError(int code, std::string message, std::map<int, std::string> pageError)
 {
 	code_ = code;
-	message_ = message;
+	if (!message.empty())
+		message_ = message;
+	else
+		message_ = "ERROR";
 	//loc_ = loc;
 	page_error_ = pageError;
+	if (pageError.empty())
+		std::cout << "le probleme est la" << std::endl;
 	//(void)loc_;
 	std::string error_page = ErrorPage();
 	std::string header = "HTTP/1.1 " + Itoa(code_);
@@ -105,9 +118,10 @@ std::string	Error::AnswerError(int code, std::string message, std::map<int, std:
 
 	header += "Content-Type: " + content_type + "\r\n";
 	header += "Content-Length: " + Itoa(error_page.length()) + "\r\n";
+
 	header += "\r\n";
 
-	//std::cout << "header = " << header << std::endl;
+	// std::cout << "header = " << header << error_page << std::endl;
 
 	//answer_error = header + error_page;
 	return (header + error_page);

@@ -21,6 +21,7 @@ enum State {
 	IN_LOCATION
 };
 
+
 int		validatePort(std::string port_str);
 void	validateIP(std::string str);
 void	validateOneArg(std::string str, ServerConfig& srv);
@@ -36,6 +37,8 @@ void	validateAutoIndex(std::vector<std::string> args, State state, ServerConfig&
 void	validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, State state);
 void	validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, State state);
 bool	validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv);
+std::string combineRootUri(std::string root, std::string uri);
 
-std::vector<std::string> combineRootUri(std::string root, std::string uri);
+
+// std::vector<std::string> combineRootUri(std::string root, std::string uri);
 

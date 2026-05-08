@@ -158,7 +158,7 @@ void ServerConfig::finalize() {
 	for (size_t i = 0; i < locations_.size(); i++) {
 
 		if (locations_[i].getRoot().empty())
-			locations_[i].setRoot(combineRootUri(this->root_, locations_[i].getPath())[0]);
+			locations_[i].setRoot(this->root_);
 
 		if (locations_[i].getAutoIndex() == -1)
 			locations_[i].setAutoIndex(this->autoindex_);
@@ -273,21 +273,24 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 
 //cherche la location par raport au path 
 //int	Request::parsingHttp()
-LocationConfig* ServerConfig::matchLocation(std::string requestPath) 
+const LocationConfig* ServerConfig::matchLocation(std::string requestPath) const
 {
-	LocationConfig* bestMatch = NULL;
-	size_t longestLen = 0;
-	std::vector<LocationConfig>::iterator it;
-	for (it = locations_.begin(); it != locations_.end(); ++it)
-	{
-		std::string locPath = it->getPath();
+    const LocationConfig* bestMatch = NULL;
+    size_t longestLen = 0;
+    std::vector<LocationConfig>::const_iterator it;
 
-		if (requestPath.find(locPath) == 0) {
-			if (locPath.length() > longestLen) {
-				longestLen = locPath.length();
-				bestMatch = &(*it);
-			}
-		}
-	}
-	return (bestMatch);
+    for (it = locations_.begin(); it != locations_.end(); ++it)
+    {
+		std::string locPath = it->getPath();
+		if (requestPath.find(locPath) == 0) 
+        {
+            if (locPath.length() > longestLen) 
+            {
+                longestLen = locPath.length();
+                bestMatch = &(*it);
+				// std::cout << bestMatch->getPath() << std::endl;
+            }
+        }
+    }
+    return bestMatch;
 }

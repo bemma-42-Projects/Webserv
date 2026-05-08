@@ -5,13 +5,11 @@
 LocationConfig::LocationConfig() {
 	autoindex_ = -1;
 	allowed_upload_ =-1;
-
 	client_max_body_size_ = 0;
 
 }
 
 const std::string&	LocationConfig::getPath() const {
-	// std::cout << path_ << std::endl;
 	return (path_);
 }
 
@@ -46,9 +44,7 @@ const std::string&	LocationConfig::getUploadPath() const {
 
 
 size_t	LocationConfig::getClientMaxBodySize() const {
-	//if (client_max_body_size_)
 	return (client_max_body_size_);
-	//return (Config::getBodySize());
 }
 
 const std::map<int, std::string>&	LocationConfig::getErrorPage() const {

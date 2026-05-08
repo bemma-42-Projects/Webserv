@@ -99,8 +99,8 @@ void validateListen(std::vector<std::string> args, State state, ServerConfig& sr
 	validateOneArg(args[0], srv);
 }
 
-std::vector<std::string> combineRootUri(std::string root, std::string uri) {
-	std::vector<std::string> res;
+std::string combineRootUri(std::string root, std::string uri) {
+	std::string res;
 	if (root.empty())
 		return (res);
 	if (uri.empty())
@@ -115,7 +115,7 @@ std::vector<std::string> combineRootUri(std::string root, std::string uri) {
 	if (uri[0] != '/') {
 		uri = "/" + uri;
 	}
-	res.push_back(root + uri);
+	res = root + uri;
 	return (res);
 }
 
@@ -448,7 +448,7 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 				}
 				srv.getLastLocation().setRoot(args[0]);
 				return (true);
-			}
+			// }
 		}
 
 		else if (name == "server_name") {
