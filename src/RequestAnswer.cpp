@@ -135,6 +135,19 @@ AnswerStatus	RequestAnswer::getIfFile(std::string file)
 	//std::cout << Config::getRoot() + file << std::endl;
 	//int	fd = open((request_.getLocation().getRoot() + '/' + file).c_str(), O_RDONLY);
 	// std::cout << "dir" << std::endl;
+
+	// il faut vérifier si le fichier demandé existe
+	// et renvoyer une erreur 404 au lieu d'un code 200 avec une page vide
+	struct stat	buffer_file;
+
+	if (stat(file.c_str(), &buffer_file) != 0)
+    {
+        std::cout << "[DEBUG] getIfFile: Fichier introuvable -> " << file << std::endl;
+        this->code_ = 404;
+        this->message_ = "Not Found";
+        return (ERROR);
+    }
+
 	int	fd = open((file).c_str(), O_RDONLY);
 	if (fd == -1)
 	{
@@ -241,6 +254,7 @@ std::string RequestAnswer::findIndex(/*LocationConfig loc*/)
 AnswerStatus	RequestAnswer::methodGet()
 {
 	struct stat info;
+
 	if (stat(request_->getPath().c_str(), &info) != 0)
 	{
 		std::cerr << "error 404" << std::endl;
@@ -269,7 +283,13 @@ AnswerStatus	RequestAnswer::methodGet()
 		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
-			return (getIfFile(request_->getServer()->getRoot() + '/' + index));	
+			
+			std::string	target_index = request_->getPath();
+			if (target_index[target_index.size() - 1] != '/')
+				target_index += "/";
+			target_index += index;
+
+			return (getIfFile(target_index));	
 			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
 		else if (loc_.getAutoIndex() == true)
@@ -279,6 +299,7 @@ AnswerStatus	RequestAnswer::methodGet()
 			//this->error_ = 403;
 			this->code_ = 403;
 			message_ = "Forbidden";
+			return (ERROR);
 		}
 	}
 	return (ERROR);
