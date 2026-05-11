@@ -35,6 +35,7 @@ class Request {
 		int									initBody();
 		int									checkOfLocation();
 		void								setServerConfig(const ServerConfig *server);
+		const LocationConfig				*matchExtensionLocation() const;
 		//void								setError(int error);
 
 		//std::string						answer();

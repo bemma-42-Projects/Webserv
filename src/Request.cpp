@@ -432,12 +432,40 @@ int Request::initBody()
     return 0;
 }
 
+
+
+const	LocationConfig	*Request::matchExtensionLocation() const
+{
+	if (this->server_ == NULL)
+        return (NULL);
+
+	const std::vector<LocationConfig> &all_locs = server_->getLocations();
+    
+    std::cout << "[DEBUG CGI] URL demandée : [" << url_path_ << "]" << std::endl;
+    std::cout << "[DEBUG CGI] Nombre total de locations dans ce server : " << all_locs.size() << std::endl;
+
+    for (size_t i = 0; i < all_locs.size(); ++i)
+    {
+        std::string loc_name = all_locs[i].getPath();
+
+        std::cout << "[DEBUG CGI] Analyse de la location : [" << loc_name << "]" << std::endl;
+
+        if (loc_name.size() > 1 && loc_name[0] == '.')
+        {
+            if (url_path_.size() >= loc_name.size()
+				&& url_path_.substr(this->url_path_.size() - loc_name.size()) == loc_name)
+			{
+				return (&all_locs[i]);
+			}
+        }
+    }
+	return (NULL);
+}
+
 int Request::checkOfLocation()
 {
     std::cout << "[DEBUG] test 1 - Entrée dans checkOfLocation" << std::endl;
     
-
-    // --- LE VERDICT ---
     if (this->server_ == NULL) {
         std::cout << "[FATAL] ARRET: Le pointeur server_ est NULL !" << std::endl;
         return 1; // On sort avant le crash
@@ -481,6 +509,12 @@ int Request::checkOfLocation()
 	// on retourne 1 (pas trouvé)
 	if (loc == NULL)
 		return (1);
+
+	// recherche d'extension CGI dans la location
+	// .bla par exemple
+	const	LocationConfig	*ext_loc = matchExtensionLocation();
+	if (ext_loc != NULL)
+		loc = ext_loc;
 
     std::cout << "[DEBUG] test 4 - Tentative de copie de la location..." << std::endl;
     location_ = *loc;
