@@ -442,6 +442,7 @@ int Request::checkOfLocation()
 {
     std::cout << "[DEBUG] test 1 - Entrée dans checkOfLocation" << std::endl;
     
+
     // --- LE VERDICT ---
     if (this->server_ == NULL) {
         std::cout << "[FATAL] ARRET: Le pointeur server_ est NULL !" << std::endl;
@@ -454,11 +455,39 @@ int Request::checkOfLocation()
     
     std::cout << "[DEBUG] test 3 - matchLocation a survécu !" << std::endl;
 
-    if (loc == NULL) {
-        std::cout << "[DEBUG] loc est NULL, on quitte." << std::endl;
-        return 1;
+	// ATTENTION
+	// si on a en location /directory/ dans le .conf
+	// et que la requete est GET /directory
+	// il faut quand meme l'accepter
+	// on est permissif sur ca, sinon, avec une url se terminant par /directory
+	// et non /directory/
+	// ca passerait pas
+
+	// si on a pas trouvé
+	// c'est peut-etre qu'on a cherché /directory
+	// alors que le root dans le .conf était /directory/
+	// dans ce cas, on utilise la location /
+	// mais ce n'est pas ce qu'on veut ici
+    if (loc == NULL || loc->getPath() == "/" ) {
+		// si l'url n'est pas vide et qu'elle ne se termine pas par un /
+		if (!url_path_.empty() && url_path_[url_path.size() -1] != '/')
+		{
+			// on ajoute le slash manquant à la fin
+			std::string	retry_path = url_path + "/";
+			// et on recherche à nouveau avec cette nouvelle URL
+			const LocationConfig	*retry_loc = server_->matchLocation(retry_path);
+			// si ca passe cette fois
+			// on prend
+			if (loc != NULL || loc->getPath() != "/" )
+				loc = retry_loc;
+		}
     }
-    
+
+	// si loc est toujours NULL
+	// on retourne 1 (pas trouvé)
+	if (loc == NULL)
+		return (1);
+
     std::cout << "[DEBUG] test 4 - Tentative de copie de la location..." << std::endl;
     location_ = *loc;
     
@@ -466,11 +495,99 @@ int Request::checkOfLocation()
     std::set<std::string> allowedMethods = location_.getAllowedMethods();
     
     std::cout << "[DEBUG] test 6 - Méthodes récupérées. Méthode actuelle = [" << method_ << "]" << std::endl;
-    if (std::find(allowedMethods.begin(), allowedMethods.end(), method_) == allowedMethods.end()) {
+    
+	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_) == allowedMethods.end()) {
         std::cout << "[DEBUG] test 7 - Méthode non autorisée." << std::endl;
         return (2);
     }
-        
+    
+	// FIX erreur 404
+	// causé par une duplication du nom de la location
+	// si la location est /directory/
+	// et que le root est home/julien/Webserv/www/src/YoupiBanane
+	// une requete vers /directory/youpi.bla doit aller chercher dans /YoupiBanane/youpi.bla
+	// et non pas dans /YoupiBanane/directory/youpi.bla
+	// ce qui etait le cas avant
+
+	// 1 : on nettoie les / de fin pour pouvoir comparer l'URL et la location proprement
+	// 2 : on soustrait le nom de la location de l'url pour isoler le fichier demandé
+	// 3 : on concatène le root avec ce fichier
+	// 4 : on nettoie le chemin absolu final (on retire le / final) pour que stat() fonctionne bien
+
+	// la directive root
+	std::string	root = location_.getRoot();		// /home/julien/Webserv/src/www/YoupiBanane
+	
+	// le path (de la location)
+	std::string	loc_p = location_.getPath();	// /directory/ ou /directory
+
+	// l'url (de la requete du client)
+	std::string url = url_path_;				// /directory/youpi.bla ou /directory ou /directory/
+
+	std::string	clean_loc = loc_p;
+	// pour loc_p (/directory/ ou /directory)
+	// si on a un / à la fin
+	// on le supprime
+	// /directory/ devient /directory
+	if (clean_loc.size() > 1 && clean_loc[clean_loc.size() - 1] == '/')
+		clean_loc.erase(clean_loc.size() - 1);
+
+	std::string	clean_url = url;
+	// pour url (/directory/youpi.bla ou /directory ou /directory/)
+	// si on a un / à la fin
+	// on le supprime
+	// /directory/ devient /directory
+	if (clean_url.size() > 1 && clean_url[clean_url.size() - 1] == '/')
+		clean_url.erase(clean_url.size() - 1);
+
+	// check si match entre clean_url et clean_loc
+	// entre l'url demandée est dans la location
+	// on cherche si on trouve clean_loc DANS clean_url
+	// plus précisément, si clean_url COMMENCE par clean_loc
+
+	// puis extraction du remaining de l'url
+	// par exemple, si le client a demandé
+	// /directory/youpi.bla 
+	// cela va extraire youpi.bla
+	std::string	remaining = "";
+
+	// si on matche
+	if (clean_url.find(clean_loc) == 0)
+	{
+		// si l'url est plus longue que la location
+		// il faut alors extraire (youpi.bla par exemple)
+		if (url.size() > clean_loc.size())
+		{
+			// on découpe à partir d'après le dernier caractère de /directory de l'url
+			remaining = url.substr(clean_loc.size());
+			// on a extrait /youpi.bla
+			// on supprime le premier / pour éviter d'avoir un double / plus tard
+			// (après la concaténation)
+			if (remaining.size() > 0 && remaining[0] == '/')
+				remaining = remaining.substr(1);
+		}
+	}
+
+	// on peut enfin concaténer 
+	// pour obtenir au final /home/julien/Webserv/src/www/YoupiBanane/youpi.bla
+	// on ne sait pas si le root est /home/julien/Webserv/src/www/YoupiBanane
+	// ou /home/julien/Webserv/src/www/YoupiBanane/
+	// si on a un / à la fin, on concatène
+	// sinon, on ajouter un / au milieu
+	if (!root.empty() && root[root.size() - 1] == '/')
+		this->path_ = root + remaining;
+	else
+		this->path_ = root + '/' + remaining;
+	
+	// on retire le / final 
+	// si le remaining était un sub-directory avec un / à la fin
+	// par exemple /home/julien/Webserv/src/www/YoupiBanane/YoupiAnanas
+	if (this->path_.size() > 1 && this->path_[this->path.size() - 1] == '/')
+		this->path_.erase(this->path_.size() - 1);
+
+	std::cout << "[DEBUG] Location matchée : [" << location_.getPath() << "]" << std::endl;
+	std::cout << "[DEBUG] Root utilisé : [" << root << "]" << std::endl;
+	std::cout << "[DEBUG] Path FINAL : [" << this->path_ << "]" << std::endl;
+	
     std::cout << "[DEBUG] test 8 - Fin de checkOfLocation, tout est OK." << std::endl;
     return (0);
 }
@@ -548,7 +665,8 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 		std::cout << "[DEBUG] Chunked incomplet (pas de '0'). Retour silencieux à epoll." << std::endl;
         return (PARSING_INCOMPLETE); 
     }
-	path_ = combineRootUri(location_.getRoot(), url_path_);
+	// on ne combine plus ici, on le fait dans CheckLocation !
+	//path_ = combineRootUri(location_.getRoot(), url_path_);
 	return (PARSING_SUCCESS);
 
 }
