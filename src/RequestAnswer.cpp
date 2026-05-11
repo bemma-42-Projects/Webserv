@@ -480,34 +480,52 @@ AnswerStatus	RequestAnswer::methodDelete()
 }
 
 //faire la reponse avec le header
-//int	RequestAnswer::setAnswer()
-void	RequestAnswer::fullAnswer()
+//int	RequestAnswer::setAnswer()void    RequestAnswer::fullAnswer()
+void    RequestAnswer::fullAnswer()
 {
-	if (code_ > 400)
-		{std::cout << "error" << std::endl;
-		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());}
-	else {
-		std::string header = request_->getVersion() + ' ' + Itoa(code_);
-		if (this->code_ == 200)
-			header += " OK\r\n";
-		else if (this->code_ == 201)
-			header += " Created\r\n";
-		else if (code_ == 204)
-			header += " No Content\r\n";
-		else if (code_ == 301)
-			header += " Moved\r\n";
-		else
-		{
-			header += " Not Found\r\n";
-			this->content_type_ = "text/html";
-		}
-		if (!content_type_.empty())
-			header += "Content-Type: " + content_type_ + "\r\n";
-		header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
-		header += "\r\n";
-	
-		answer_ = header + this->body_;
-	}
+    // FIX : >= 400
+	// sinon, l'erreur 400 n'était pas affichée
+    if (code_ >= 400) 
+    {
+        std::cout << "[DEBUG] Génération d'une page d'erreur pour le code " << code_ << std::endl;
+        answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+    }
+    else {
+        // facultatif ? : hardcoder la version HTTP
+		// pour forcer l'utilisatino du protocole
+		// HTTP/1.1 pour Webserv
+		// car les autres versions ne sont pas supportees
+        std::string header = "HTTP/1.1 " + Itoa(code_); 
+        
+        if (this->code_ == 200)
+            header += " OK\r\n";
+        else if (this->code_ == 201)
+            header += " Created\r\n";
+        else if (code_ == 204)
+            header += " No Content\r\n";
+		// Moved Permanently
+		// A la place de Moved
+		// (pour correspondre au vrai code HTTP)
+        else if (code_ == 301)
+            header += " Moved Permanently\r\n"; // Plus standard que juste "Moved"
+        else
+        {
+            header += " Not Found\r\n";
+            this->content_type_ = "text/html";
+        }
+        
+        if (!content_type_.empty())
+            header += "Content-Type: " + content_type_ + "\r\n";
+            
+        // FIX :
+		// sans ca, le serveur attendait indefiniment !
+        header += "Connection: keep-alive\r\n"; 
+        
+        header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
+        header += "\r\n";
+    
+        answer_ = header + this->body_;
+    }
 }
 
 AnswerStatus	RequestAnswer::setAnswer(Request &request)
@@ -524,16 +542,17 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 			status = methodDelete();
 		else if (request_->getMethod() == "POST")
 		{
-			std::cout << "test" << std::endl;
+			std::cout << "[DEBUG] Traitement du POST..." << std::endl;
 			if (this->isCgi() == true)
 				status = methodPost();
 			else if (loc_.getAllowedUpload() == true)
 				status = methodPost();
 			else 
 			{
-				code_ = 405;
-				message_ = "Method Not Allowed";
-				status = ERROR;
+                std::cout << "[DEBUG] POST sans action spécifique. On renvoie 200 OK." << std::endl;
+                code_ = 405;
+                message_ = "Method Not Allowed";
+                status = ERROR;
 			}
 		}
 	}
@@ -686,6 +705,8 @@ void	RequestAnswer::clear()
 {
 	this->code_ = 200;
 	this->error_ = 200;
+	// j'avais oublié de clear le message
+	this->message_.clear();
 	this->request_ = NULL;
 	if (this->cgi_handler_ != NULL)
 	{

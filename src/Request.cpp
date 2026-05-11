@@ -249,49 +249,81 @@ int	Request::initFistLine()
 	return (0);
 }
 
-//initialise la map avec le header
-int	Request::initHeader()
+// initialise la map avec le header
+int Request::initHeader()
 {
-	size_t last = this->request_.find("\r\n\r\n");
-	if (last == std::string::npos)
-		return (1);
-	size_t end = 0;
-	while (end < last)
-	{
-		size_t	begin = this->request_.find("\r\n", end);
-		if (begin == std::string::npos)
-			return (1);
-		if (begin == last)
-			break;
-		begin += 2;
-		end = begin;
-		size_t it = this->request_.find(":", begin);
-		if (it == std::string::npos || it >= last)
-			return (1);
-		std::string key = this->request_.substr(begin, it - begin);
-		if (it +2 >= last || request_[it + 1] != ' ')
-			return (1);
-		begin = it + 2;
-		size_t	end = this->request_.find("\r\n", begin);
-		std::string value = this->request_.substr(begin, end - begin);
-		this->headers_.insert(std::pair<std::string, std::string>(key, value));
-	}
-	if (headers_.find("Host") == headers_.end() 
-		|| (method_ == "POST" && headers_.find("Content-Length") == headers_.end() 
-		/*&& location_.getAllowedUpload() == false*/))
-		return 1;
-	if (headers_.find("Content-Type") == headers_.end())
-		headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
-	return 0;
+    size_t last = this->request_.find("\r\n\r\n");
+    if (last == std::string::npos)
+        return (1);
+
+	// FIX :
+	// il y avait size_t end = 0;
+	// et size_t	end = this->request_.find("\r\n", begin);
+	// pour éviter le shadowing, j'ai remplacé le premier
+	// end par current_pos et le deuxieme par
+	// value_end
+    size_t current_pos = 0;
+    
+    while (current_pos < last)
+    {
+        size_t begin = this->request_.find("\r\n", current_pos);
+        if (begin == std::string::npos)
+            return (1);
+        if (begin == last)
+            break;
+            
+        begin += 2;
+        // end = begin;
+        size_t it = this->request_.find(":", begin);
+        if (it == std::string::npos || it >= last)
+            return (1);
+            
+        std::string key = this->request_.substr(begin, it - begin);
+        
+        if (it + 2 >= last || request_[it + 1] != ' ')
+            return (1);
+            
+        begin = it + 2;
+        
+        size_t value_end = this->request_.find("\r\n", begin);
+        if (value_end == std::string::npos)
+            return (1);
+            
+        std::string value = this->request_.substr(begin, value_end - begin);
+        this->headers_.insert(std::pair<std::string, std::string>(key, value));
+        
+        // l'équivalent du end = begin plus haut, je l'ai déplacé ici 
+        current_pos = value_end; 
+    }
+
+
+   	if (headers_.find("Host") == headers_.end())
+        return (1);
+
+	// ici, j'ai réjouté la gestion de Transfer-Encoding (chunked)
+	// c'est-a-dire la gestion du contenu envoyé par "chunks"
+    if (method_ == "POST" 
+        && headers_.find("Content-Length") == headers_.end() 
+        && headers_.find("Transfer-Encoding") == headers_.end())
+    {
+        return (1);
+    }
+
+    if (headers_.find("Content-Type") == headers_.end())
+        headers_.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
+        
+    return (0);
 }
 
 //verifie que le body exist et initialise le body de la class
+/*
 int	Request::initBody()
 {
 	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
 	if (it == headers_.end())
 	{
 		body_ = "\0";
+		body_.clear();
 		return 0;
 	}
 	std::string value = it->second;
@@ -310,19 +342,132 @@ int	Request::initBody()
 	body_ = request_.substr(begin, len);
 	return 0;
 }
+*/
 
-int	Request::checkOfLocation()
+int Request::initBody()
 {
-	std::cout << "test " << std::endl;
-	const LocationConfig* loc = server_->matchLocation(url_path_);
-	if (loc == NULL)
-		return 1;
-	location_ = *loc;
-	std::set<std::string> allowedMethods = location_.getAllowedMethods();
-	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_)
-			== allowedMethods.end())
-		return (2);
-	return (0);
+    // =================================================================
+    // 1. NOUVEAU : GESTION DU CHUNKED
+    // =================================================================
+    if (headers_.count("Transfer-Encoding") && headers_["Transfer-Encoding"] == "chunked") 
+    {
+        size_t headers_end = request_.find("\r\n\r\n");
+        if (headers_end == std::string::npos) 
+            return 1; // Headers incomplets
+
+        std::string raw_body = request_.substr(headers_end + 4);
+
+        // Est-ce qu'on a reçu la fin absolue de la requête chunked ? ("0\r\n\r\n")
+        if (raw_body.find("0\r\n\r\n") != std::string::npos) 
+        {
+            body_.clear(); // Pour le test "size 0", le body final est vide
+            return 0;      // Succès ! On a tout reçu.
+        }
+        
+        // Si on n'a pas encore reçu le 0 final, on dit au parseur d'attendre la suite
+        return 3; // (PARSING_INCOMPLETE)
+    }
+
+    // =================================================================
+    // 2. GESTION DU CONTENT-LENGTH CLASSIQUE
+    // =================================================================
+    std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
+    
+    // S'il n'y a ni Chunked, ni Content-Length, c'est qu'il n'y a pas de body
+    if (it == headers_.end())
+    {
+		// a la place de body_ = "\0";
+		// ce qui posait probleme
+		// car sinon if (body_.empty()) renvoyait false !
+        body_.clear(); 
+        return 0;
+    }
+
+    std::string value = it->second;
+	// j'ai deplace ce bloc un peu plus bas
+	// size_t begin = request_.find("\r\n\r\n");
+    // if (begin == std::string::npos)
+    //    return 1;
+    size_t  len;
+    std::stringstream ss(value);
+    ss >> len;
+
+    // Si le POST fait explicitement une taille de 0
+    if (len == 0) {
+        body_.clear();
+        return 0; 
+    }
+
+    // Si on attend vraiment un body avec une taille précise
+    size_t begin = request_.find("\r\n\r\n");
+    if (begin == std::string::npos)
+        return 1;
+        
+	//while (request_[begin] == '\r' || request_[begin] == '\n')
+	//	++begin;
+
+    // On saute juste les 4 caractères "\r\n\r\n"
+	// cela posait probleme
+	// sur 0\r\n\r\n
+	// (POST taille 0)
+	// la boucle continuait d'avancer
+    begin += 4; 
+
+    // Vérification de la taille max autorisée (Client Max Body Size)
+    if (len > location_.getClientMaxBodySize())
+        return 2; // Retournera une erreur 413
+
+    // Vérification que tout a bien été reçu par le serveur
+	// si on avait pas exactement le nombre d'octets recus
+	// on envoyait une erreur
+	// cela posait probleme pour les chunked request
+	// (les requetes en plusieurs blocs)
+	// (fragmentation TCP)
+	// if (request_.size() - begin != len)
+    if (request_.size() - begin < len)
+        return 1; // Pas encore tout lu, on attend
+
+    // Extraction du vrai body
+    body_ = request_.substr(begin, len);
+    
+    return 0;
+}
+
+int Request::checkOfLocation()
+{
+    std::cout << "[DEBUG] test 1 - Entrée dans checkOfLocation" << std::endl;
+    
+    // --- LE VERDICT ---
+    if (this->server_ == NULL) {
+        std::cout << "[FATAL] ARRET: Le pointeur server_ est NULL !" << std::endl;
+        return 1; // On sort avant le crash
+    }
+    
+    std::cout << "[DEBUG] test 2 - server_ est OK. url_path_ = [" << url_path_ << "]" << std::endl;
+
+    const LocationConfig* loc = server_->matchLocation(url_path_);
+    
+    std::cout << "[DEBUG] test 3 - matchLocation a survécu !" << std::endl;
+
+    if (loc == NULL) {
+        std::cout << "[DEBUG] loc est NULL, on quitte." << std::endl;
+        return 1;
+    }
+    
+    std::cout << "[DEBUG] test 4 - Tentative de copie de la location..." << std::endl;
+    location_ = *loc;
+    
+    std::cout << "[DEBUG] test 5 - Copie OK. Récupération des méthodes..." << std::endl;
+    std::set<std::string> allowedMethods = location_.getAllowedMethods();
+    
+    std::cout << "[DEBUG] test 6 - Méthodes récupérées. Méthode actuelle = [" << method_ << "]" << std::endl;
+    if (std::find(allowedMethods.begin(), allowedMethods.end(), method_) == allowedMethods.end()) {
+        std::cout << "[DEBUG] test 7 - Méthode non autorisée." << std::endl;
+        return (2);
+    }
+        
+    std::cout << "[DEBUG] test 8 - Fin de checkOfLocation, tout est OK." << std::endl;
+    return (0);
 }
 
 void	Request::setServerConfig(const ServerConfig *server)
@@ -335,7 +480,7 @@ void	Request::setServerConfig(const ServerConfig *server)
 ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
 	std::cout << raw_data << std::endl;
-	this->request_ += raw_data;
+	this->request_ = raw_data;
 
 	if (complete() == false)
 		return (PARSING_INCOMPLETE); //continuer la lecture
@@ -371,23 +516,33 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 	
 	if (initHeader() == 1)
 	{
-		error_ = 400;
-		message_error_ = "Bad Request";
-		return (PARSING_FAILED);
+		std::cout << "[🚨 BUG] Crash 400 provoqué par initHeader() !" << std::endl;
+        error_ = 400;
+        message_error_ = "Bad Request";
+        return (PARSING_FAILED);
 	}
 	int	body =  initBody();
 	if (body == 1)
 	{
+		std::cout << "[🚨 BUG] Crash 400 provoqué par initBody() !" << std::endl;
 		error_ = 400;
         message_error_ = "Bad Request";
 		return (PARSING_FAILED);
 	}
 	else if (body == 2)
 	{
+		std::cout << "[🚨 BUG] Crash 413 provoqué par initBody() !" << std::endl;
 		error_ = 413;
 		message_error_ = "Payload Too Large";
 		return (PARSING_FAILED);
 	}
+	// ajout du parsing incomplete
+	// provenant d'un chunked
+	// avec ca, on attend la suite proprement
+	else if (body == 3) {
+		std::cout << "[DEBUG] Chunked incomplet (pas de '0'). Retour silencieux à epoll." << std::endl;
+        return (PARSING_INCOMPLETE); 
+    }
 	path_ = combineRootUri(location_.getRoot(), url_path_);
 	return (PARSING_SUCCESS);
 
@@ -447,15 +602,21 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 void	Request::clear()
 {
 	this->request_.clear();
-	this->method_.clear();
-	this->path_.clear();
-	this->url_path_.clear();
-	this->version_.clear();
+    this->method_.clear();
+    this->path_.clear();
+    this->url_path_.clear();
+    this->version_.clear();
+    this->body_.clear();
+    this->message_error_.clear();
+    this->raw_uri_.clear();
+    this->query_string_.clear();
 	this->headers_.clear();
-	this->body_.clear();
-	this->error_ = 0;
-	//this->location_ = Location();
-	this->raw_uri_.clear();
-	this->query_string_.clear();
-	this->client_ip_.clear();
+	this->error_ = 0; // Je suppose que 0 veut dire "Pas d'erreur"
+
+    // 4. Réinitialisation des objets complexes
+    // On remplace l'ancienne location par une nouvelle toute neuve (vide)
+    this->location_ = LocationConfig(); 
+
+    // 5. Les variables liées à la connexion (Optionnel mais recommandé)
+    this->server_ = NULL;
 }

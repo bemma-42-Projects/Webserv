@@ -150,7 +150,7 @@ bool validateRoot(std::vector<std::string> args) {
 		std::cout << "C'est pas un dossier" << std::endl;
 		return (false);
 	}
-	std::cout << "Root = good" << std::endl;
+	//std::cout << "Root = good" << std::endl;
 	return (true);
 }
 

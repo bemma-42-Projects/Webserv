@@ -97,7 +97,6 @@ std::string	Error::ErrorPage()
 		"</html>");
 }
 
-
 //cree et retourne une page error http
 std::string	Error::AnswerError(int code, std::string message, std::map<int, std::string> pageError)
 {

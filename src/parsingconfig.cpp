@@ -112,7 +112,7 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 		return (false);
 	if (validateSpecificDirective(name, args, state, srv) == false)
 	{
-		std::cout << "[DEBUG] Echec de validation sur la directive : " << name << std::endl;
+		//std::cout << "[DEBUG] Echec de validation sur la directive : " << name << std::endl;
 		return (false);
 	}
 	return (true);
@@ -124,11 +124,11 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 // etc, je ne check pas pour l'instant les directives et les ;)
 bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
 
-	std::cout << "--> DEBUG PARSING: Nombre de tokens trouves = " << tokens.size() << std::endl;
-    for (size_t i = 0; i < tokens.size(); i++) {
-        std::cout << "[" << tokens[i] << "] ";
-    }
-    std::cout << std::endl;
+	//std::cout << "--> DEBUG PARSING: Nombre de tokens trouves = " << tokens.size() << std::endl;
+    //for (size_t i = 0; i < tokens.size(); i++) {
+    //    std::cout << "[" << tokens[i] << "] ";
+    //}
+    //std::cout << std::endl;
 	State state = OUTSIDE;
 	std::stack<std::string> context;
 	for (size_t i = 0; i < tokens.size() ; i++)
