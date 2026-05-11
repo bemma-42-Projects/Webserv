@@ -470,15 +470,15 @@ int Request::checkOfLocation()
 	// mais ce n'est pas ce qu'on veut ici
     if (loc == NULL || loc->getPath() == "/" ) {
 		// si l'url n'est pas vide et qu'elle ne se termine pas par un /
-		if (!url_path_.empty() && url_path_[url_path.size() -1] != '/')
+		if (!url_path_.empty() && url_path_[url_path_.size() -1] != '/')
 		{
 			// on ajoute le slash manquant à la fin
-			std::string	retry_path = url_path + "/";
+			std::string	retry_path = url_path_ + "/";
 			// et on recherche à nouveau avec cette nouvelle URL
 			const LocationConfig	*retry_loc = server_->matchLocation(retry_path);
 			// si ca passe cette fois
 			// on prend
-			if (loc != NULL || loc->getPath() != "/" )
+			if (retry_loc != NULL && retry_loc->getPath() != "/" )
 				loc = retry_loc;
 		}
     }
@@ -581,7 +581,7 @@ int Request::checkOfLocation()
 	// on retire le / final 
 	// si le remaining était un sub-directory avec un / à la fin
 	// par exemple /home/julien/Webserv/src/www/YoupiBanane/YoupiAnanas
-	if (this->path_.size() > 1 && this->path_[this->path.size() - 1] == '/')
+	if (this->path_.size() > 1 && this->path_[this->path_.size() - 1] == '/')
 		this->path_.erase(this->path_.size() - 1);
 
 	std::cout << "[DEBUG] Location matchée : [" << location_.getPath() << "]" << std::endl;
