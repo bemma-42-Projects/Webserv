@@ -224,7 +224,12 @@ int	Request::initFistLine()
 	if (this->method_ != "GET" && this->method_ != "POST" && this->method_ != "DELETE")
 		return (2); //501 Not Implemented
 
-	
+	// A SUPPRIMER
+	// TEMPORAIRE POUR LE TEST 3
+	// DU tester 42
+	if (this->method_ != "HEAD")
+		return (2);
+
 	begin = this->request_.find("/", it);
 	if (begin == std::string::npos || begin != (it + 1))
 		return (1);
