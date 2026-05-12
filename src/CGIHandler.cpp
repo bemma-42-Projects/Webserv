@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/12 12:14:04 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/12 13:38:51 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,11 @@ int	CGIHandler::getReadFd() const
 	return (this->subprocess_.getReadFd());
 }
 
+int	CGIHandler::getWriteFd() const
+{
+	return (this->subprocess_.getWriteFd());
+}
+
 // il faut gérer le fait que la réponse du CGI peut arriver en chunks !
 // il faut donc un appendOutput
 // qui prendra le chunk et le concaténera au raw output cgi
@@ -70,6 +75,37 @@ std::string CGIHandler::getRawOutput() const
 	return (this->cgi_raw_output_);
 }
 
+size_t	CGIHandler::getBytesSent() const
+{
+	return (this->bytes_sent_);
+}
+
+void CGIHandler::handleWrite()
+{
+    const std::string& body = this->request_.getBody();
+    size_t total_size = body.size();
+    
+    ssize_t bytes = write(this->subprocess_.getWriteFd(), 
+                          body.c_str() + bytes_sent_, 
+                          total_size - bytes_sent_);
+
+    if (bytes > 0)
+    {
+        size_t old_mb = bytes_sent_ / (1024 * 1024);
+        bytes_sent_ += bytes;
+        size_t new_mb = bytes_sent_ / (1024 * 1024);
+
+        // On n'affiche un log que tous les 5 Mo de progression
+        if (new_mb > old_mb && new_mb % 5 == 0)
+        {
+            std::cout << "[CGI PROGRESS] " << new_mb << " / " 
+                      << (total_size / (1024 * 1024)) << " MB envoyés..." << std::endl;
+        }
+    }
+
+    if (bytes_sent_ >= total_size)
+        close(this->subprocess_.getWriteFd());
+}
 
 std::string	CGIHandler::getAbsolutePath_() const
 {
@@ -183,18 +219,17 @@ void    CGIHandler::execute()
     char    **envp = this->getEnvp();
     try {
 		this->subprocess_.createSubprocess(this->request_.getPath(), this->interpreter_, envp);
-		if (this->request_.getMethod() == "POST")
+		
+		this->bytes_sent_ = 0;
+		
+		if (this->request_.getMethod() != "POST" || this->request_.getBody().empty())
 		{
-			std::string body = this->request_.getBody();
-		}
-		if (this->subprocess_.getWriteFd() != -1)
-		{
-			close(this->subprocess_.getWriteFd());
+			if (this->subprocess_.getWriteFd() != -1)
+				close(this->subprocess_.getWriteFd());
 		}
     }
 	catch (const std::exception& e) {
-		std::cerr << "[CGI] ERREUR: " << e.what() << std::endl;
-        this->freeEnvp(envp);
+		this->freeEnvp(envp);
             throw;
     }
     this->freeEnvp(envp);

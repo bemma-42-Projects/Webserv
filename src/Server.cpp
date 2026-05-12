@@ -356,6 +356,10 @@ void    Server::prepareForWriting_(int client_fd, Client &client)
 
 void    Server::setupCgiEpoll_(int client_fd, Client &client)
 {
+    std::cout << "[DIAGNOSTIC] Methode: " << client.getRequest().getMethod() << std::endl;
+    std::cout << "[DIAGNOSTIC] Taille Body: " << client.getRequest().getBody().size() << std::endl;
+    std::cout << "[DIAGNOSTIC] Write FD: " << client.getAnswer().getCGIHandler()->getWriteFd() << std::endl;
+
     client.setState(Client::WAITING_CGI);
 
     int cgi_fd  = client.getAnswer().getCGIHandler()->getReadFd();
@@ -370,9 +374,36 @@ void    Server::setupCgiEpoll_(int client_fd, Client &client)
         client.getAnswer().setMessage("Internal Server Error");
         client.getAnswer().setAnswer(client.getRequest()); 
         this->prepareForWriting_(client_fd, client);
+        return ;
     }
-    else
-        this->cgi_to_client_[cgi_fd] = client_fd;
+    this->cgi_to_client_[cgi_fd] = client_fd;
+
+    if (client.getRequest().getMethod() == "POST" && !client.getRequest().getBody().empty())
+    {
+        int write_fd = client.getAnswer().getCGIHandler()->getWriteFd();
+        
+        if (write_fd == -1)
+            return ;
+
+        if (fcntl(write_fd, F_SETFL, O_NONBLOCK) == -1) {
+            std::cerr << "[ERROR] fcntl O_NONBLOCK failed for write_fd" << std::endl;
+        }
+
+        struct epoll_event ev_out;
+        memset(&ev_out, 0, sizeof(ev_out));
+        ev_out.events = EPOLLOUT; // 🚨 On surveille quand le pipe est prêt à recevoir
+        ev_out.data.fd = write_fd;
+
+        if (epoll_ctl(this->epoll_fd_, EPOLL_CTL_ADD, write_fd, &ev_out) == -1) {
+            client.getAnswer().setCode(500);
+            client.getAnswer().setMessage("Internal Server Error");
+            client.getAnswer().setAnswer(client.getRequest()); 
+            this->prepareForWriting_(client_fd, client);
+            return;
+        }
+        this->cgi_write_to_client_[write_fd] = client_fd; 
+        std::cout << "[DEBUG] Pipe écriture CGI ajouté à epoll (fd: " << write_fd << ")" << std::endl;
+    }
 }
 
 void    Server::processClientRequest_(int client_fd) {
@@ -468,7 +499,29 @@ void    Server::handleClientRead_(int client_fd) {
         client->updateLastActivity();
         const ServerConfig  *config = client->getConfig();
         client->getRequest().setServerConfig(config);
-        processClientRequest_(client_fd);
+
+        // 🚨 LA CORRECTION EST ICI :
+        // On appelle le parseur pour voir où on en est
+        int status = client->getRequest().parsingHttp();
+
+        // Status 0  = Requête terminée (Headers + Body OK)
+        // Status 3  = Body incomplet (on attend la suite)
+        // Status 10 = Chunked incomplet
+        
+        if (status == 0) 
+        {
+            // SEULEMENT ICI on traite la requête et on lance le CGI
+            std::cout << "[INFO] Requête complète reçue (" 
+                    << client->getRequest().getBody().size() << " octets). Traitement..." << std::endl;
+            processClientRequest_(client_fd);
+        }
+        else 
+        {
+            // On ne fait RIEN. On laisse epoll nous rappeler quand 
+            // les prochains octets des 100 Mo arriveront.
+            std::cout << "[DEBUG] Réception du body en cours... (" 
+                    << client->getRequest().getBody().size() << " octets reçus)" << std::endl;
+        }
     }
 }
 // bascule la surveillance epoll d'un client en mode lecture
@@ -567,13 +620,28 @@ void    Server::handleCgiRead_(int cgi_fd)
     this->prepareForWriting_(client_fd, *client);
 }
 
+void Server::handleCgiWrite_(int fd)
+{
+    int client_fd = this->cgi_write_to_client_[fd];
+    Client *client = this->clients_[client_fd];
+    CGIHandler *cgi = client->getAnswer().getCGIHandler();
+
+    cgi->handleWrite();
+
+    if (cgi->getBytesSent() >= client->getRequest().getBody().size())
+    {
+        std::cout << "\033[1;32m[SUCCESS]\033[0m Body envoyé au CGI. "
+                  << "Total : " << cgi->getBytesSent() << " octets." << std::endl;
+        epoll_ctl(this->epoll_fd_, EPOLL_CTL_DEL, fd, NULL);
+        this->cgi_write_to_client_.erase(fd);
+    }
+}
+
 // lance la boucle d'évènements principale du serveur
 void	Server::run() {
     struct epoll_event  events[MAX_EVENTS];
 	int	n_events;
 
-	//std::cout << "Entering the main server loop..." << std::endl;
-    //while (true) {
     while (g_running)
     {
         handleTimeouts_();
@@ -610,6 +678,11 @@ void	Server::run() {
                 }
                 else if (cgi_to_client_.count(fd) > 0)
                     handleCgiRead_(fd);
+                else if (cgi_write_to_client_.count(fd) > 0)
+                {
+                    if (events[i].events & EPOLLOUT)
+                        handleCgiWrite_(fd);
+                }
 		    }
             catch (const std::exception &e)
             {

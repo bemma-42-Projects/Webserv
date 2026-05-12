@@ -46,6 +46,7 @@ class   Server {
         void            setSocketToReadState_(int client_fd);
         void            handleClientWrite_(int client_fd);
         void            handleCgiRead_(int cgi_fd);
+        void            handleCgiWrite_(int fd);
         void            prepareForWriting_(int client_fd, Client &client);
         void            setupCgiEpoll_(int client_fd, Client &client);
         void            cleanCgiData_(int cgi_fd, std::map<int, int>::iterator it);
@@ -56,6 +57,7 @@ class   Server {
         int                             epoll_fd_;
         std::map<int, Client*>          clients_;
         std::map<int, int>              cgi_to_client_;
+        std::map<int, int>              cgi_write_to_client_;
         std::vector<ServerConfig>       configs_;
 
     };
