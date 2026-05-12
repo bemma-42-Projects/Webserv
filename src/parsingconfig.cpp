@@ -185,8 +185,6 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 				else if (context.top() == "location")
 					state = IN_LOCATION;
 			}
-			
-			
 		}
 		else if (isSimpleDirective(tokens[i]) == true)
 		{
@@ -202,7 +200,8 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 				return (false);
 			}
 		}
-		
+		else
+            return (false);
 	}
 	if (state == OUTSIDE && context.empty())
 		return (true);
