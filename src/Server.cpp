@@ -382,13 +382,16 @@ void    Server::processClientRequest_(int client_fd) {
 
     std::cout << "\n========== REQUÊTE BRUTE (FD: " << client_fd << ") ==========\n";
     const std::string& raw = client.getRequestData();
-    for (size_t i = 0; i < raw.length(); ++i) {
+    size_t limit = std::min(raw.length(), (size_t)500); // <-- LA SÉCURITÉ
+    for (size_t i = 0; i < limit; ++i) {
         if (raw[i] == '\r') std::cout << "\\r";
         else if (raw[i] == '\n') std::cout << "\\n\n";
         else std::cout << raw[i];
     }
+    if (raw.length() > 500)
+        std::cout << "\n... [BODY TRONQUÉ POUR L'AFFICHAGE (" << raw.length() << " octets)] ...";
     std::cout << "\n==============================================================\n" << std::endl;
-    
+
     try {
         ParsingStatus   parsing_status = request.parsingHttp(client.getRequestData());
 
@@ -410,6 +413,8 @@ void    Server::processClientRequest_(int client_fd) {
             
             response.setCode(err_code);
             response.setMessage(err_msg);
+
+            response.setCloseConnection(true);
             
             // On bypass setAnswer() classique pour générer directement la page d'erreur
             response.fullAnswer(); // Va générer le HTML de l'erreur avec les bons headers

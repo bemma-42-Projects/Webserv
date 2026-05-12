@@ -16,7 +16,7 @@
 #include <cstring>	// pour strcpy
 
 // constructeur par défaut
-RequestAnswer::RequestAnswer() : code_(200), error_(0), request_(NULL), cgi_handler_(NULL)
+RequestAnswer::RequestAnswer() : code_(200), error_(0), request_(NULL), cgi_handler_(NULL), close_connection_(false)
 {
 	this->answer_ = "";
 	this->content_type_ = "";
@@ -49,6 +49,7 @@ RequestAnswer	&RequestAnswer::operator=(const RequestAnswer &rhs)
 		this->post_file_name_ = rhs.post_file_name_;
 		this->cgi_interpreter_ = rhs.cgi_interpreter_;
 		this->cgi_handler_ = NULL;
+		this->close_connection_ = rhs.close_connection_;
 	}
 	return (*this);
 }
@@ -535,6 +536,11 @@ void    RequestAnswer::fullAnswer()
             this->content_type_ = "text/html";
         }
         
+		if (this->close_connection_ == true)
+			header += "Connection: close\r\n";
+		else
+			header += "Connection: keep-alive\r\n"; 
+
         if (!content_type_.empty())
             header += "Content-Type: " + content_type_ + "\r\n";
             
@@ -631,6 +637,17 @@ void	RequestAnswer::setMessage(const std::string &message)
 void RequestAnswer::setFullAnswer(const std::string& full_response) {
     this->answer_ = full_response;
 }
+
+void	RequestAnswer::setCloseConnection(bool close)
+{
+	this->close_connection_ = close;
+}
+
+bool	RequestAnswer::getCloseConnection() const
+{
+	return (close_connection_);
+}
+
 
 // fonction pour déterminer si c'est un cgi
 // et pour stocker l'interpreter correspondant
