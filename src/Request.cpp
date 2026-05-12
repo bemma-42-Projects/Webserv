@@ -174,11 +174,11 @@ const ServerConfig*	Request::getServer() const
 
 //verifie qu'il y a "\r\n\r\n" cad que la requet soit complete
 //!!! ne pouvoir lire et parser qu'un certain nombre de body en meme temps pour l'espace memoir
-bool	Request::complete()
+int	Request::complete()
 {
 	size_t	end = this->request_.find("\r\n\r\n");
 	if (end == std::string::npos)
-		return false;//requette non complet
+		return 1;//requette non complet
 	// std::cout << "test" <<std::endl;
 	size_t it = this->request_.find("Content-Length:");
 	if (it != std::string::npos)
@@ -194,8 +194,10 @@ bool	Request::complete()
 		// return true;
 	end += 4;
 	if (request_.size() - end < len)
-		return false;
-	return true;
+		return 1;//false
+	else if (request_.size() - end > len)
+		return 2;
+	return 0;//true
 }
 
 
@@ -636,9 +638,15 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 	std::cout << raw_data << std::endl;
 	this->request_ = raw_data;
 
-	if (complete() == false)
+	int comp = complete();
+	if (comp == 1)
 		return (PARSING_INCOMPLETE); //continuer la lecture
-	
+	else if (comp == 2)
+	{
+		error_ = 400;
+		message_error_ = "Bad Request";
+		return (PARSING_FAILED);
+	}
 	int res = initFirstLine();
 
 	if (res == 1)
