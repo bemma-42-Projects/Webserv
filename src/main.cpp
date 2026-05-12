@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     std::signal(SIGINT, handle_sigint);
 
     try {
-		std::cout << "[INFO] Parsing configuration file: " << argv[1] << std::endl;
+		//std::cout << "[INFO] Parsing configuration file: " << argv[1] << std::endl;
 		std::string text = readFile(argv[1]);
 		std::vector<std::string> res = tokenizeConfig(text);
 	
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 			std::cout << "Fatal error: Invalid configuration file." << std::endl;
 			return (1);
 		}
-		std::cout << "Everything's good!" << std::endl;
+		//std::cout << "Everything's good!" << std::endl;
 
 		for (size_t i = 0; i < all_configs.size(); i++) 
 			all_configs[i].finalize();
@@ -45,9 +45,9 @@ int main(int argc, char **argv) {
 	// 	std::cout << all_configs[i] << std::endl << std::endl;
 	// }
 	//std::cout << "testtttt" << std::endl;
-	std::cout << "--> DEBUG MAIN: Taille de all_configs avant Server = " << all_configs.size() << std::endl;
+	//std::cout << "--> DEBUG MAIN: Taille de all_configs avant Server = " << all_configs.size() << std::endl;
 
-	std::cout << "[INFO] Initializing server..." << std::endl;
+	//std::cout << "[INFO] Initializing server..." << std::endl;
 	/*
 	if (all_configs.empty())
 		return (1);

@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/07 12:25:36 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/11 09:18:15 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -145,7 +145,7 @@ char		**CGIHandler::getEnvp()
 	this->addHeadersToEnv(env);
 
 	// --- LOGS DE DEBUG ---
-    std::cout << "\n--- [DEBUG CGI ENV] ---" << std::endl;
+    //std::cout << "\n--- [DEBUG CGI ENV] ---" << std::endl;
     for (size_t i = 0; i < env.size(); ++i) {
         std::cout << "Env[" << i << "]: " << env[i] << std::endl;
     }

@@ -35,6 +35,7 @@ class Request {
 		int									initBody();
 		int									checkOfLocation();
 		void								setServerConfig(const ServerConfig *server);
+		const LocationConfig				*matchExtensionLocation() const;
 		//void								setError(int error);
 
 		//std::string						answer();
@@ -63,7 +64,7 @@ class Request {
 		std::string							raw_uri_;
 		std::string							query_string_;
 		std::string							client_ip_;
-		const ServerConfig*						server_;
+		const ServerConfig*					server_;
 
 };
 

@@ -112,7 +112,7 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 		return (false);
 	if (validateSpecificDirective(name, args, state, srv) == false)
 	{
-		std::cout << "[DEBUG] Echec de validation sur la directive : " << name << std::endl;
+		//std::cout << "[DEBUG] Echec de validation sur la directive : " << name << std::endl;
 		return (false);
 	}
 	return (true);
@@ -202,7 +202,8 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 				return (false);
 			}
 		}
-		
+		else
+			return false;
 	}
 	if (state == OUTSIDE && context.empty())
 		return (true);
