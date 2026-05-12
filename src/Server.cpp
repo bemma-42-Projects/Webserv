@@ -503,7 +503,7 @@ void    Server::handleClientWrite_(int client_fd) {
 
     ssize_t         bytes_sent = send(client_fd, buffer.c_str(), buffer.length(), MSG_NOSIGNAL);
 
-    if (bytes_sent < 0)
+    if (bytes_sent == -1)
         return (handleClientDisconnect_(client_fd));
     else if (bytes_sent == 0)
         return (handleClientDisconnect_(client_fd));
@@ -602,7 +602,7 @@ void	Server::run() {
                         if (client->getState() == Client::READING_REQUEST)
 				            handleClientRead_(fd);
                     }
-			        else if (events[i].events & EPOLLOUT)
+			        if (events[i].events & EPOLLOUT)
                     {
                         if (client->getState() == Client::WRITING_RESPONSE)
     				        handleClientWrite_(fd);

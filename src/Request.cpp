@@ -465,6 +465,12 @@ int Request::checkOfLocation()
     }
 
     const LocationConfig* loc = server_->matchLocation(url_path_);
+	/*if (loc->getReturn().first == 301 || loc->getReturn().first == 302)
+	{
+		return_ = loc->getReturn();
+		return (3);
+	}
+	*/
 
     if (loc == NULL || loc->getPath() == "/" ) {
 		if (!url_path_.empty() && url_path_[url_path_.size() -1] != '/')
@@ -491,7 +497,16 @@ int Request::checkOfLocation()
         return (2);
     }
 
-	std::string	root = location_.getRoot();
+	std::string root = location_.getRoot();
+	if (method_ == "POST" && location_.getAllowedUpload() == true)
+	{
+		if (!location_.getUploadPath().empty())
+			root = location_.getUploadPath();
+		else
+			return 1;
+	}
+	//else
+	//	root = location_.getRoot();
 	std::string	loc_p = location_.getPath();
 	std::string url = url_path_;
 	std::string	clean_loc = loc_p;
@@ -565,7 +580,11 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 		message_error_ = "Method Not Allowed";
 		return (PARSING_FAILED);
 	}
-	
+	else if (checkLoc == 3)
+	{
+		//return (REDIRECT);
+		return (PARSING_SUCCESS);
+	}
 	if (initHeader() == 1)
 	{
         error_ = 400;
