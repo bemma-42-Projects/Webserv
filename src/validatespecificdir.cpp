@@ -154,18 +154,6 @@ void validateClientMaxBodySize(std::vector<std::string> args) {
 	if (!isdigit(args[0][i]) && i < args[0].size())
 		throw std::runtime_error("client_max_body_size: must be a digit");
 
-	// if (i < args[0].size())
-	// 	throw std::runtime_error("client_max_body_size: '" + s + "' must start with a number");
-	// 	// return (false);
-
-	// if (i < s.size()) {
-	// 	if (i != s.size() - 1)
-	// 		throw std::runtime_error("client_max_body_size: invalid format '" + s + "'");
-
-	// 	char unit = toupper(s[i]);
-	// 	if (unit != 'K' && unit != 'M' && unit != 'G')
-	// 		throw std::runtime_error("client_max_body_size: unknown unit '" + std::string(1, s[i]) + "' (use K, M, or G)");
-	// }
 	long long val = std::atoll(args[0].c_str());
 	if (val < 0)
 		throw std::runtime_error("client_max_body_size: value must be positive");
@@ -427,34 +415,32 @@ void validateCgi(std::vector<std::string> args, ServerConfig& srv, State state) 
 		throw std::runtime_error("cgi: directive not allowed in this context");
 }
 
-bool validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv) {
+void validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv) {
 	
-	try {
 		if (name == "listen") {
 			validateListen(args, state, srv);
-			return (true);
 		}
-
 		else if (name == "root") {
 			validateRoot(args);
 
 			if (state == IN_SERVER) {
+				if (!srv.getRoot().empty())
+					throw std::runtime_error("root '" + srv.getRoot() + "': directive is duplicate");
 				srv.setRoot(args[0]);
-				return (true);
 			}
+
 			else if (state == IN_LOCATION) {
-				if (srv.getLocations().empty()) {
-					return (false);
-				}
+				if (srv.getLocations().empty())
+					throw std::runtime_error(name + ": location context missing");
+				if (!srv.getLastLocation().getRoot().empty())
+					throw std::runtime_error("root: duplicate directive in location");
 				srv.getLastLocation().setRoot(args[0]);
-				return (true);
 			}
 		}
 
 		else if (name == "server_name") {
 			validateServerName(args);
 			srv.setServerName(args);
-			return (true);
 		}
 
 		else if (name == "client_max_body_size") {
@@ -463,15 +449,12 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 			size_t size = strtol(args[0].c_str(), &end, 10);
 			if (state == IN_SERVER) {
 				srv.setClientMaxBodySize(size);
-				return (true);
 			}
 			else if (state == IN_LOCATION) {
 				if (srv.getLocations().empty())
-					return (false);
+					throw std::runtime_error(name + ": location context missing");
 				srv.getLastLocation().setClientMaxBodySize(size);
-				return (true);
 			}
-			return (false);
 		}
 
 		else if (name == "error_page") {
@@ -481,23 +464,21 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 				int code = std::atoi(args[i].c_str());
 				if (state == IN_SERVER) 
 					srv.addErrorPage(code, path);
-				else if (state == IN_LOCATION && !srv.getLocations().empty())
+				else if (state == IN_LOCATION ) {
+					if (srv.getLocations().empty())
+						throw std::runtime_error(name + ": location context missing");
 					srv.getLastLocation().addErrorPage(code, path);
-				else
-					return (false);
+				}
 			}
-			return (true);
 		}
 
 		else if (name == "index") {
 			validateIndex(args);
 			if (state == IN_SERVER) {
 				srv.setIndex(args);
-				return (true);
 			}
 			else if (state == IN_LOCATION && !srv.getLocations().empty()) {
 				srv.getLastLocation().setIndex(args);
-				return (true);
 			}
 		}
 
@@ -520,42 +501,34 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 			}
 			if (state == IN_SERVER) {
 				srv.setReturn(code, url);
-				return (true);
 			}
-			else if (state == IN_LOCATION && !srv.getLocations().empty()) {
+			else if (state == IN_LOCATION) {
+				if (srv.getLocations().empty())
+					throw std::runtime_error(name + ": location context missing");
 				srv.getLastLocation().setReturn(code, url);
-				return (true);
 			}
 		}
 
 		else if (name == "autoindex") {
 			validateAutoIndex(args,state, srv);
-			return (true); 
 		}
 
 		else if (name == "allowed_methods") {
 			validateAllowedMethods(args, srv, state);
-			return (true);
 		}
 
 		else if (name == "allowed_upload") {
 			validateAllowedUpload(args, srv, state);
-			return (true);
 		}
 
 		else if (name == "upload_path") {
 			validateUploadPath(args, srv, state);
-			return (true);
 		}
 
-		else if (name == "cgi") {
+		else if (name == "cgi_handler") {
 			validateCgi(args, srv, state);
-			return (true);
 		}
-	}
-	catch (const std::exception& e) {
-		std::cerr << "Configuration Error: " << e.what() << std::endl;
-		return (false);
-	}
-	return (false);
+		else 
+			throw std::runtime_error("unknown directive '" + name + "'");
+
 }

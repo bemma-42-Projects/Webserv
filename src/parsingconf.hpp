@@ -36,7 +36,7 @@ void	validateIndex(std::vector<std::string> args);
 void	validateAutoIndex(std::vector<std::string> args, State state, ServerConfig& srv);
 void	validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, State state);
 void	validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, State state);
-bool	validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv);
+void	validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv);
 std::string combineRootUri(std::string root, std::string uri);
 
 

@@ -88,58 +88,55 @@ bool directiveIsAllowed(std::string name, State state) {
 
 //validation globale des directive on va juste check si les attentes communes a 
 //toutes les directives sont respecter 
-bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State state, ServerConfig& srv) {
+void validateOneDirective(std::vector<std::string> tokens, size_t& i, State state, ServerConfig& srv) {
 	std::vector<std::string> args;
 	std::string name = tokens[i];
 
 	if (directiveIsAllowed(name, state) == false)
 	{
-		std::cout << "Pas dans le bon bloc..." << std::endl; 
-		return (false);
+		throw std::runtime_error("directive '" + name + "' is not allowed in this context");
+		// std::cout << "Pas dans le bon bloc..." << std::endl; 
+		// return (false);
 	}
 	i++;
 	for ( ;i < tokens.size() && tokens[i] != ";" ;i++)
 	{
 		if (tokens[i] == "}" || tokens[i] == "{")
-			return (false);
+			throw std::runtime_error("directive '" + name + "': unexpected '" + tokens[i] + "' found before ';'");
+
 		if (isSimpleDirective(tokens[i]) == true)
-			return (false);
+			throw std::runtime_error("directive '" + name + "': missing ';' before '" + tokens[i] + "'");
+
 		args.push_back(tokens[i]);
 	}
-	if (args.size() == 0)
-		return (false);
+	if (args.empty())
+		throw std::runtime_error("directive '" + name + "' requires at least one argument");
+
 	if (i >= tokens.size() || tokens[i] != ";")
-		return (false);
-	if (validateSpecificDirective(name, args, state, srv) == false)
-	{
-		std::cout << "[DEBUG] Echec de validation sur la directive : " << name << std::endl;
-		return (false);
-	}
-	return (true);
+		throw std::runtime_error("directive '" + name + "': missing termination ';' at end of line");
+
+	validateSpecificDirective(name, args, state, srv);
+
 }
 
 
 // fonction qui valide la structure du fichier de config (pour l'instant elle check si le 
 // nb d'accolade est bon, si les blocs sont bien fait qu'il n'y a pas de location dans location
 // etc, je ne check pas pour l'instant les directives et les ;)
-bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
+void validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
 
-	std::cout << "--> DEBUG PARSING: Nombre de tokens trouves = " << tokens.size() << std::endl;
-    for (size_t i = 0; i < tokens.size(); i++) {
-        std::cout << "[" << tokens[i] << "] ";
-    }
-    std::cout << std::endl;
 	State state = OUTSIDE;
 	std::stack<std::string> context;
+
 	for (size_t i = 0; i < tokens.size() ; i++)
 	{
 		
 		if (tokens[i] == "server")
 		{
 			if (state != OUTSIDE)
-				return (false);
+				throw std::runtime_error("structure: 'server' block cannot be nested inside another block");
 			else if (i + 1 >= tokens.size() || tokens[i + 1] != "{")
-				return (false);
+				throw std::runtime_error("structure: expected '{' after 'server'");
 			ServerConfig server;
 			all_servers.push_back(server);
 			context.push("server");
@@ -149,14 +146,14 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 		else if (tokens[i] == "location")
 		{
 			if (state != IN_SERVER)
-			{
-				// std::cout << "c'est pas bon ici " << state << std::endl;
-				return (false);
-			}
+				throw std::runtime_error("structure: 'location' must be inside a 'server' block");
+
 			if (i + 1 >= tokens.size() || tokens[i + 1].find_first_of("{}") != std::string::npos)
-				return (false);
+				throw std::runtime_error("structure: 'location' requires a valid path before '{'");
+
 			if (i + 2 >= tokens.size() || tokens[i + 2] != "{")
-				return (false);
+				throw std::runtime_error("structure: expected '{' after location path");
+
 			LocationConfig location;
 			location.setPath(tokens[i + 1]);
 			all_servers.back().addLocation(location);
@@ -165,17 +162,11 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 			i += 2;
 		}
 		else if (tokens[i] == "{")
-		{
-			// std::cout << "c'est pas bon ici" << std::endl;
-			return (false);
-		}
-		else if (tokens[i] == "}")
-		{
+			throw std::runtime_error("structure: unexpected '{' (check your block opening syntax)");
+		else if (tokens[i] == "}") {
 			if (context.empty())
-			{
-				// std::cout << "c'est pas bon ici" << std::endl;
-				return (false);
-			}
+				throw std::runtime_error("structure: unexpected closing brace '}' (no block open)");
+
 			context.pop();
 			if (context.empty())
 				state = OUTSIDE;
@@ -185,29 +176,21 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 				else if (context.top() == "location")
 					state = IN_LOCATION;
 			}
-			
-			
-		}
-		else if (isSimpleDirective(tokens[i]) == true)
-		{
-			if (all_servers.empty()) {
-				std::cout << "directive hors bloc server" << std::endl;
-				return (false);
-			}
 
-			// std::cout << "         Je suis sur une directive!" << std::endl;
-			if (validateOneDirective(tokens, i, state, all_servers.back()) == false)
-			{
-				// std::cout << "c'est pas bon ici" << std::endl;
-				return (false);
-			}
 		}
-		
+		else if (isSimpleDirective(tokens[i]) == true) {
+			if (all_servers.empty())
+				throw std::runtime_error("structure: directive '" + tokens[i] + "' found outside of any 'server' block");
+
+			validateOneDirective(tokens, i, state, all_servers.back());
+		}
+		else
+			throw std::runtime_error("structure: unknown token '" + tokens[i] + "'");
+
 	}
-	if (state == OUTSIDE && context.empty())
-		return (true);
-	std::cout << "c'est pas bon ici" << std::endl;
-	return (false);
+	if (state != OUTSIDE && !context.empty())
+		throw std::runtime_error("structure: reached end of file with unclosed '" + context.top() + "' block");
+
 }
 
 
