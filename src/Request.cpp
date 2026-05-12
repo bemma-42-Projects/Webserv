@@ -532,7 +532,6 @@ void	Request::setServerConfig(const ServerConfig *server)
 // pas le dernier morceau de requete
 ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
-	std::cout << raw_data << std::endl;
 	this->request_ = raw_data;
 
 	if (complete() == false)

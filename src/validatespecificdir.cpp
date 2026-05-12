@@ -124,33 +124,27 @@ std::string combineRootUri(std::string root, std::string uri) {
 bool validateRoot(std::vector<std::string> args) {
 	if (args.size() != 1)
 	{
-		std::cout << "pas bon nb d'argument" << std::endl;
 		return (false);
 	}
 	if (args[0].empty())
 		return (false);
 	if (access(args[0].c_str(), F_OK) == -1)
 	{
-		std::cout << "le dossier n'existe pas" << std::endl;
 		return (false);
 	}
 	if (access(args[0].c_str(), R_OK | X_OK) == -1)
 	{
-		std::cout << "je n'arrive pas a lire " << std::endl;
 		return (false);
 	}
 	struct stat sb;
 	if (stat(args[0].c_str(), &sb) == -1)
 	{
-		std::cout << "stat pas bon" << std::endl;
 		return (false);
 	}
 	if (!S_ISDIR(sb.st_mode))
 	{
-		std::cout << "C'est pas un dossier" << std::endl;
 		return (false);
 	}
-	//std::cout << "Root = good" << std::endl;
 	return (true);
 }
 

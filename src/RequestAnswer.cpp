@@ -257,7 +257,6 @@ AnswerStatus	RequestAnswer::methodGet()
 
 	if (stat(request_->getPath().c_str(), &info) != 0)
 	{
-		std::cerr << "error 404" << std::endl;
 		//this->error_ = 404;
 		this->code_ = 404;
 		this->message_ = "Not Found";

@@ -501,18 +501,6 @@ void    Server::handleClientWrite_(int client_fd) {
         return ;
     }
 
-    // =====================================================================
-    // 📡 RADAR : Affiche les headers de la réponse juste avant de l'envoyer
-    // =====================================================================
-    if (buffer.find("HTTP/1.1") == 0) { // Si le buffer commence par HTTP/1.1, c'est le début de la réponse !
-        std::cout << "\n[DEBUG ENVOI] -> Ce que le serveur répond au testeur :\n";
-        std::cout << "--------------------------------------\n";
-        // On affiche les 300 premiers caractères (pour voir les headers)
-        std::cout << buffer.substr(0, 300); 
-        std::cout << "\n--------------------------------------\n" << std::endl;
-    }
-    // =====================================================================
-
     ssize_t         bytes_sent = send(client_fd, buffer.c_str(), buffer.length(), MSG_NOSIGNAL);
 
     if (bytes_sent < 0)
@@ -530,7 +518,6 @@ void    Server::handleClientWrite_(int client_fd) {
         client->getAnswer().clear();
         client->setState(Client::READING_REQUEST);
         setSocketToReadState_(client_fd);
-        std::cout << "[DEBUG] Envoi terminé sur FD " << client_fd << ". Client réinitialisé (Keep-Alive)." << std::endl;
     }
 }
 

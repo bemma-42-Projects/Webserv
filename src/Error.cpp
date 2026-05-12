@@ -107,9 +107,6 @@ std::string	Error::AnswerError(int code, std::string message, std::map<int, std:
 		message_ = "ERROR";
 	//loc_ = loc;
 	page_error_ = pageError;
-	if (pageError.empty())
-		std::cout << "le probleme est la" << std::endl;
-	//(void)loc_;
 	std::string error_page = ErrorPage();
 	std::string header = "HTTP/1.1 " + Itoa(code_);
 	header += " " + message_ + "\r\n";

@@ -11,7 +11,6 @@ bool g_running = true;
 
 void    handle_sigint(int sig) {
     (void)sig;
-    std::cout << "\nSIGINT received. Shutting down server gracefully..." << std::endl;
     g_running = false;
 }
 

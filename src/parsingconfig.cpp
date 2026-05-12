@@ -94,7 +94,6 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 
 	if (directiveIsAllowed(name, state) == false)
 	{
-		std::cout << "Pas dans le bon bloc..." << std::endl; 
 		return (false);
 	}
 	i++;
@@ -189,7 +188,6 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 		else if (isSimpleDirective(tokens[i]) == true)
 		{
 			if (all_servers.empty()) {
-				std::cout << "directive hors bloc server" << std::endl;
 				return (false);
 			}
 
@@ -205,7 +203,6 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 	}
 	if (state == OUTSIDE && context.empty())
 		return (true);
-	std::cout << "c'est pas bon ici" << std::endl;
 	return (false);
 }
 

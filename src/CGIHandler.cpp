@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/11 09:18:15 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/12 12:14:04 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,20 +73,7 @@ std::string CGIHandler::getRawOutput() const
 
 std::string	CGIHandler::getAbsolutePath_() const
 {
-	char	cwd[1024];
-	std::string	relativePath = this->request_.getPath();
-
-	if (getcwd(cwd, sizeof(cwd)) == NULL)
-		return (relativePath);
-
-	std::string	currentDir(cwd);
-
-	if (relativePath.size() >= 2 && relativePath[0] == '.' && relativePath[1] == '/')
-		relativePath = relativePath.substr(1);
-
-	if (!relativePath.empty() && relativePath[0] == '/')
-		return (currentDir + relativePath);
-	return (currentDir + "/" + relativePath);
+	return (this->request_.getPath());
 }
 
 void	CGIHandler::setupStandardEnv_(std::vector<std::string> &env) const
@@ -94,7 +81,7 @@ void	CGIHandler::setupStandardEnv_(std::vector<std::string> &env) const
 	std::stringstream	ss_len;
 	std::stringstream	ss_port;
 
-	ss_len << this->request_.getContentLength();
+	ss_len << this->request_.getBody().size();
 	ss_port << this->request_.getPort();
 
 	const LocationConfig	&loc = this->request_.getLocation();
@@ -105,8 +92,13 @@ void	CGIHandler::setupStandardEnv_(std::vector<std::string> &env) const
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
 	env.push_back("REQUEST_METHOD=" + this->request_.getMethod());
 	env.push_back("REQUEST_URI=" + this->request_.getRequestUri());
+	
+
 	env.push_back("SCRIPT_FILENAME=" + this->request_.getPath());
 	env.push_back("PATH_TRANSLATED=" + this->request_.getPath());
+	
+	env.push_back("PATH_INFO=" + this->request_.getUrlPath());
+	
 	env.push_back("DOCUMENT_ROOT=" + document_root);
 	env.push_back("SCRIPT_NAME=" + this->request_.getUrlPath());
     env.push_back("QUERY_STRING=" + this->request_.getQueryString());
@@ -143,14 +135,6 @@ char		**CGIHandler::getEnvp()
 
 	this->setupStandardEnv_(env);
 	this->addHeadersToEnv(env);
-
-	// --- LOGS DE DEBUG ---
-    //std::cout << "\n--- [DEBUG CGI ENV] ---" << std::endl;
-    for (size_t i = 0; i < env.size(); ++i) {
-        std::cout << "Env[" << i << "]: " << env[i] << std::endl;
-    }
-    std::cout << "-----------------------\n" << std::endl;
-    // ---------------------
 
 	return (this->vectorToCharArray_(env));
 }
@@ -202,17 +186,9 @@ void    CGIHandler::execute()
 		if (this->request_.getMethod() == "POST")
 		{
 			std::string body = this->request_.getBody();
-			std::cout << "[CGI] Envoi du body au pipe (Taille: " << body.size() << " octets)" << std::endl;
-
-			if (!body.empty())
-			{
-				ssize_t	bytesWritten = write(this->subprocess_.getWriteFd(), body.c_str(), body.size());
-				std::cout << "[CGI] Octets reellement ecrits: " << bytesWritten << std::endl;
-			}
 		}
 		if (this->subprocess_.getWriteFd() != -1)
 		{
-			std::cout << "[CGI] Fermeture du WriteFd (Envoi EOF)" << std::endl;
 			close(this->subprocess_.getWriteFd());
 		}
     }
