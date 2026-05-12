@@ -181,13 +181,17 @@ bool	Request::complete()
 		return false;//requette non complet
 	// std::cout << "test" <<std::endl;
 	size_t it = this->request_.find("Content-Length:");
-	if (it == std::string::npos)
-		return true;
-	it += 15;
-	std::string	tmp = this->request_.substr(it, end);
-	size_t	len;
-	std::stringstream ss(tmp);
-    ss >> len;
+	if (it != std::string::npos)
+	{
+		it += 15;
+		std::string	tmp = this->request_.substr(it, end);
+		size_t	len;
+		std::stringstream ss(tmp);
+		ss >> len;
+
+	}
+	size_t	len = 0;
+		// return true;
 	end += 4;
 	if (request_.size() - end < len)
 		return false;
@@ -209,7 +213,7 @@ void	Request::splitUri_()
 }
 
 //parse la premier ligne et implemente la class (methode chemin version)
-int	Request::initFistLine()
+int	Request::initFirstLine()
 {
 	size_t	begin = 0;
 	size_t last = this->request_.find("\r\n");
@@ -334,13 +338,13 @@ void	Request::setServerConfig(const ServerConfig *server)
 // pas le dernier morceau de requete
 ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
-	std::cout << raw_data << std::endl;
+	std::cout << "request === -------------------------\n" << raw_data << std::endl;
 	this->request_ += raw_data;
 
 	if (complete() == false)
 		return (PARSING_INCOMPLETE); //continuer la lecture
 	
-	int res = initFistLine();
+	int res = initFirstLine();
 
 	if (res == 1)
 	{

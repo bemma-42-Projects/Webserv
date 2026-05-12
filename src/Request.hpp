@@ -30,7 +30,7 @@ class Request {
 		//int								requestHttp();							
 		ParsingStatus						parsingHttp(const std::string &raw_data);
 		bool								complete();
-		int									initFistLine();
+		int									initFirstLine();
 		int									initHeader();
 		int									initBody();
 		int									checkOfLocation();
