@@ -97,6 +97,13 @@ void validateListen(std::vector<std::string> args, State state, ServerConfig& sr
 	if (state != IN_SERVER)
 		throw std::runtime_error("directive 'listen' is only allowed in server block");
 	validateOneArg(args[0], srv);
+	if (!srv.getListen().empty()) {
+		for (size_t i = 0; i < srv.getListen().size() - 1; i++)
+		{
+			if (srv.getListen()[i].ip == srv.getListen().back().ip && srv.getListen()[i].port == srv.getListen().back().port)
+				throw std::runtime_error("listen: duplicate directive");
+		}
+	}
 }
 
 std::string combineRootUri(std::string root, std::string uri) {
