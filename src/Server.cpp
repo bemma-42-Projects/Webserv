@@ -380,18 +380,6 @@ void    Server::processClientRequest_(int client_fd) {
     Request         &request = client.getRequest();
     RequestAnswer   &response = client.getAnswer();
 
-    std::cout << "\n========== REQUÊTE BRUTE (FD: " << client_fd << ") ==========\n";
-    const std::string& raw = client.getRequestData();
-    size_t limit = std::min(raw.length(), (size_t)500); // <-- LA SÉCURITÉ
-    for (size_t i = 0; i < limit; ++i) {
-        if (raw[i] == '\r') std::cout << "\\r";
-        else if (raw[i] == '\n') std::cout << "\\n\n";
-        else std::cout << raw[i];
-    }
-    if (raw.length() > 500)
-        std::cout << "\n... [BODY TRONQUÉ POUR L'AFFICHAGE (" << raw.length() << " octets)] ...";
-    std::cout << "\n==============================================================\n" << std::endl;
-
     try {
         ParsingStatus   parsing_status = request.parsingHttp(client.getRequestData());
 
@@ -455,8 +443,6 @@ void    Server::handleClientRead_(int client_fd) {
 
     Client  *client = clients_[client_fd];
 
-    std::cout << "\n[RESEAU] --- Epoll signale des données à lire sur le FD " << client_fd << " ---" << std::endl;
-
     while (true)
     {
         memset(buffer, 0, sizeof(buffer));
@@ -464,13 +450,11 @@ void    Server::handleClientRead_(int client_fd) {
         
         if (bytes_received > 0)
         {
-            std::cout << "[RESEAU] " << bytes_received << " octets lus depuis recv()." << std::endl;
             std::string chunk(buffer, bytes_received);
             client->appendRequestData(chunk);
             data_read = true;
         }
         else if (bytes_received == 0) {
-            std::cout << "[RESEAU] recv() a renvoyé 0 : Le client a fermé la connexion proprement." << std::endl;
             return(handleClientDisconnect_(client_fd));
         }
         else {
@@ -481,7 +465,6 @@ void    Server::handleClientRead_(int client_fd) {
     
     if (data_read)
     {
-        std::cout << "[RESEAU] Lecture terminée. Envoi au parseur..." << std::endl;
         client->updateLastActivity();
         const ServerConfig  *config = client->getConfig();
         client->getRequest().setServerConfig(config);

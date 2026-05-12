@@ -440,15 +440,10 @@ const	LocationConfig	*Request::matchExtensionLocation() const
         return (NULL);
 
 	const std::vector<LocationConfig> &all_locs = server_->getLocations();
-    
-    std::cout << "[DEBUG CGI] URL demandée : [" << url_path_ << "]" << std::endl;
-    std::cout << "[DEBUG CGI] Nombre total de locations dans ce server : " << all_locs.size() << std::endl;
 
     for (size_t i = 0; i < all_locs.size(); ++i)
     {
         std::string loc_name = all_locs[i].getPath();
-
-        std::cout << "[DEBUG CGI] Analyse de la location : [" << loc_name << "]" << std::endl;
 
         if (loc_name.size() > 1 && loc_name[0] == '.')
         {
@@ -464,159 +459,67 @@ const	LocationConfig	*Request::matchExtensionLocation() const
 
 int Request::checkOfLocation()
 {
-    std::cout << "[DEBUG] test 1 - Entrée dans checkOfLocation" << std::endl;
     
     if (this->server_ == NULL) {
-        std::cout << "[FATAL] ARRET: Le pointeur server_ est NULL !" << std::endl;
-        return 1; // On sort avant le crash
+        return 1;
     }
-    
-    std::cout << "[DEBUG] test 2 - server_ est OK. url_path_ = [" << url_path_ << "]" << std::endl;
 
     const LocationConfig* loc = server_->matchLocation(url_path_);
-    
-    std::cout << "[DEBUG] test 3 - matchLocation a survécu !" << std::endl;
 
-	// ATTENTION
-	// si on a en location /directory/ dans le .conf
-	// et que la requete est GET /directory
-	// il faut quand meme l'accepter
-	// on est permissif sur ca, sinon, avec une url se terminant par /directory
-	// et non /directory/
-	// ca passerait pas
-
-	// si on a pas trouvé
-	// c'est peut-etre qu'on a cherché /directory
-	// alors que le root dans le .conf était /directory/
-	// dans ce cas, on utilise la location /
-	// mais ce n'est pas ce qu'on veut ici
     if (loc == NULL || loc->getPath() == "/" ) {
-		// si l'url n'est pas vide et qu'elle ne se termine pas par un /
 		if (!url_path_.empty() && url_path_[url_path_.size() -1] != '/')
 		{
-			// on ajoute le slash manquant à la fin
 			std::string	retry_path = url_path_ + "/";
-			// et on recherche à nouveau avec cette nouvelle URL
 			const LocationConfig	*retry_loc = server_->matchLocation(retry_path);
-			// si ca passe cette fois
-			// on prend
 			if (retry_loc != NULL && retry_loc->getPath() != "/" )
 				loc = retry_loc;
 		}
     }
 
-	// si loc est toujours NULL
-	// on retourne 1 (pas trouvé)
 	if (loc == NULL)
 		return (1);
 
-	// recherche d'extension CGI dans la location
-	// .bla par exemple
 	const	LocationConfig	*ext_loc = matchExtensionLocation();
 	if (ext_loc != NULL)
 		loc = ext_loc;
 
-    std::cout << "[DEBUG] test 4 - Tentative de copie de la location..." << std::endl;
     location_ = *loc;
     
-    std::cout << "[DEBUG] test 5 - Copie OK. Récupération des méthodes..." << std::endl;
     std::set<std::string> allowedMethods = location_.getAllowedMethods();
     
-    std::cout << "[DEBUG] test 6 - Méthodes récupérées. Méthode actuelle = [" << method_ << "]" << std::endl;
-    
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_) == allowedMethods.end()) {
-        std::cout << "[DEBUG] test 7 - Méthode non autorisée." << std::endl;
         return (2);
     }
-    
-	// FIX erreur 404
-	// causé par une duplication du nom de la location
-	// si la location est /directory/
-	// et que le root est home/julien/Webserv/www/src/YoupiBanane
-	// une requete vers /directory/youpi.bla doit aller chercher dans /YoupiBanane/youpi.bla
-	// et non pas dans /YoupiBanane/directory/youpi.bla
-	// ce qui etait le cas avant
 
-	// 1 : on nettoie les / de fin pour pouvoir comparer l'URL et la location proprement
-	// 2 : on soustrait le nom de la location de l'url pour isoler le fichier demandé
-	// 3 : on concatène le root avec ce fichier
-	// 4 : on nettoie le chemin absolu final (on retire le / final) pour que stat() fonctionne bien
-
-	// la directive root
-	std::string	root = location_.getRoot();		// /home/julien/Webserv/src/www/YoupiBanane
-	
-	// le path (de la location)
-	std::string	loc_p = location_.getPath();	// /directory/ ou /directory
-
-	// l'url (de la requete du client)
-	std::string url = url_path_;				// /directory/youpi.bla ou /directory ou /directory/
-
+	std::string	root = location_.getRoot();
+	std::string	loc_p = location_.getPath();
+	std::string url = url_path_;
 	std::string	clean_loc = loc_p;
-	// pour loc_p (/directory/ ou /directory)
-	// si on a un / à la fin
-	// on le supprime
-	// /directory/ devient /directory
+
 	if (clean_loc.size() > 1 && clean_loc[clean_loc.size() - 1] == '/')
 		clean_loc.erase(clean_loc.size() - 1);
 
 	std::string	clean_url = url;
-	// pour url (/directory/youpi.bla ou /directory ou /directory/)
-	// si on a un / à la fin
-	// on le supprime
-	// /directory/ devient /directory
 	if (clean_url.size() > 1 && clean_url[clean_url.size() - 1] == '/')
 		clean_url.erase(clean_url.size() - 1);
 
-	// check si match entre clean_url et clean_loc
-	// entre l'url demandée est dans la location
-	// on cherche si on trouve clean_loc DANS clean_url
-	// plus précisément, si clean_url COMMENCE par clean_loc
-
-	// puis extraction du remaining de l'url
-	// par exemple, si le client a demandé
-	// /directory/youpi.bla 
-	// cela va extraire youpi.bla
 	std::string	remaining = "";
 
-	// si on matche
 	if (clean_url.find(clean_loc) == 0)
 	{
-		// si l'url est plus longue que la location
-		// il faut alors extraire (youpi.bla par exemple)
 		if (url.size() > clean_loc.size())
 		{
-			// on découpe à partir d'après le dernier caractère de /directory de l'url
 			remaining = url.substr(clean_loc.size());
-			// on a extrait /youpi.bla
-			// on supprime le premier / pour éviter d'avoir un double / plus tard
-			// (après la concaténation)
 			if (remaining.size() > 0 && remaining[0] == '/')
 				remaining = remaining.substr(1);
 		}
 	}
-
-	// on peut enfin concaténer 
-	// pour obtenir au final /home/julien/Webserv/src/www/YoupiBanane/youpi.bla
-	// on ne sait pas si le root est /home/julien/Webserv/src/www/YoupiBanane
-	// ou /home/julien/Webserv/src/www/YoupiBanane/
-	// si on a un / à la fin, on concatène
-	// sinon, on ajouter un / au milieu
 	if (!root.empty() && root[root.size() - 1] == '/')
 		this->path_ = root + remaining;
 	else
 		this->path_ = root + '/' + remaining;
-	
-	// on retire le / final 
-	// si le remaining était un sub-directory avec un / à la fin
-	// par exemple /home/julien/Webserv/src/www/YoupiBanane/YoupiAnanas
 	if (this->path_.size() > 1 && this->path_[this->path_.size() - 1] == '/')
 		this->path_.erase(this->path_.size() - 1);
-
-	std::cout << "[DEBUG] Location matchée : [" << location_.getPath() << "]" << std::endl;
-	std::cout << "[DEBUG] Root utilisé : [" << root << "]" << std::endl;
-	std::cout << "[DEBUG] Path FINAL : [" << this->path_ << "]" << std::endl;
-	
-    std::cout << "[DEBUG] test 8 - Fin de checkOfLocation, tout est OK." << std::endl;
     return (0);
 }
 
@@ -633,7 +536,7 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 	this->request_ = raw_data;
 
 	if (complete() == false)
-		return (PARSING_INCOMPLETE); //continuer la lecture
+		return (PARSING_INCOMPLETE);
 	
 	int res = initFistLine();
 
@@ -666,7 +569,6 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 	
 	if (initHeader() == 1)
 	{
-		std::cout << "[🚨 BUG] Crash 400 provoqué par initHeader() !" << std::endl;
         error_ = 400;
         message_error_ = "Bad Request";
         return (PARSING_FAILED);
@@ -674,81 +576,22 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 	int	body =  initBody();
 	if (body == 1)
 	{
-		std::cout << "[🚨 BUG] Crash 400 provoqué par initBody() !" << std::endl;
 		error_ = 400;
         message_error_ = "Bad Request";
 		return (PARSING_FAILED);
 	}
 	else if (body == 2)
 	{
-		std::cout << "[🚨 BUG] Crash 413 provoqué par initBody() !" << std::endl;
 		error_ = 413;
 		message_error_ = "Payload Too Large";
 		return (PARSING_FAILED);
 	}
-	// ajout du parsing incomplete
-	// provenant d'un chunked
-	// avec ca, on attend la suite proprement
 	else if (body == 3) {
-		std::cout << "[DEBUG] Chunked incomplet (pas de '0'). Retour silencieux à epoll." << std::endl;
         return (PARSING_INCOMPLETE); 
     }
-	// on ne combine plus ici, on le fait dans CheckLocation !
-	//path_ = combineRootUri(location_.getRoot(), url_path_);
 	return (PARSING_SUCCESS);
 
 }
-
-//void	Request::setError(int error)
-//{
-//	error_ = error;
-//}
-
-//int main()
-//{
-//	//try{
-//		Config::location();
-
-//		const char *buffer = 
-//		"GET /Makefile HTTP/1.1\r\n"
-//		"Host: localhost:8080\r\n"
-//		"Content-Type: multipart/form-data; boundary=boundary123\r\n"
-//		"Content-Length: 162\r\n"
-//		"\r\n"
-//		"--boundary123\r\n"
-//		"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
-//		"Content-Type: text/plain\r\n"
-//		"\r\n"
-//		"Ceci est le contenu de mon fichier !\r\n"
-//		"--boundary123--";
-	
-//		Request file((char *)buffer);
-//		int res = file.parsingHttp();
-//		if (res == 0)
-//		{
-//			std::cout << "error " << file.getError() << std::endl;
-//			std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), NULL);
-//			return 0;
-//		}
-//		else if (res == 2)
-//		{
-//			std::cout << "requette non complete" << std::endl;
-//			return 0;
-//		}
-//		// std::cout << "parsing good, locatio = " << file.getLocation().getRoot() << std::endl;
-//		// std::cout << file << std::endl;
-//		RequestAnswer answer(file);
-//		// std::cout << "test " << std::endl;
-//		if (answer.setAnswer() == 1)
-//			std::cout << "anser =" << answer.getAnswer() << std::endl;
-		
-//	//}
-//	//catch(std::exception &e)
-//	//{
-//	//	std::cerr << "error : " << e.what() << std::endl;
-//	//	//Error::setError(e.what());
-//	//}
-//}
 
 void	Request::clear()
 {
@@ -762,12 +605,7 @@ void	Request::clear()
     this->raw_uri_.clear();
     this->query_string_.clear();
 	this->headers_.clear();
-	this->error_ = 0; // Je suppose que 0 veut dire "Pas d'erreur"
-
-    // 4. Réinitialisation des objets complexes
-    // On remplace l'ancienne location par une nouvelle toute neuve (vide)
+	this->error_ = 0;
     this->location_ = LocationConfig(); 
-
-    // 5. Les variables liées à la connexion (Optionnel mais recommandé)
     this->server_ = NULL;
 }

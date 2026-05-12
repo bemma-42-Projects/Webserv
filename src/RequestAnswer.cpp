@@ -143,7 +143,6 @@ AnswerStatus	RequestAnswer::getIfFile(std::string file)
 
 	if (stat(file.c_str(), &buffer_file) != 0)
     {
-        std::cout << "[DEBUG] getIfFile: Fichier introuvable -> " << file << std::endl;
         this->code_ = 404;
         this->message_ = "Not Found";
         return (ERROR);
@@ -502,21 +501,13 @@ AnswerStatus	RequestAnswer::methodDelete()
 }
 
 //faire la reponse avec le header
-//int	RequestAnswer::setAnswer()void    RequestAnswer::fullAnswer()
 void    RequestAnswer::fullAnswer()
 {
-    // FIX : >= 400
-	// sinon, l'erreur 400 n'était pas affichée
     if (code_ >= 400) 
     {
-        std::cout << "[DEBUG] Génération d'une page d'erreur pour le code " << code_ << std::endl;
         answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
     }
     else {
-        // facultatif ? : hardcoder la version HTTP
-		// pour forcer l'utilisatino du protocole
-		// HTTP/1.1 pour Webserv
-		// car les autres versions ne sont pas supportees
         std::string header = "HTTP/1.1 " + Itoa(code_); 
         
         if (this->code_ == 200)
@@ -525,11 +516,8 @@ void    RequestAnswer::fullAnswer()
             header += " Created\r\n";
         else if (code_ == 204)
             header += " No Content\r\n";
-		// Moved Permanently
-		// A la place de Moved
-		// (pour correspondre au vrai code HTTP)
         else if (code_ == 301)
-            header += " Moved Permanently\r\n"; // Plus standard que juste "Moved"
+            header += " Moved Permanently\r\n";
         else
         {
             header += " Not Found\r\n";
@@ -543,10 +531,6 @@ void    RequestAnswer::fullAnswer()
 
         if (!content_type_.empty())
             header += "Content-Type: " + content_type_ + "\r\n";
-            
-        // FIX :
-		// sans ca, le serveur attendait indefiniment !
-        header += "Connection: keep-alive\r\n"; 
         
         header += "Content-Length: " + Itoa(body_.length()) + "\r\n";
         header += "\r\n";
@@ -569,14 +553,12 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 			status = methodDelete();
 		else if (request_->getMethod() == "POST")
 		{
-			std::cout << "[DEBUG] Traitement du POST..." << std::endl;
 			if (this->isCgi() == true)
 				status = methodPost();
 			else if (loc_.getAllowedUpload() == true)
 				status = methodPost();
 			else 
 			{
-                std::cout << "[DEBUG] POST sans action spécifique. On renvoie 200 OK." << std::endl;
                 code_ = 405;
                 message_ = "Method Not Allowed";
                 status = ERROR;
@@ -585,7 +567,6 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 	}
 	catch (const std::exception &e)
 	{
-		std::cerr << "[RequestAnswer] Critical Error: " << e.what() << std::endl;
 		code_ = 500;
 		message_ = "Internal Server Error";
 		status = ERROR;
@@ -597,7 +578,6 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 		fullAnswer();
 	else 
 		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
-		// content_type_ = findContentType(request_.getPath());
 	return (status);
 }
 
