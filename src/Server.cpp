@@ -461,37 +461,37 @@ void    Server::handleClientRead_(int client_fd) {
 
     Client  *client = clients_[client_fd];
 
-    while (true)
-    {
-        memset(buffer, 0, sizeof(buffer));
-        bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-        
-        if (bytes_received > 0)
+    try {
+        while (true)
         {
-            std::string chunk(buffer, bytes_received);
-            client->appendRequestData(chunk);
-            data_read = true;
+            memset(buffer, 0, sizeof(buffer));
+            bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+            
+            if (bytes_received > 0)
+            {
+                std::string chunk(buffer, bytes_received);
+                client->appendRequestData(chunk);
+                data_read = true;
+            }
+            else if (bytes_received == 0) {
+                return(handleClientDisconnect_(client_fd));
+            }
+            else {
+                break ;
+            }
         }
-        else if (bytes_received == 0) {
-            return(handleClientDisconnect_(client_fd));
-        }
-        else {
-            break ;
-        }
-    }
     
-    if (data_read)
-    {
-        client->updateLastActivity();
-        const ServerConfig  *config = client->getConfig();
-        client->getRequest().setServerConfig(config);
-
-        //int status = client->getRequest().parsingHttp();
-        
-        if (status == 0) 
+        if (data_read)
         {
+            client->updateLastActivity();
+            const ServerConfig  *config = client->getConfig();
+            client->getRequest().setServerConfig(config);
             processClientRequest_(client_fd);
         }
+    }
+    catch (const std::exception &e) {
+        this->sendEmergencyError_(client_fd, 500, "Internal Server Error");
+        this->handleClientDisconnect_(client_fd);
     }
 }
 
