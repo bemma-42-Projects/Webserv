@@ -517,6 +517,14 @@ void    RequestAnswer::fullAnswer()
             header += " No Content\r\n";
         else if (code_ == 301)
             header += " Moved Permanently\r\n";
+		else if (code_ == 302)
+			header += " Found\r\n";
+
+		/*
+		if (this->code_ == 301 || this->code_ == 302)
+		{
+
+		}*/
         else
         {
             header += " Not Found\r\n";

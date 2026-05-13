@@ -2,6 +2,7 @@
 #include <string>
 #include <map>
 #include "ServerConfig.hpp"
+#include <utility>
 
 enum	ParsingStatus {
 	PARSING_FAILED = 0,
@@ -65,6 +66,7 @@ class Request {
 		std::string							query_string_;
 		std::string							client_ip_;
 		const ServerConfig*					server_;
+		std::pair<int, std::string>			return_;
 
 };
 
