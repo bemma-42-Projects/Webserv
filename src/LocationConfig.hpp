@@ -27,6 +27,7 @@ public:
 	size_t										getClientMaxBodySize() const;
 	const std::map<int, std::string>&			getErrorPage() const;
 	const std::map<std::string, std::string>&	getCgiHandler() const;
+	const std::string&							getAlias() const;
 
 	void										setPath(const std::string& path_loc);
 	void										setRoot(const std::string& str);
@@ -38,11 +39,13 @@ public:
 	void										setAllowedMethods(const std::set<std::string>& methods);
 	void										setReturn(int code, const std::string& url);
 	void										setCgiHandler(const std::string& ext, const std::string& path);
+	void										setAlias(const std::string& str);
 
 	void										addErrorPage(int code, const std::string& path);
 private:
 	std::string							path_;
 	std::string							root_;
+	std::string							alias_;
 	std::vector<std::string>			index_;
 	int									autoindex_;
 	std::pair<int, std::string>			return_;

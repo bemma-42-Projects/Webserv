@@ -146,7 +146,7 @@ void ServerConfig::finalize() {
 		listen_.push_back(newLis);
 	}
 
-	if (this->index_.empty())
+	if (this->index_.empty() && this->autoindex_ == -1)
 		index_.push_back("index.html");
 
 	if (this->upload_path_.empty() && this->allowed_upload_ == true)
@@ -154,7 +154,7 @@ void ServerConfig::finalize() {
 
 	for (size_t i = 0; i < locations_.size(); i++) {
 
-		if (locations_[i].getRoot().empty())
+		if (locations_[i].getRoot().empty() && locations_[i].getAlias().empty())
 			locations_[i].setRoot(this->root_);
 
 		if (locations_[i].getAutoIndex() == -1)
@@ -270,21 +270,21 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 //cherche la location par raport au path
 const LocationConfig* ServerConfig::matchLocation(std::string requestPath) const
 {
-    const LocationConfig* bestMatch = NULL;
-    size_t longestLen = 0;
-    std::vector<LocationConfig>::const_iterator it;
+	const LocationConfig* bestMatch = NULL;
+	size_t longestLen = 0;
+	std::vector<LocationConfig>::const_iterator it;
 
-    for (it = locations_.begin(); it != locations_.end(); ++it)
-    {
+	for (it = locations_.begin(); it != locations_.end(); ++it)
+	{
 		std::string locPath = it->getPath();
 		if (requestPath.find(locPath) == 0) 
-        {
-            if (locPath.length() > longestLen) 
-            {
-                longestLen = locPath.length();
-                bestMatch = &(*it);
-            }
-        }
-    }
-    return bestMatch;
+		{
+			if (locPath.length() > longestLen) 
+			{
+				longestLen = locPath.length();
+				bestMatch = &(*it);
+			}
+		}
+	}
+	return bestMatch;
 }
