@@ -469,24 +469,29 @@ void    RequestAnswer::fullAnswer()
         answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
     }
     else {
-        std::string header = "HTTP/1.1 " + Itoa(code_); 
+		if (this->loc_.getReturn().first == 301 || this->loc_.getReturn().first == 302)
+		{
+			code_ = this->loc_.getReturn().first;
+			body_ = "";
+		}
+		std::string header = "HTTP/1.1 " + Itoa(code_); 
         
-        if (this->code_ == 200)
+		if (code_ == 301)
+		{
+			header += " Moved Permanently\r\n";
+			header += "Location: " + this->loc_.getReturn().second + "\r\n"; 
+		}
+		else if (code_ == 302)
+		{
+			header += " Found\r\n";
+			header += "Location: " + this->loc_.getReturn().second + "\r\n"; 
+		}
+        else if (this->code_ == 200)
             header += " OK\r\n";
         else if (this->code_ == 201)
             header += " Created\r\n";
         else if (code_ == 204)
             header += " No Content\r\n";
-        else if (code_ == 301)
-            header += " Moved Permanently\r\n";
-		else if (code_ == 302)
-			header += " Found\r\n";
-
-		/*
-		if (this->code_ == 301 || this->code_ == 302)
-		{
-
-		}*/
         else
         {
             header += " Not Found\r\n";
@@ -505,6 +510,7 @@ void    RequestAnswer::fullAnswer()
         header += "\r\n";
     
         answer_ = header + this->body_;
+		std::cout << answer_ << std::endl;
     }
 }
 

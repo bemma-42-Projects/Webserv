@@ -4,6 +4,8 @@ LocationConfig::LocationConfig() {
 	autoindex_ = -1;
 	allowed_upload_ =-1;
 	client_max_body_size_ = 0;
+	//return_.first = 0;
+	//return_.second = "";
 }
 
 const std::string&	LocationConfig::getPath() const {
