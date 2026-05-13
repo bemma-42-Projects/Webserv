@@ -459,15 +459,8 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
 	this->request_ = raw_data;
 
-	// int comp = complete();
 	if (complete()== false)
-		return (PARSING_INCOMPLETE); //continuer la lecture
-	// else if (comp == 2)
-	// {
-	// 	error_ = 400;
-	// 	message_error_ = "Bad Request";
-	// 	return (PARSING_FAILED);
-	// }
+		return (PARSING_INCOMPLETE);
 	int res = initFirstLine();
 
 	if (res == 1)

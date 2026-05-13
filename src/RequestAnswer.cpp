@@ -219,29 +219,20 @@ AnswerStatus	RequestAnswer::methodGet()
 
 	if (stat(request_->getPath().c_str(), &info) != 0)
 	{
-		//this->error_ = 404;
 		this->code_ = 404;
 		this->message_ = "Not Found";
 		return (ERROR);
 	}
 	std::string res;
-	// si c'est un REGULAR FILE
 	if (S_ISREG(info.st_mode))
 	{
 		if (this->isCgi())
 			return (this->methodCGI());
 		return (getIfFile(request_->getPath()));
 	}
-	// si c'est un DIRECTORY
-	// ...
 	else if (S_ISDIR(info.st_mode))
 	{
-		//LocationConfig	loc = request_.getLocation();
-		//divier la fontion
-		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
-		// std::cout << "dir" << std::endl;
 		std::string index = findIndex();
-		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
 			
@@ -251,13 +242,11 @@ AnswerStatus	RequestAnswer::methodGet()
 			target_index += index;
 
 			return (getIfFile(target_index));	
-			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
 		else if (loc_.getAutoIndex() == true)
 			return (getIfDir());
 		else
 		{
-			//this->error_ = 403;
 			this->code_ = 403;
 			message_ = "Forbidden";
 			return (ERROR);
@@ -269,7 +258,6 @@ AnswerStatus	RequestAnswer::methodGet()
 //recupere le path du file name pour upload les fichier
 int RequestAnswer::fileName()
 {
-    //LocationConfig    loc = request_.getLocation();
     std::string root_path = loc_.getRoot() + loc_.getPath(); // Chemin dossier sur disque
     std::string url_path = request_->getPath();           // Chemin demandé dans l'URL
 
@@ -310,24 +298,18 @@ int RequestAnswer::fileName()
 		if (s != std::string::npos)
 			start = s + 1;
 		std::string file_name = body.substr(start, end - start);
-
-        // On construit le chemin final : Dossier + / + Nom
-        this->post_file_name_ = url_path;
+		this->post_file_name_ = url_path;
         if (this->post_file_name_[this->post_file_name_.size() - 1] != '/')
             this->post_file_name_ += '/';
         this->post_file_name_ += file_name;
     } 
-    // ÉTAPE 3 : Si ce n'est pas un dossier, le nom est déjà dans l'URL
     else {
         this->post_file_name_ = url_path;
     }
-
-    // ÉTAPE 4 : Vérification finale - Est-ce que le dossier parent existe ?
-    size_t last_slash = this->post_file_name_.find_last_of('/');
+	size_t last_slash = this->post_file_name_.find_last_of('/');
     if (last_slash != std::string::npos) {
         std::string dir_to_check = this->post_file_name_.substr(0, last_slash);
         if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) {
-            //std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
             return (1);
         }
     }
@@ -341,7 +323,6 @@ AnswerStatus RequestAnswer::methodPost()
 	if (this->isCgi())
     {   
         try {
-            // Nettoyage de sécurité si un handler existait déjà
             if (this->cgi_handler_)
 			{
                 delete this->cgi_handler_;
@@ -356,28 +337,16 @@ AnswerStatus RequestAnswer::methodPost()
             return (ERROR);
         }
     }
-
-	// if (request_->getBody().empty()) {
-    //     code_ = 405; // No Content (ou 200 OK)
-	// 	message_ = "Method Not Allowed";
-    //     return (ERROR);
-    // }
-
     if (fileName() == 1) 
     {
-        //error_ = 400;
         code_ = 400;
 		message_ = "Bad Request";
         return (ERROR);
     }
-    // DEBUG : Affiche le chemin exact que le serveur essaie d'ouvrir
-    // std::cout << "Tentative d'ouverture de : [" << post_file_name_ << "]" << std::endl;
-
     std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
     if (!outfile.is_open())
 	{
         std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
-        //error_ = 500;
 		code_ = 500;
 		message_ = "Internal Server Error";
         return (ERROR);
@@ -548,11 +517,7 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 	}
 	if (status == CGI_IN_PROGRESS)
 		return (status);
-	
-	// if (code_ < 400)
 	fullAnswer();
-	// else 
-	// 	answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
 	return (status);
 }
 
