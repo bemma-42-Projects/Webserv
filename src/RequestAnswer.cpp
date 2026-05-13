@@ -154,46 +154,53 @@ AnswerStatus	RequestAnswer::getIfFile(std::string file)
 }
 
 //recupere le contenue du dossier pour la methode get
-AnswerStatus	RequestAnswer::getIfDir()
+AnswerStatus    RequestAnswer::getIfDir()
 {
-	DIR* dir = opendir(request_->getPath().c_str());
-	if (!dir)
-	{
-		code_ = 404;
-		message_ = "Not Found";
-		return (ERROR);
-	} 
+    std::string physical_path = request_->getPath();
+    
+    DIR* dir = opendir(physical_path.c_str());
+    if (!dir)
+    {
+        code_ = 404;
+        return (ERROR);
+    }
 
-	std::string body = "<html><head><title>Index of " + request_->getUrlPath() + "</title></head><body>";
-	body += "<h1>Index of " + request_->getUrlPath() + "</h1><hr><ul>";
-	struct dirent* entry;
-	while ((entry = readdir(dir)) != NULL)
-	{
-		std::string name = entry->d_name;
-		if (name == ".")
-			continue;
-		std::string fullPath = request_->getPath() + "/" + name;
-		struct stat st;
-		if (stat(fullPath.c_str(), &st) == 0)
-		{
-			if (S_ISDIR(st.st_mode))
-				name += "/";
-		}
-		else
-		{
-			this->code_ = 400;
-			return (ERROR);
-		} 
-		body += "<li><a href=\"" + name + "\">" + name + "</a></li>\n";
-	}
-	body += "</ul><hr></body></html>";
-	closedir(dir);
+    std::string url_path = request_->getUrlPath();
+    
+    std::string base_link = url_path;
+    if (!base_link.empty() && base_link[base_link.size() - 1] != '/')
+        base_link += "/";
 
-	this->body_ = body;
-	this->code_ = 200;
-	this->content_type_ = "text/html";
-	return (READY_TO_SEND);
+    std::string body = "<html><head><title>Index of " + base_link + "</title></head><body>";
+    body += "<h1>Index of " + base_link + "</h1><hr><ul>";
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        std::string name = entry->d_name;
+        if (name == ".") continue;
+
+        std::string fullPhysicalPath = physical_path;
+        if (fullPhysicalPath[fullPhysicalPath.size() - 1] != '/')
+            fullPhysicalPath += "/";
+        fullPhysicalPath += name;
+
+        struct stat st;
+        if (stat(fullPhysicalPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            name += "/";
+
+        body += "<li><a href=\"" + base_link + name + "\">" + name + "</a></li>\n";
+    }
+    
+    body += "</ul><hr></body></html>";
+    closedir(dir);
+
+    this->body_ = body;
+    this->code_ = 200;
+    this->content_type_ = "text/html";
+    return (READY_TO_SEND);
 }
+
 
 //cherche un index qui existe et est lisible et on le renvoi
 std::string RequestAnswer::findIndex()
@@ -250,6 +257,7 @@ AnswerStatus	RequestAnswer::methodGet()
 				target_index += "/";
 			target_index += index;
 
+			
 			return (getIfFile(target_index));	
 			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
@@ -508,7 +516,6 @@ void    RequestAnswer::fullAnswer()
         header += "\r\n";
     
         answer_ = header + this->body_;
-		std::cout << answer_ << std::endl;
     }
 }
 

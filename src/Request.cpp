@@ -370,8 +370,6 @@ const	LocationConfig	*Request::matchExtensionLocation() const
 
 int Request::checkOfLocation()
 {
-    std::cout << "\033[1;34m[DEBUG checkOfLocation] URL demandée : " << url_path_ << "\033[0m" << std::endl;
-
     if (this->server_ == NULL) {
         return 1;
     }
@@ -389,15 +387,13 @@ int Request::checkOfLocation()
     }
 
     if (prefix_loc == NULL) {
-        std::cout << "\033[1;31m[DEBUG] Aucune location trouvée pour " << url_path_ << "\033[0m" << std::endl;
         return (1);
     }
 
     const LocationConfig* final_loc = prefix_loc;
-
     const LocationConfig *ext_loc = matchExtensionLocation();
+    
     if (ext_loc != NULL) {
-        std::cout << "\033[1;32m[DEBUG] Extension matchée : " << ext_loc->getPath() << "\033[0m" << std::endl;
         final_loc = ext_loc;
     }
 
@@ -408,12 +404,7 @@ int Request::checkOfLocation()
         return (2);
     }
 
-    std::string alias = "";
-    if (prefix_loc->getPath() == "/directory/" || prefix_loc->getPath() == "/directory") {
-        alias = "YoupiBanane"; 
-        std::cout << "\033[1;33m[DEBUG] Alias détecté via préfixe -> YoupiBanane\033[0m" << std::endl;
-    }
-
+    std::string alias = prefix_loc->getAlias();
     if (!alias.empty())
     {
         std::string loc_p = prefix_loc->getPath();
@@ -437,12 +428,12 @@ int Request::checkOfLocation()
             this->path_ = alias + remaining;
         else
             this->path_ = alias + '/' + remaining;
-            
-        std::cout << "[DEBUG] Path généré par ALIAS : " << this->path_ << std::endl;
     }
     else
     {
-        std::string root = location_.getRoot();
+        std::string root = prefix_loc->getRoot();
+        
+        // Cas particulier Upload
         if (method_ == "POST" && location_.getAllowedUpload() == true && !location_.getUploadPath().empty())
             root = location_.getUploadPath();
 
@@ -459,10 +450,9 @@ int Request::checkOfLocation()
 
         this->path_ = clean_root + clean_url;
     }
+
     if (this->path_.size() > 1 && this->path_[this->path_.size() - 1] == '/')
         this->path_.erase(this->path_.size() - 1);
-
-    std::cout << "\033[1;32m[DEBUG] CHEMIN FINAL RÉEL : " << this->path_ << "\033[0m" << std::endl;
 
     return (0);
 }
