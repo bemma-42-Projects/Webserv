@@ -465,9 +465,7 @@ AnswerStatus	RequestAnswer::methodDelete()
 void    RequestAnswer::fullAnswer()
 {
     if (code_ >= 400) 
-    {
         answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
-    }
     else {
 		if (this->loc_.getReturn().first == 301 || this->loc_.getReturn().first == 302)
 		{
@@ -522,7 +520,9 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 	AnswerStatus	status = ERROR;
 
 	try {
-		if (request_->getMethod() == "GET")
+		if (loc_.getReturn().first == 301 || loc_.getReturn().first == 302)
+			fullAnswer();
+		else if (request_->getMethod() == "GET")
 			status = methodGet();
 		else if (this->request_->getMethod() == "DELETE")
 			status = methodDelete();
@@ -549,10 +549,10 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 	if (status == CGI_IN_PROGRESS)
 		return (status);
 	
-	if (code_ < 400)
-		fullAnswer();
-	else 
-		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+	// if (code_ < 400)
+	fullAnswer();
+	// else 
+	// 	answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
 	return (status);
 }
 
