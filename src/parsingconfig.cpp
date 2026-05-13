@@ -119,11 +119,10 @@ void validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 
 }
 
-
 // fonction qui valide la structure du fichier de config (pour l'instant elle check si le 
 // nb d'accolade est bon, si les blocs sont bien fait qu'il n'y a pas de location dans location
 // etc, je ne check pas pour l'instant les directives et les ;)
-bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
+void validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
 	State state = OUTSIDE;
 	std::stack<std::string> context;
 
@@ -185,11 +184,9 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 		}
 		else
 			throw std::runtime_error("structure: unknown token '" + tokens[i] + "'");
-
 	}
 	if (state != OUTSIDE && !context.empty())
 		throw std::runtime_error("structure: reached end of file with unclosed '" + context.top() + "' block");
-
 }
 
 
