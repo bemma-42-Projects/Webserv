@@ -356,10 +356,6 @@ void    Server::prepareForWriting_(int client_fd, Client &client)
 
 void    Server::setupCgiEpoll_(int client_fd, Client &client)
 {
-    std::cout << "[DIAGNOSTIC] Methode: " << client.getRequest().getMethod() << std::endl;
-    std::cout << "[DIAGNOSTIC] Taille Body: " << client.getRequest().getBody().size() << std::endl;
-    std::cout << "[DIAGNOSTIC] Write FD: " << client.getAnswer().getCGIHandler()->getWriteFd() << std::endl;
-
     client.setState(Client::WAITING_CGI);
 
     int cgi_fd  = client.getAnswer().getCGIHandler()->getReadFd();
@@ -391,7 +387,7 @@ void    Server::setupCgiEpoll_(int client_fd, Client &client)
 
         struct epoll_event ev_out;
         memset(&ev_out, 0, sizeof(ev_out));
-        ev_out.events = EPOLLOUT; // 🚨 On surveille quand le pipe est prêt à recevoir
+        ev_out.events = EPOLLOUT;
         ev_out.data.fd = write_fd;
 
         if (epoll_ctl(this->epoll_fd_, EPOLL_CTL_ADD, write_fd, &ev_out) == -1) {
@@ -401,8 +397,7 @@ void    Server::setupCgiEpoll_(int client_fd, Client &client)
             this->prepareForWriting_(client_fd, client);
             return;
         }
-        this->cgi_write_to_client_[write_fd] = client_fd; 
-        std::cout << "[DEBUG] Pipe écriture CGI ajouté à epoll (fd: " << write_fd << ")" << std::endl;
+        this->cgi_write_to_client_[write_fd] = client_fd;
     }
 }
 
@@ -414,18 +409,14 @@ void    Server::processClientRequest_(int client_fd) {
     try {
         ParsingStatus   parsing_status = request.parsingHttp(client.getRequestData());
 
-        // 1. LE CHUNKED INCOMPLET ARRIVE ICI ET RETOURNE À EPOLL_WAIT !
         if (parsing_status == PARSING_INCOMPLETE)
            return ; 
-           
-        // 2. GESTION DES VRAIES ERREURS DE PARSING (400, 413, 405...)
         if (parsing_status == PARSING_FAILED)
         {
-            // On récupère le VRAI code d'erreur généré par ton parseur
-            int err_code = request.getError(); // (Ou le getter approprié si c'est privé)
+            int err_code = request.getError();
             std::string err_msg = request.getErrorMessage();
             
-            if (err_code == 0) { // Sécurité au cas où l'erreur ne serait pas set
+            if (err_code == 0) {
                 err_code = 400;
                 err_msg = "Bad Request";
             }
@@ -434,15 +425,12 @@ void    Server::processClientRequest_(int client_fd) {
             response.setMessage(err_msg);
 
             response.setCloseConnection(true);
-            
-            // On bypass setAnswer() classique pour générer directement la page d'erreur
-            response.fullAnswer(); // Va générer le HTML de l'erreur avec les bons headers
+
+            response.fullAnswer();
             
             this->prepareForWriting_(client_fd, client);
             return ;
         }
-        
-        // 3. SI LE PARSING EST UN SUCCÈS (Le 0\r\n\r\n a été reçu)
         AnswerStatus answer_status = response.setAnswer(request);
 
         if (answer_status == READY_TO_SEND || answer_status == ERROR)
@@ -455,7 +443,7 @@ void    Server::processClientRequest_(int client_fd) {
         std::cerr << "[CRITICAL] Exception during request processing: " << e.what() << std::endl;
         client.getAnswer().setCode(500);
         client.getAnswer().setMessage("Internal Server Error");
-        client.getAnswer().fullAnswer(); // Pour construire les headers 500
+        client.getAnswer().fullAnswer();
         this->prepareForWriting_(client_fd, client);
     }
 }
@@ -466,7 +454,6 @@ void    Server::handleClientRead_(int client_fd) {
     ssize_t bytes_received;
     bool    data_read = false;
 
-    // SECURITÉ : On vérifie que le client existe bien
     if (clients_.find(client_fd) == clients_.end() || clients_[client_fd] == NULL) {
         std::cerr << "[RESEAU FATAL] Tentative de lecture sur un FD client inconnu (" << client_fd << ")" << std::endl;
         return;
@@ -489,7 +476,6 @@ void    Server::handleClientRead_(int client_fd) {
             return(handleClientDisconnect_(client_fd));
         }
         else {
-            // bytes_received == -1 (Plus rien à lire pour le moment sur ce socket non-bloquant)
             break ;
         }
     }
@@ -500,30 +486,15 @@ void    Server::handleClientRead_(int client_fd) {
         const ServerConfig  *config = client->getConfig();
         client->getRequest().setServerConfig(config);
 
-        // 🚨 LA CORRECTION EST ICI :
-        // On appelle le parseur pour voir où on en est
-        int status = client->getRequest().parsingHttp();
-
-        // Status 0  = Requête terminée (Headers + Body OK)
-        // Status 3  = Body incomplet (on attend la suite)
-        // Status 10 = Chunked incomplet
+        //int status = client->getRequest().parsingHttp();
         
         if (status == 0) 
         {
-            // SEULEMENT ICI on traite la requête et on lance le CGI
-            std::cout << "[INFO] Requête complète reçue (" 
-                    << client->getRequest().getBody().size() << " octets). Traitement..." << std::endl;
             processClientRequest_(client_fd);
-        }
-        else 
-        {
-            // On ne fait RIEN. On laisse epoll nous rappeler quand 
-            // les prochains octets des 100 Mo arriveront.
-            std::cout << "[DEBUG] Réception du body en cours... (" 
-                    << client->getRequest().getBody().size() << " octets reçus)" << std::endl;
         }
     }
 }
+
 // bascule la surveillance epoll d'un client en mode lecture
 void	Server::setSocketToReadState_(int client_fd) {
 	if (this->clients_.count(client_fd) == 0)
@@ -538,7 +509,6 @@ void	Server::setSocketToReadState_(int client_fd) {
         handleClientDisconnect_(client_fd);
 		return ;
 	}
-    //std::cout << "Socket " << client_fd << " kept alive. Waiting for next request..." << std::endl;
 }
 
 // gère l'évènement d'écriture sur un socket client
@@ -630,8 +600,6 @@ void Server::handleCgiWrite_(int fd)
 
     if (cgi->getBytesSent() >= client->getRequest().getBody().size())
     {
-        std::cout << "\033[1;32m[SUCCESS]\033[0m Body envoyé au CGI. "
-                  << "Total : " << cgi->getBytesSent() << " octets." << std::endl;
         epoll_ctl(this->epoll_fd_, EPOLL_CTL_DEL, fd, NULL);
         this->cgi_write_to_client_.erase(fd);
     }

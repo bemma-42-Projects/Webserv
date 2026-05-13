@@ -3,17 +3,16 @@
 #include "CGISubprocess.hpp"
 
 #include <iostream>
-#include <fcntl.h>		// pour open
-#include <unistd.h>		// pour read, close, fork et execve
-#include <sys/stat.h>	// pour stat
-#include <sys/wait.h>	// pour waitpid
-//#include <cstdlib>	// pour exit
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <dirent.h>
 #include <sstream>
 #include <fstream>
 #include "Error.hpp"
 #include <map>
-#include <cstring>	// pour strcpy
+#include <cstring>
 
 // constructeur par défaut
 RequestAnswer::RequestAnswer() : code_(200), error_(0), request_(NULL), cgi_handler_(NULL), close_connection_(false)
@@ -68,7 +67,6 @@ const std::string	&RequestAnswer::getAnswer() const
 	return (this->answer_);
 }
 
-//return l'error
 int	RequestAnswer::getError() const
 {
 	return (this->error_);
@@ -94,29 +92,24 @@ std::string RequestAnswer::findContentType(const std::string& path)
     static std::map<std::string, std::string> mimeTypes;
 
     if (mimeTypes.empty()) {
-        // TEXTE
         mimeTypes[".html"] = "text/html";
         mimeTypes[".htm"]  = "text/html";
         mimeTypes[".css"]  = "text/css";
         mimeTypes[".txt"]  = "text/plain";
-        mimeTypes[".cpp"]  = "text/plain"; // Pour tes fichiers source
+        mimeTypes[".cpp"]  = "text/plain";
         mimeTypes[".hpp"]  = "text/plain";
 
-        // IMAGES
         mimeTypes[".png"]  = "image/png";
         mimeTypes[".jpg"]  = "image/jpeg";
         mimeTypes[".jpeg"] = "image/jpeg";
         mimeTypes[".gif"]  = "image/gif";
         mimeTypes[".ico"]  = "image/x-icon";
 
-        // APPLICATION / BINAIRE
         mimeTypes[".js"]   = "application/javascript";
         mimeTypes[".json"] = "application/json";
         mimeTypes[".pdf"]  = "application/pdf";
         mimeTypes[".zip"]  = "application/zip";
     }
-
-    // Trouver l'extension (tout ce qui est après le dernier point)
     size_t dotPos = path.find_last_of('.');
     if (dotPos == std::string::npos) 
 		return "application/octet-stream";
@@ -130,15 +123,8 @@ std::string RequestAnswer::findContentType(const std::string& path)
 }
 
 //recupere le contenue du fichier pour la methode get
-//int	RequestAnswer::getMethode()
 AnswerStatus	RequestAnswer::getIfFile(std::string file)
 {
-	//std::cout << Config::getRoot() + file << std::endl;
-	//int	fd = open((request_.getLocation().getRoot() + '/' + file).c_str(), O_RDONLY);
-	// std::cout << "dir" << std::endl;
-
-	// il faut vérifier si le fichier demandé existe
-	// et renvoyer une erreur 404 au lieu d'un code 200 avec une page vide
 	struct stat	buffer_file;
 
 	if (stat(file.c_str(), &buffer_file) != 0)
@@ -161,7 +147,6 @@ AnswerStatus	RequestAnswer::getIfFile(std::string file)
 		res.append(buffer, bytes_read);
 	}
 	close(fd);
-	//std::cout << res << std::endl;
 	this->body_ = res;
 	this->code_ = 200;
 	this->content_type_ = findContentType(file);
@@ -171,37 +156,31 @@ AnswerStatus	RequestAnswer::getIfFile(std::string file)
 //recupere le contenue du dossier pour la methode get
 AnswerStatus	RequestAnswer::getIfDir()
 {
-	// std::cout << "pd" << std::endl;
 	DIR* dir = opendir(request_->getPath().c_str());
 	if (!dir)
 	{
-		// std::cout << "error 404" << std::endl;
-		//error_ = 404;
 		code_ = 404;
 		message_ = "Not Found";
-		return (ERROR);// Erreur 403 ou 404
+		return (ERROR);
 	} 
 
 	std::string body = "<html><head><title>Index of " + request_->getUrlPath() + "</title></head><body>";
 	body += "<h1>Index of " + request_->getUrlPath() + "</h1><hr><ul>";
 	struct dirent* entry;
-	while ((entry = readdir(dir)) != NULL) // reccupere fichier par fichier
+	while ((entry = readdir(dir)) != NULL)
 	{
-		std::string name = entry->d_name; // recupere le nom du fichier
-		if (name == ".") // on ne dois pas annaliser le "." sinon on ouvre le dossier actuel et il faut qu'on le gere
+		std::string name = entry->d_name;
+		if (name == ".")
 			continue;
-		// On construit le chemin complet pour que stat puisse le trouver
 		std::string fullPath = request_->getPath() + "/" + name;
 		struct stat st;
-		if (stat(fullPath.c_str(), &st) == 0) // regarde si le fichier existe
+		if (stat(fullPath.c_str(), &st) == 0)
 		{
 			if (S_ISDIR(st.st_mode))
-				name += "/"; // On ajoute un slash visuel
+				name += "/";
 		}
 		else
 		{
-			//std::cout << "error 400" << std::endl;
-			//this->error_ = 400;
 			this->code_ = 400;
 			return (ERROR);
 		} 
@@ -210,47 +189,30 @@ AnswerStatus	RequestAnswer::getIfDir()
 	body += "</ul><hr></body></html>";
 	closedir(dir);
 
-	//std::string header = "HTTP/1.1 200 OK\r\n";
-	//header += "Content-Type: text/html\r\n";
-	//header += "Content-Length: " + itoa(body.length()) + "\r\n"; // Il faudra une petite fonction pour convertir int en string
-	//header += "\r\n"; // La ligne vide cruciale !
-	//res = header + body;
-	//std::cout << res << std::endl;
-
-	//answer_ = res;
 	this->body_ = body;
 	this->code_ = 200;
 	this->content_type_ = "text/html";
-	// TODO : vérifier quand est appelé getIfDir et
-	// checker READY_TO_SEND, plus 0
 	return (READY_TO_SEND);
-	//return 0;
 }
 
 //cherche un index qui existe et est lisible et on le renvoi
-std::string RequestAnswer::findIndex(/*LocationConfig loc*/)
+std::string RequestAnswer::findIndex()
 {
 
     std::vector<std::string>::iterator it;
 	std::vector<std::string> index = loc_.getIndex();
-	//if (!loc.getIndex().empty())
-	//	index = loc.getIndex();
-	//else
-	//	index = Config::getIndex();
+
     for (it = index.begin(); it != index.end(); ++it)
 	{
 		const std::string root = loc_.getRoot();
 		std::string fullPath = root + '/' + *it;
-        // On utilise la fonction access() de <unistd.h> 
-        // pour vérifier si le fichier existe et est lisible
         if (access(fullPath.c_str(), R_OK) == 0)
-            return *it; // On a trouvé le premier index valide !
+            return *it;
     }
-    return ""; // Aucun index trouvé
+    return "";
 }
 
 //envoie les fonction pour la methode get (dossier ou fichier)
-//int	RequestAnswer::setAnswer()
 AnswerStatus	RequestAnswer::methodGet()
 {
 	struct stat info;

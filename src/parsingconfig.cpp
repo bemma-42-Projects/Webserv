@@ -111,7 +111,6 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 		return (false);
 	if (validateSpecificDirective(name, args, state, srv) == false)
 	{
-		//std::cout << "[DEBUG] Echec de validation sur la directive : " << name << std::endl;
 		return (false);
 	}
 	return (true);
@@ -122,12 +121,6 @@ bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State stat
 // nb d'accolade est bon, si les blocs sont bien fait qu'il n'y a pas de location dans location
 // etc, je ne check pas pour l'instant les directives et les ;)
 bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
-
-	//std::cout << "--> DEBUG PARSING: Nombre de tokens trouves = " << tokens.size() << std::endl;
-    //for (size_t i = 0; i < tokens.size(); i++) {
-    //    std::cout << "[" << tokens[i] << "] ";
-    //}
-    //std::cout << std::endl;
 	State state = OUTSIDE;
 	std::stack<std::string> context;
 	for (size_t i = 0; i < tokens.size() ; i++)
@@ -149,7 +142,6 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 		{
 			if (state != IN_SERVER)
 			{
-				// std::cout << "c'est pas bon ici " << state << std::endl;
 				return (false);
 			}
 			if (i + 1 >= tokens.size() || tokens[i + 1].find_first_of("{}") != std::string::npos)
@@ -165,14 +157,12 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 		}
 		else if (tokens[i] == "{")
 		{
-			// std::cout << "c'est pas bon ici" << std::endl;
 			return (false);
 		}
 		else if (tokens[i] == "}")
 		{
 			if (context.empty())
 			{
-				// std::cout << "c'est pas bon ici" << std::endl;
 				return (false);
 			}
 			context.pop();
@@ -190,11 +180,8 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 			if (all_servers.empty()) {
 				return (false);
 			}
-
-			// std::cout << "         Je suis sur une directive!" << std::endl;
 			if (validateOneDirective(tokens, i, state, all_servers.back()) == false)
 			{
-				// std::cout << "c'est pas bon ici" << std::endl;
 				return (false);
 			}
 		}
@@ -205,75 +192,3 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 		return (true);
 	return (false);
 }
-
-
-
-
-/*
-int main(int argc, char **argv) {
-	if (argc != 2)
-		return (1);
-
-	std::vector<ServerConfig> all_configs;
-	std::string text = readFile(argv[1]);
-	std::vector<std::string> res = tokenizeConfig(text);
-	if (validateStructure(res, all_configs) == false)
-	{
-		std::cout << "Erreur bad configuration" << std::endl;
-		return (1);
-	}
-	std::cout << "Everything's good!" << std::endl;
-
-	for (size_t i = 0; i < all_configs.size(); i++) 
-		all_configs[i].finalize();
-	// for (size_t i = 0; i < all_configs.size(); i++) {
-
-	// 	std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
-	// 	std::cout << all_configs[i] << std::endl << std::endl;
-	// }
-	std::cout << "testtttt" << std::endl;
-
-	if (all_configs.empty())
-		return (1);
-	if (all_configs[0].getLocations().empty())
-		return (1);
-	// std::cout << "testtttt" << std::endl;
-	// if (all_configs[1].get)
-	// std::cout << all_configs[0].getLocations()[0].getPath() << std::endl;
-	// std::cout << "end" << std::endl;
-	const char *buffer = 
-	"POST /upload HTTP/1.1\r\n"
-	"Host: localhost:8080\r\n"
-	"Content-Type: multipart/form-data; boundary=boundary123\r\n"
-	"Content-Length: 162\r\n"
-	"\r\n"
-	"--boundary123\r\n"
-	"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
-	"Content-Type: text/plain\r\n"
-	"\r\n"
-	"Ceci est le contenu de ton fichier !\r\n"
-	"--boundary123--";
-	
-	Request file((char *)buffer, all_configs[0]);
-	int result = file.parsingHttp(buffer);
-	std::cout << "request\n\n\n\n\n" << std::endl;
-	std::cout << file << std::endl;
-	if (result == 0)
-	{
-		std::cout << "error " << file.getError() << std::endl;
-		std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), all_configs[0].getErrorPage());
-		return 0;
-	}
-	else if (result == 2)
-	{
-		std::cout << "requette non complete" << std::endl;
-		return 0;
-	}
-	RequestAnswer answer(file);
-	if (answer.setAnswer() == 1)
-		std::cout << "anser =" << answer.getAnswer() << std::endl;
-
-}
-*/
-
-//probleme avec le getpath, ca segfault

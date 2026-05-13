@@ -27,8 +27,7 @@ class Request {
 		std::string 						getErrorMessage() const;
 		const LocationConfig				&getLocation() const;
 		const ServerConfig*					getServer() const;
-		std::string							getClientIP() const;
-		//int								requestHttp();							
+		std::string							getClientIP() const;					
 		ParsingStatus						parsingHttp(const std::string &raw_data);
 		bool								complete();
 		int									initFistLine();
@@ -37,10 +36,6 @@ class Request {
 		int									checkOfLocation();
 		void								setServerConfig(const ServerConfig *server);
 		const LocationConfig				*matchExtensionLocation() const;
-		//void								setError(int error);
-
-		//std::string						answer();
-		//std::string						methodGet();
 		void								splitUri_();
 		std::string							getRequestUri() const;
 		std::string							getQueryString() const;

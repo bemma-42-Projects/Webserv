@@ -94,7 +94,6 @@ void    Client::clearBuffers()
     this->request_buffer_.clear();
     this->response_buffer_.clear();
 
-    // Ajoute un petit debug ici aussi pour vérifier que c'est appelé
     this->request_.clear();
     this->answer_.clear();
 

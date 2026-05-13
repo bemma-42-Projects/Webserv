@@ -57,7 +57,7 @@ bool validateOneArg(std::string str, ServerConfig& srv) {
 	if (str.empty())	
 		return (false);
 	size_t pos = str.find(':');
-	if (pos == str.npos) { // le cas ou il y a que l'IP ou que le port
+	if (pos == str.npos) {
 
 		if (str.find('.') != std::string::npos || str == "localhost") {
 			if (validateIP(str) == true) {
@@ -97,7 +97,6 @@ bool validateListen(std::vector<std::string> args, State state, ServerConfig& sr
 		return (false);
 	if (validateOneArg(args[0], srv) == false)
 		return (false);
-	// std::cout << "listen = good" << std::endl;
 	return (true);
 }
 
@@ -108,12 +107,10 @@ std::string combineRootUri(std::string root, std::string uri) {
 	if (uri.empty())
 		return (res);
 
-	// Si le root finit par un slash, on l'enlève pour éviter le double slash avec l'URI
 	if (root[root.size() - 1] == '/') {
 		root.erase(root.size() - 1);
 	}
 
-	// Si l'URI ne commence pas par un slash, on en ajoute un
 	if (uri[0] != '/') {
 		uri = "/" + uri;
 	}
@@ -158,7 +155,6 @@ bool validateClientMaxBodySize(std::vector<std::string> args) {
 		i++;
 	if (i < args[0].size())
 		return (false);
-	// std::cout << "ClientMaxBodySize = good" << std::endl;
 	return (true);
 }
 
@@ -172,41 +168,33 @@ bool isErrorCode(std::string code) {
 bool validateErrorPage(std::vector<std::string> args) {
 	if (args.size() < 2)
 	{
-		// std::cout << "pas bon nombre d'argument" << std::endl;
 		return (false);
 	}
 
 	for (size_t i = 0; i < args.size() - 1; i++) {
 		if (isErrorCode(args[i]) == false) {
-			// std::cout << "mauvais code" << std::endl;
 			return (false);
 		}
 	}
 	if (args.back().empty())
 	{
-		// std::cout << "emplacement vide" << std::endl;
 		return (false);
 	}
 	if (access(args.back().c_str(), F_OK) == -1) {
-		// std::cout << "je ne trouve pas" << std::endl;
 		return (false);
 	}
 	if (access(args.back().c_str(), R_OK) == -1) {
-		// std::cout << "je ne trouve pas" << std::endl;
 		return (false);
 	}
 	struct stat sb;
 	if (stat(args.back().c_str(), &sb) == -1)
 	{
-		// std::cout << "stat pas bon" << std::endl;
 		return (false);
 	}
 	if (!S_ISREG(sb.st_mode))
 	{
-		// std::cout << "C'est pas un fichier" << std::endl;
 		return (false);
 	}
-	// std::cout << "ErrorPage = good" << std::endl;
 	return (true);
 }
 
@@ -229,7 +217,6 @@ bool isValidUrl(const std::string& url) {
 bool validateReturn(std::vector<std::string> args) {
 	if (args.size() < 1 || args.size() > 2)
 	{
-		// std::cout << "args mauvais" << std::endl;
 		return (false);
 	}
 	if (args.size() == 1) {
@@ -237,7 +224,6 @@ bool validateReturn(std::vector<std::string> args) {
 			|| args[0] == "302" || isErrorCode(args[0]) == true)
 		{
 			if (args[0] == "301" || args[0] == "302") {
-				// std::cout << "redir doit avoir url" << std::endl;
 				return (false);
 			}
 			return (true);
@@ -250,14 +236,12 @@ bool validateReturn(std::vector<std::string> args) {
 		if (args[0] != "200" && args[0] != "201" && args[0] != "204" && args[0] != "301" 
 			&& args[0] != "302" && isErrorCode(args[0]) == false)
 		{
-			// std::cout << "mauvais code erreur" << std::endl;
 			return (false);
 		}
 		if (args[1].empty())
 			return (false);
 	}
 	
-	// std::cout << "Return = good" << std::endl;
 	return (true);
 	
 }
@@ -269,7 +253,6 @@ bool validateIndex(std::vector<std::string> args) {
 		if (args[i][0] == '/' && (i + 1) != args.size())
 			return (false);
 	}
-	// std::cout << "Index = good" << std::endl;
 	return (true);
 }
 
@@ -373,18 +356,15 @@ bool validateUploadPath(std::vector<std::string> args,ServerConfig& srv, State s
 
 bool validateServerName(std::vector<std::string> args) {
 	if (args.size() < 1) {
-		// std::cout << "c'est la" << std::endl;
 		return (false);
 	}
 	for (size_t i = 0; i < args.size(); i++) {
 		if (args[i].empty()) {
-			// std::cout << "c'est la" << std::endl;
 			return (false);
 		}
 
 		for (size_t j = 0; j < args[i].size(); j++) {
 			if (!isalnum(args[i][j]) && args[i][j] != '.' && args[i][j] != '-' && args[i][j] != '_') {
-				// std::cout << "c'est la" << std::endl;
 				return (false);
 			}
 		}
@@ -424,31 +404,25 @@ bool validateCgi(std::vector<std::string> args, ServerConfig& srv, State state) 
 bool validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv) {
 	if (name == "listen")
 	{
-		// std::cout << "LISTEN:" << std::endl;
 		return (validateListen(args, state, srv));
 		
 	}
 
 	else if (name == "root")
 	{
-	 if (validateRoot(args) == true) {
-		if (state == IN_SERVER) {
-			srv.setRoot(args[0]);
-			return (true);
-		}
-		else if (state == IN_LOCATION) {
-			if (srv.getLocations().empty()) {
-				// std::cerr << "pas de location" << std::endl;
-				return (false);
-			}
-			// std::vector<std::string> res = combineRootUri(args[0], srv.getLastLocation().getPath());
-			// if (validateRoot(args)) {
-				srv.getLastLocation().setRoot(args[0]);
+		if (validateRoot(args) == true) {
+			if (state == IN_SERVER) {
+				srv.setRoot(args[0]);
 				return (true);
-			// }
-		}
-	 }
-		// std::cout << "ROOT:" << std::endl;
+			}
+			else if (state == IN_LOCATION) {
+				if (srv.getLocations().empty()) {
+					return (false);
+				}
+					srv.getLastLocation().setRoot(args[0]);
+					return (true);
+			}
+	 	}
 		return (false);
 	}
 
@@ -457,7 +431,6 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 			srv.setServerName(args);
 			return (true);
 		}
-		// std::cout << "c'est la" << std::endl;
 		return (false);
 	}
 
@@ -471,7 +444,6 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 			}
 			else if (state == IN_LOCATION) {
 				if (srv.getLocations().empty()) {
-					// std::cerr << "pas de location" << std::endl;
 					return (false);
 				}
 				srv.getLastLocation().setClientMaxBodySize(size);
@@ -479,7 +451,6 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 			}
 			return (false);
 		}
-		// std::cout << "CLIENT_MAX_BODY_SIZE:" << std::endl;
 		return (false);
 	}
 
@@ -559,6 +530,5 @@ bool validateSpecificDirective(std::string name, std::vector<std::string> args, 
 	
 	else if (name == "cgi_handler")
 		return (validateCgi(args, srv, state));
-	return (false);
-	
+	return (false);	
 }

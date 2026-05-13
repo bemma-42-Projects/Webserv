@@ -31,7 +31,7 @@ class RequestAnswer
 		const std::string		&getAnswer() const;
 		int						getError() const;
 		CGIHandler				*getCGIHandler() const;
-		std::string 			findIndex(/*LocationConfig loc*/);
+		std::string 			findIndex();
 		std::string 			findContentType(const std::string& path);
 		int						fileName();
 		bool					isCgi();

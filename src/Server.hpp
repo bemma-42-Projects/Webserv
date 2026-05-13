@@ -51,8 +51,7 @@ class   Server {
         void            setupCgiEpoll_(int client_fd, Client &client);
         void            cleanCgiData_(int cgi_fd, std::map<int, int>::iterator it);
         void            sendEmergencyError_(int client_fd, int code, const std::string &message);
-        
-        //int                         server_socket_;
+
         std::map<int, ServerConfig*>    listen_sockets_;
         int                             epoll_fd_;
         std::map<int, Client*>          clients_;

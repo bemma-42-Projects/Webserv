@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CGIHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
+/*   By: juduchar <juduchar@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/12 13:38:51 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/13 09:44:33 by juduchar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,16 +91,7 @@ void CGIHandler::handleWrite()
 
     if (bytes > 0)
     {
-        size_t old_mb = bytes_sent_ / (1024 * 1024);
         bytes_sent_ += bytes;
-        size_t new_mb = bytes_sent_ / (1024 * 1024);
-
-        // On n'affiche un log que tous les 5 Mo de progression
-        if (new_mb > old_mb && new_mb % 5 == 0)
-        {
-            std::cout << "[CGI PROGRESS] " << new_mb << " / " 
-                      << (total_size / (1024 * 1024)) << " MB envoyés..." << std::endl;
-        }
     }
 
     if (bytes_sent_ >= total_size)

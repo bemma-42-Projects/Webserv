@@ -3,16 +3,10 @@
 #include <exception>
 #include <algorithm>
 #include <sstream>
-//#include <fcntl.h>    // pour open
-//#include <unistd.h>   // pour read, close
-//#include <sys/stat.h> // pour stat
-//#include "Config.hpp"
 #include "RequestAnswer.hpp"
 #include "Error.hpp"
 #include "ServerConfig.hpp"
 #include "parsingconf.hpp"
-//#include <dirent.h>
-
 
 Request::Request()
 {}
@@ -39,8 +33,8 @@ std::ostream& operator<<(std::ostream& out, const Request& request)
 	std::map<std::string, std::string>::const_iterator i;
 
 	for (i = headers.begin(); i != headers.end(); ++i) {
-		out << "	Header: " << i->first  // La clé (ex: "Content-Type")
-				<< " | Valeur: " << i->second // La valeur (ex: "text/html")
+		out << "	Header: " << i->first
+				<< " | Valeur: " << i->second
 				<< "\n";
 	}
 	out << "Body: " << request.getBody() << "\n";
@@ -178,8 +172,7 @@ bool	Request::complete()
 {
 	size_t	end = this->request_.find("\r\n\r\n");
 	if (end == std::string::npos)
-		return false;//requette non complet
-	// std::cout << "test" <<std::endl;
+		return false;
 	size_t it = this->request_.find("Content-Length:");
 	if (it == std::string::npos)
 		return true;
@@ -222,7 +215,7 @@ int	Request::initFistLine()
 
 	this->method_ = this->request_.substr(begin, it);
 	if (this->method_ != "GET" && this->method_ != "POST" && this->method_ != "DELETE" && this->method_ != "HEAD")
-		return (2); //501 Not Implemented
+		return (2);
 
 	begin = this->request_.find("/", it);
 	if (begin == std::string::npos || begin != (it + 1))
@@ -233,13 +226,9 @@ int	Request::initFistLine()
 		return (1);
 
 	this->url_path_ = this->request_.substr(begin, it - begin);
-	//std::cout << this->url_path_ << std::endl;
 
 	this->raw_uri_ = this->url_path_;
 	this->splitUri_();
-
-	//path_ = Config::getRoot() + url_path_;//avoir a peut etre supprimer
-	
 	
 	begin = this->request_.find("HTTP", it);
 	if (begin == std::string::npos || begin != (it + 1))
@@ -255,12 +244,6 @@ int Request::initHeader()
     if (last == std::string::npos)
         return (1);
 
-	// FIX :
-	// il y avait size_t end = 0;
-	// et size_t	end = this->request_.find("\r\n", begin);
-	// pour éviter le shadowing, j'ai remplacé le premier
-	// end par current_pos et le deuxieme par
-	// value_end
     size_t current_pos = 0;
     
     while (current_pos < last)
@@ -272,7 +255,6 @@ int Request::initHeader()
             break;
             
         begin += 2;
-        // end = begin;
         size_t it = this->request_.find(":", begin);
         if (it == std::string::npos || it >= last)
             return (1);
@@ -290,8 +272,7 @@ int Request::initHeader()
             
         std::string value = this->request_.substr(begin, value_end - begin);
         this->headers_.insert(std::pair<std::string, std::string>(key, value));
-        
-        // l'équivalent du end = begin plus haut, je l'ai déplacé ici 
+
         current_pos = value_end; 
     }
 
@@ -299,8 +280,6 @@ int Request::initHeader()
    	if (headers_.find("Host") == headers_.end())
         return (1);
 
-	// ici, j'ai réjouté la gestion de Transfer-Encoding (chunked)
-	// c'est-a-dire la gestion du contenu envoyé par "chunks"
     if (method_ == "POST" 
         && headers_.find("Content-Length") == headers_.end() 
         && headers_.find("Transfer-Encoding") == headers_.end())
@@ -314,119 +293,53 @@ int Request::initHeader()
     return (0);
 }
 
-//verifie que le body exist et initialise le body de la class
-/*
-int	Request::initBody()
-{
-	std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
-	if (it == headers_.end())
-	{
-		body_ = "\0";
-		body_.clear();
-		return 0;
-	}
-	std::string value = it->second;
-	size_t begin = request_.find("\r\n\r\n");
-	if (begin == std::string::npos)
-		return 1;
-	size_t	len;
-	std::stringstream ss(value);
-    ss >> len;
-	if (len > location_.getClientMaxBodySize())
-		return 2;
-	while (request_[begin] == '\r' || request_[begin] == '\n')
-		++begin;
-	if (request_.size() - begin != len)
-		return 1;
-	body_ = request_.substr(begin, len);
-	return 0;
-}
-*/
-
 int Request::initBody()
 {
-    // =================================================================
-    // 1. NOUVEAU : GESTION DU CHUNKED
-    // =================================================================
     if (headers_.count("Transfer-Encoding") && headers_["Transfer-Encoding"] == "chunked") 
     {
         size_t headers_end = request_.find("\r\n\r\n");
         if (headers_end == std::string::npos) 
-            return 1; // Headers incomplets
+            return 1;
 
         std::string raw_body = request_.substr(headers_end + 4);
 
-        // Est-ce qu'on a reçu la fin absolue de la requête chunked ? ("0\r\n\r\n")
         if (raw_body.find("0\r\n\r\n") != std::string::npos) 
         {
-            body_.clear(); // Pour le test "size 0", le body final est vide
-            return 0;      // Succès ! On a tout reçu.
+            body_.clear();
+            return 0;
         }
-        
-        // Si on n'a pas encore reçu le 0 final, on dit au parseur d'attendre la suite
-        return 3; // (PARSING_INCOMPLETE)
+        return 3;
     }
 
-    // =================================================================
-    // 2. GESTION DU CONTENT-LENGTH CLASSIQUE
-    // =================================================================
     std::map<std::string, std::string>::const_iterator it = headers_.find("Content-Length");
     
-    // S'il n'y a ni Chunked, ni Content-Length, c'est qu'il n'y a pas de body
     if (it == headers_.end())
     {
-		// a la place de body_ = "\0";
-		// ce qui posait probleme
-		// car sinon if (body_.empty()) renvoyait false !
         body_.clear(); 
         return 0;
     }
 
     std::string value = it->second;
-	// j'ai deplace ce bloc un peu plus bas
-	// size_t begin = request_.find("\r\n\r\n");
-    // if (begin == std::string::npos)
-    //    return 1;
     size_t  len;
     std::stringstream ss(value);
     ss >> len;
 
-    // Si le POST fait explicitement une taille de 0
     if (len == 0) {
         body_.clear();
         return 0; 
     }
 
-    // Si on attend vraiment un body avec une taille précise
     size_t begin = request_.find("\r\n\r\n");
     if (begin == std::string::npos)
         return 1;
-        
-	//while (request_[begin] == '\r' || request_[begin] == '\n')
-	//	++begin;
-
-    // On saute juste les 4 caractères "\r\n\r\n"
-	// cela posait probleme
-	// sur 0\r\n\r\n
-	// (POST taille 0)
-	// la boucle continuait d'avancer
     begin += 4; 
 
-    // Vérification de la taille max autorisée (Client Max Body Size)
     if (len > location_.getClientMaxBodySize())
-        return 2; // Retournera une erreur 413
+        return 2;
 
-    // Vérification que tout a bien été reçu par le serveur
-	// si on avait pas exactement le nombre d'octets recus
-	// on envoyait une erreur
-	// cela posait probleme pour les chunked request
-	// (les requetes en plusieurs blocs)
-	// (fragmentation TCP)
-	// if (request_.size() - begin != len)
     if (request_.size() - begin < len)
-        return 1; // Pas encore tout lu, on attend
+        return 1;
 
-    // Extraction du vrai body
     body_ = request_.substr(begin, len);
     
     return 0;
@@ -505,8 +418,6 @@ int Request::checkOfLocation()
 		else
 			return 1;
 	}
-	//else
-	//	root = location_.getRoot();
 	std::string	loc_p = location_.getPath();
 	std::string url = url_path_;
 	std::string	clean_loc = loc_p;
@@ -544,7 +455,6 @@ void	Request::setServerConfig(const ServerConfig *server)
 }
 
 // on parse tout ce qu'on a accumule jusqu'a present
-// pas le dernier morceau de requete
 ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 {
 	this->request_ = raw_data;
@@ -582,7 +492,6 @@ ParsingStatus	Request::parsingHttp(const std::string &raw_data)
 	}
 	else if (checkLoc == 3)
 	{
-		//return (REDIRECT);
 		return (PARSING_SUCCESS);
 	}
 	if (initHeader() == 1)
