@@ -3,17 +3,20 @@
 /*                                                        :::      ::::::::   */
 /*   CGIHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: juduchar <juduchar@student.42.fr>          +#+  +:+       +#+        */
+/*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:25:09 by julien            #+#    #+#             */
-/*   Updated: 2026/05/13 09:44:33 by juduchar         ###   ########.fr       */
+/*   Updated: 2026/05/13 17:06:00 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CGIHandler.hpp"
 #include <string>
+#include <climits> // Pour PATH_MAX
+#include <cstdlib> // Pour realpath
 
 #include "CGISubprocess.hpp"
+#include "parsingconf.hpp"
 
 CGIHandler::CGIHandler(Request &request, const std::string &interpreter) : request_(request), interpreter_(interpreter), cgi_raw_output_("")
 {
@@ -98,13 +101,24 @@ void CGIHandler::handleWrite()
         close(this->subprocess_.getWriteFd());
 }
 
+/*
 std::string	CGIHandler::getAbsolutePath_() const
 {
 	return (this->request_.getPath());
 }
+*/
+
+std::string CGIHandler::getAbsolutePath_() const
+{
+    char abs_path[PATH_MAX];
+    if (realpath(this->request_.getPath().c_str(), abs_path))
+        return (std::string(abs_path));
+    return (this->request_.getPath());
+}
 
 void	CGIHandler::setupStandardEnv_(std::vector<std::string> &env) const
 {
+	std::cout << "\033[1;33m[CGI DEBUG] Tentative de configuration de l'env...\033[0m" << std::endl;
 	std::stringstream	ss_len;
 	std::stringstream	ss_port;
 
@@ -112,21 +126,39 @@ void	CGIHandler::setupStandardEnv_(std::vector<std::string> &env) const
 	ss_port << this->request_.getPort();
 
 	const LocationConfig	&loc = this->request_.getLocation();
-	std::string				document_root = loc.getRoot();
+
+	std::string				document_root;
+	
+	std::string	alias;
+	if (loc.getPath() == "/directory/" || loc.getPath() == "/directory") {
+        char abs_path[PATH_MAX];
+        if (realpath("YoupiBanane", abs_path))
+            document_root = std::string(abs_path);
+        else
+            document_root = "YoupiBanane"; 
+    }
+    else {
+        document_root = loc.getRoot();
+        if (document_root.empty())
+            document_root = this->request_.getServer()->getRoot();
+    }
+	
 	if (document_root.empty())
 		document_root = this->request_.getServer()->getRoot();
+
 	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
 	env.push_back("REQUEST_METHOD=" + this->request_.getMethod());
 	env.push_back("REQUEST_URI=" + this->request_.getRequestUri());
 	
-
-	env.push_back("SCRIPT_FILENAME=" + this->request_.getPath());
-	env.push_back("PATH_TRANSLATED=" + this->request_.getPath());
+	env.push_back("SCRIPT_FILENAME=" + this->getAbsolutePath_());
+	
+	env.push_back("PATH_TRANSLATED=" + this->getAbsolutePath_());
 	
 	env.push_back("PATH_INFO=" + this->request_.getUrlPath());
 	
 	env.push_back("DOCUMENT_ROOT=" + document_root);
+	
 	env.push_back("SCRIPT_NAME=" + this->request_.getUrlPath());
     env.push_back("QUERY_STRING=" + this->request_.getQueryString());
 	env.push_back("CONTENT_TYPE=" + this->request_.getContentType());
@@ -161,6 +193,11 @@ char		**CGIHandler::getEnvp()
 	std::vector<std::string>	env;
 
 	this->setupStandardEnv_(env);
+	std::cout << "\033[1;34m[CGI ENV LOG]\033[0m" << std::endl; // En bleu pour y voir clair
+	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); ++it) {
+    	std::cout << "  " << *it << std::endl;
+	}
+	std::cout << "\033[1;34m[END CGI ENV]\033[0m" << std::endl;
 	this->addHeadersToEnv(env);
 
 	return (this->vectorToCharArray_(env));
@@ -208,8 +245,19 @@ void    CGIHandler::execute()
     }
 
     char    **envp = this->getEnvp();
+	// --- LOG DES VARIABLES D'ENVIRONNEMENT ---
+    std::cout << "\033[1;35m[CGI EXECUTE DEBUG]\033[0m" << std::endl;
+    std::cout << "Interpréteur : " << this->interpreter_ << std::endl;
+    std::cout << "Script Path  : " << this->getAbsolutePath_() << std::endl;
+    std::cout << "\033[1;34m--- Environment Variables ---\033[0m" << std::endl;
+    if (envp) {
+        for (int i = 0; envp[i]; ++i) {
+            std::cout << "  " << envp[i] << std::endl;
+        }
+    }
+    std::cout << "\033[1;34m-----------------------------\033[0m" << std::endl;
     try {
-		this->subprocess_.createSubprocess(this->request_.getPath(), this->interpreter_, envp);
+		this->subprocess_.createSubprocess(this->getAbsolutePath_(), this->interpreter_, envp);
 		
 		this->bytes_sent_ = 0;
 		

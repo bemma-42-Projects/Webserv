@@ -334,8 +334,6 @@ int RequestAnswer::fileName()
     return 0;
 }
 
-
-
 AnswerStatus RequestAnswer::methodPost()
 {
 	if (this->isCgi())
@@ -556,28 +554,6 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request)
 	return (status);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void	RequestAnswer::setCode(int code)
 {
 	this->code_ = code;
@@ -608,7 +584,6 @@ bool	RequestAnswer::getCloseConnection() const
 // et pour stocker l'interpreter correspondant
 bool	RequestAnswer::isCgi()
 {
-	const std::map<std::string, std::string>	&cgi_handlers = request_->getServer()->getCgiHandler();
 	std::string	url = request_->getUrlPath();
 	size_t	last_point_position = url.find_last_of(".");
 	
@@ -617,13 +592,24 @@ bool	RequestAnswer::isCgi()
 
 	std::string	extension = url.substr(last_point_position);
 
-	std::map<std::string, std::string>::const_iterator it = cgi_handlers.find(extension);
+	const std::map<std::string, std::string>	&loc_cgi_handlers = request_->getLocation().getCgiHandler();
+	std::map<std::string, std::string>::const_iterator it_loc = loc_cgi_handlers.find(extension);
 
-	if (it != cgi_handlers.end())
+	if (it_loc != loc_cgi_handlers.end())
 	{
-		this->cgi_interpreter_ = it->second;
+		this->cgi_interpreter_ = it_loc->second;
 		return (true);
 	}
+
+	const std::map<std::string, std::string>	&srv_cgi_handlers = request_->getServer()->getCgiHandler();
+	std::map<std::string, std::string>::const_iterator it_srv = srv_cgi_handlers.find(extension);
+
+	if (it_srv != srv_cgi_handlers.end())
+	{
+		this->cgi_interpreter_ = it_srv->second;
+		return (true);
+	}
+
 	return (false);
 }
 

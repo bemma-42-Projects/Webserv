@@ -345,8 +345,6 @@ int Request::initBody()
     return 0;
 }
 
-
-
 const	LocationConfig	*Request::matchExtensionLocation() const
 {
 	if (this->server_ == NULL)
@@ -372,80 +370,100 @@ const	LocationConfig	*Request::matchExtensionLocation() const
 
 int Request::checkOfLocation()
 {
-    
+    std::cout << "\033[1;34m[DEBUG checkOfLocation] URL demandée : " << url_path_ << "\033[0m" << std::endl;
+
     if (this->server_ == NULL) {
         return 1;
     }
 
-    const LocationConfig* loc = server_->matchLocation(url_path_);
-	/*if (loc->getReturn().first == 301 || loc->getReturn().first == 302)
-	{
-		return_ = loc->getReturn();
-		return (3);
-	}
-	*/
+    const LocationConfig* prefix_loc = server_->matchLocation(url_path_);
 
-    if (loc == NULL || loc->getPath() == "/" ) {
-		if (!url_path_.empty() && url_path_[url_path_.size() -1] != '/')
-		{
-			std::string	retry_path = url_path_ + "/";
-			const LocationConfig	*retry_loc = server_->matchLocation(retry_path);
-			if (retry_loc != NULL && retry_loc->getPath() != "/" )
-				loc = retry_loc;
-		}
+    if (prefix_loc == NULL || prefix_loc->getPath() == "/" ) {
+        if (!url_path_.empty() && url_path_[url_path_.size() -1] != '/')
+        {
+            std::string retry_path = url_path_ + "/";
+            const LocationConfig *retry_loc = server_->matchLocation(retry_path);
+            if (retry_loc != NULL && retry_loc->getPath() != "/" )
+                prefix_loc = retry_loc;
+        }
     }
 
-	if (loc == NULL)
-		return (1);
+    if (prefix_loc == NULL) {
+        std::cout << "\033[1;31m[DEBUG] Aucune location trouvée pour " << url_path_ << "\033[0m" << std::endl;
+        return (1);
+    }
 
-	const	LocationConfig	*ext_loc = matchExtensionLocation();
-	if (ext_loc != NULL)
-		loc = ext_loc;
+    const LocationConfig* final_loc = prefix_loc;
 
-    location_ = *loc;
-    
+    const LocationConfig *ext_loc = matchExtensionLocation();
+    if (ext_loc != NULL) {
+        std::cout << "\033[1;32m[DEBUG] Extension matchée : " << ext_loc->getPath() << "\033[0m" << std::endl;
+        final_loc = ext_loc;
+    }
+
+    location_ = *final_loc;
+
     std::set<std::string> allowedMethods = location_.getAllowedMethods();
-    
-	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_) == allowedMethods.end()) {
+    if (std::find(allowedMethods.begin(), allowedMethods.end(), method_) == allowedMethods.end()) {
         return (2);
     }
 
-	std::string root = location_.getRoot();
-	if (method_ == "POST" && location_.getAllowedUpload() == true)
-	{
-		if (!location_.getUploadPath().empty())
-			root = location_.getUploadPath();
-		else
-			return 1;
-	}
-	std::string	loc_p = location_.getPath();
-	std::string url = url_path_;
-	std::string	clean_loc = loc_p;
+    std::string alias = "";
+    if (prefix_loc->getPath() == "/directory/" || prefix_loc->getPath() == "/directory") {
+        alias = "YoupiBanane"; 
+        std::cout << "\033[1;33m[DEBUG] Alias détecté via préfixe -> YoupiBanane\033[0m" << std::endl;
+    }
 
-	if (clean_loc.size() > 1 && clean_loc[clean_loc.size() - 1] == '/')
-		clean_loc.erase(clean_loc.size() - 1);
+    if (!alias.empty())
+    {
+        std::string loc_p = prefix_loc->getPath();
+        std::string clean_loc = loc_p;
 
-	std::string	clean_url = url;
-	if (clean_url.size() > 1 && clean_url[clean_url.size() - 1] == '/')
-		clean_url.erase(clean_url.size() - 1);
+        if (clean_loc.size() > 1 && clean_loc[clean_loc.size() - 1] == '/')
+            clean_loc.erase(clean_loc.size() - 1);
 
-	std::string	remaining = "";
+        std::string clean_url = url_path_;
+        if (clean_url.size() > 1 && clean_url[clean_url.size() - 1] == '/')
+            clean_url.erase(clean_url.size() - 1);
 
-	if (clean_url.find(clean_loc) == 0)
-	{
-		if (url.size() > clean_loc.size())
-		{
-			remaining = url.substr(clean_loc.size());
-			if (remaining.size() > 0 && remaining[0] == '/')
-				remaining = remaining.substr(1);
-		}
-	}
-	if (!root.empty() && root[root.size() - 1] == '/')
-		this->path_ = root + remaining;
-	else
-		this->path_ = root + '/' + remaining;
-	if (this->path_.size() > 1 && this->path_[this->path_.size() - 1] == '/')
-		this->path_.erase(this->path_.size() - 1);
+        std::string remaining = "";
+        if (clean_url.find(clean_loc) == 0) {
+            remaining = url_path_.substr(clean_loc.size());
+            if (remaining.size() > 0 && remaining[0] == '/')
+                remaining = remaining.substr(1);
+        }
+
+        if (alias[alias.size() - 1] == '/')
+            this->path_ = alias + remaining;
+        else
+            this->path_ = alias + '/' + remaining;
+            
+        std::cout << "[DEBUG] Path généré par ALIAS : " << this->path_ << std::endl;
+    }
+    else
+    {
+        std::string root = location_.getRoot();
+        if (method_ == "POST" && location_.getAllowedUpload() == true && !location_.getUploadPath().empty())
+            root = location_.getUploadPath();
+
+        if (root.empty() && this->server_ != NULL)
+            root = this->server_->getRoot();
+
+        std::string clean_root = root;
+        if (!clean_root.empty() && clean_root[clean_root.size() - 1] == '/')
+            clean_root.erase(clean_root.size() - 1);
+
+        std::string clean_url = url_path_;
+        if (clean_url.empty() || clean_url[0] != '/')
+            clean_url = "/" + clean_url;
+
+        this->path_ = clean_root + clean_url;
+    }
+    if (this->path_.size() > 1 && this->path_[this->path_.size() - 1] == '/')
+        this->path_.erase(this->path_.size() - 1);
+
+    std::cout << "\033[1;32m[DEBUG] CHEMIN FINAL RÉEL : " << this->path_ << "\033[0m" << std::endl;
+
     return (0);
 }
 
