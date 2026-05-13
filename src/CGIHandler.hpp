@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 16:14:03 by julien            #+#    #+#             */
-/*   Updated: 2026/05/04 11:53:34 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/12 13:32:21 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,8 +32,11 @@ class   CGIHandler
         void        execute();
         int         getPid() const;
         int         getReadFd() const;
+        int         getWriteFd() const;
         void        appendOutput(const std::string &chunk);
         std::string getRawOutput() const;
+        size_t      getBytesSent() const;
+        void        handleWrite();
 
     private:
         std::string getAbsolutePath_() const;
@@ -43,10 +46,11 @@ class   CGIHandler
 		void		addHeadersToEnv(std::vector<std::string>& env_vector);
         void        freeEnvp(char **envp);
 
-        Request     &request_;
-        std::string interpreter_;
+        Request         &request_;
+        std::string     interpreter_;
         CGISubprocess   subprocess_;
-        std::string cgi_raw_output_;
+        std::string     cgi_raw_output_;
+        size_t          bytes_sent_;
 };
 
 #endif

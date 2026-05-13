@@ -232,7 +232,6 @@ void    Server::handleTimeouts_() {
         Client *client = it->second;
 
         if (std::difftime(current_time, client->getLastActivity()) > MAX_TIMEOUT) {
-            std::cout << "Client on socket " << client->getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
             client->setState(Client::DISCONNECTED);
             epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client->getSocketFd(), NULL);
             close(client->getSocketFd());
@@ -370,9 +369,35 @@ void    Server::setupCgiEpoll_(int client_fd, Client &client)
         client.getAnswer().setMessage("Internal Server Error");
         client.getAnswer().setAnswer(client.getRequest()); 
         this->prepareForWriting_(client_fd, client);
+        return ;
     }
-    else
-        this->cgi_to_client_[cgi_fd] = client_fd;
+    this->cgi_to_client_[cgi_fd] = client_fd;
+
+    if (client.getRequest().getMethod() == "POST" && !client.getRequest().getBody().empty())
+    {
+        int write_fd = client.getAnswer().getCGIHandler()->getWriteFd();
+        
+        if (write_fd == -1)
+            return ;
+
+        if (fcntl(write_fd, F_SETFL, O_NONBLOCK) == -1) {
+            std::cerr << "[ERROR] fcntl O_NONBLOCK failed for write_fd" << std::endl;
+        }
+
+        struct epoll_event ev_out;
+        memset(&ev_out, 0, sizeof(ev_out));
+        ev_out.events = EPOLLOUT;
+        ev_out.data.fd = write_fd;
+
+        if (epoll_ctl(this->epoll_fd_, EPOLL_CTL_ADD, write_fd, &ev_out) == -1) {
+            client.getAnswer().setCode(500);
+            client.getAnswer().setMessage("Internal Server Error");
+            client.getAnswer().setAnswer(client.getRequest()); 
+            this->prepareForWriting_(client_fd, client);
+            return;
+        }
+        this->cgi_write_to_client_[write_fd] = client_fd;
+    }
 }
 
 void    Server::processClientRequest_(int client_fd) {
@@ -380,45 +405,31 @@ void    Server::processClientRequest_(int client_fd) {
     Request         &request = client.getRequest();
     RequestAnswer   &response = client.getAnswer();
 
-    std::cout << "\n========== REQUÊTE BRUTE (FD: " << client_fd << ") ==========\n";
-    const std::string& raw = client.getRequestData();
-    for (size_t i = 0; i < raw.length(); ++i) {
-        if (raw[i] == '\r') std::cout << "\\r";
-        else if (raw[i] == '\n') std::cout << "\\n\n";
-        else std::cout << raw[i];
-    }
-    std::cout << "\n==============================================================\n" << std::endl;
-    
     try {
         ParsingStatus   parsing_status = request.parsingHttp(client.getRequestData());
 
-        // 1. LE CHUNKED INCOMPLET ARRIVE ICI ET RETOURNE À EPOLL_WAIT !
         if (parsing_status == PARSING_INCOMPLETE)
            return ; 
-           
-        // 2. GESTION DES VRAIES ERREURS DE PARSING (400, 413, 405...)
         if (parsing_status == PARSING_FAILED)
         {
-            // On récupère le VRAI code d'erreur généré par ton parseur
-            int err_code = request.getError(); // (Ou le getter approprié si c'est privé)
+            int err_code = request.getError();
             std::string err_msg = request.getErrorMessage();
             
-            if (err_code == 0) { // Sécurité au cas où l'erreur ne serait pas set
+            if (err_code == 0) {
                 err_code = 400;
                 err_msg = "Bad Request";
             }
             
             response.setCode(err_code);
             response.setMessage(err_msg);
-            
-            // On bypass setAnswer() classique pour générer directement la page d'erreur
-            response.fullAnswer(); // Va générer le HTML de l'erreur avec les bons headers
+
+            response.setCloseConnection(true);
+
+            response.fullAnswer();
             
             this->prepareForWriting_(client_fd, client);
             return ;
         }
-        
-        // 3. SI LE PARSING EST UN SUCCÈS (Le 0\r\n\r\n a été reçu)
         AnswerStatus answer_status = response.setAnswer(request);
 
         if (answer_status == READY_TO_SEND || answer_status == ERROR)
@@ -431,7 +442,7 @@ void    Server::processClientRequest_(int client_fd) {
         std::cerr << "[CRITICAL] Exception during request processing: " << e.what() << std::endl;
         client.getAnswer().setCode(500);
         client.getAnswer().setMessage("Internal Server Error");
-        client.getAnswer().fullAnswer(); // Pour construire les headers 500
+        client.getAnswer().fullAnswer();
         this->prepareForWriting_(client_fd, client);
     }
 }
@@ -442,7 +453,6 @@ void    Server::handleClientRead_(int client_fd) {
     ssize_t bytes_received;
     bool    data_read = false;
 
-    // SECURITÉ : On vérifie que le client existe bien
     if (clients_.find(client_fd) == clients_.end() || clients_[client_fd] == NULL) {
         std::cerr << "[RESEAU FATAL] Tentative de lecture sur un FD client inconnu (" << client_fd << ")" << std::endl;
         return;
@@ -450,39 +460,40 @@ void    Server::handleClientRead_(int client_fd) {
 
     Client  *client = clients_[client_fd];
 
-    std::cout << "\n[RESEAU] --- Epoll signale des données à lire sur le FD " << client_fd << " ---" << std::endl;
-
-    while (true)
-    {
-        memset(buffer, 0, sizeof(buffer));
-        bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-        
-        if (bytes_received > 0)
+    try {
+        while (true)
         {
-            std::cout << "[RESEAU] " << bytes_received << " octets lus depuis recv()." << std::endl;
-            std::string chunk(buffer, bytes_received);
-            client->appendRequestData(chunk);
-            data_read = true;
+            memset(buffer, 0, sizeof(buffer));
+            bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+            
+            if (bytes_received > 0)
+            {
+                std::string chunk(buffer, bytes_received);
+                client->appendRequestData(chunk);
+                data_read = true;
+            }
+            else if (bytes_received == 0) {
+                return(handleClientDisconnect_(client_fd));
+            }
+            else {
+                break ;
+            }
         }
-        else if (bytes_received == 0) {
-            std::cout << "[RESEAU] recv() a renvoyé 0 : Le client a fermé la connexion proprement." << std::endl;
-            return(handleClientDisconnect_(client_fd));
-        }
-        else {
-            // bytes_received == -1 (Plus rien à lire pour le moment sur ce socket non-bloquant)
-            break ;
+    
+        if (data_read)
+        {
+            client->updateLastActivity();
+            const ServerConfig  *config = client->getConfig();
+            client->getRequest().setServerConfig(config);
+            processClientRequest_(client_fd);
         }
     }
-    
-    if (data_read)
-    {
-        std::cout << "[RESEAU] Lecture terminée. Envoi au parseur..." << std::endl;
-        client->updateLastActivity();
-        const ServerConfig  *config = client->getConfig();
-        client->getRequest().setServerConfig(config);
-        processClientRequest_(client_fd);
+    catch (const std::exception &e) {
+        this->sendEmergencyError_(client_fd, 500, "Internal Server Error");
+        this->handleClientDisconnect_(client_fd);
     }
 }
+
 // bascule la surveillance epoll d'un client en mode lecture
 void	Server::setSocketToReadState_(int client_fd) {
 	if (this->clients_.count(client_fd) == 0)
@@ -497,7 +508,6 @@ void	Server::setSocketToReadState_(int client_fd) {
         handleClientDisconnect_(client_fd);
 		return ;
 	}
-    //std::cout << "Socket " << client_fd << " kept alive. Waiting for next request..." << std::endl;
 }
 
 // gère l'évènement d'écriture sur un socket client
@@ -513,21 +523,9 @@ void    Server::handleClientWrite_(int client_fd) {
         return ;
     }
 
-    // =====================================================================
-    // 📡 RADAR : Affiche les headers de la réponse juste avant de l'envoyer
-    // =====================================================================
-    if (buffer.find("HTTP/1.1") == 0) { // Si le buffer commence par HTTP/1.1, c'est le début de la réponse !
-        std::cout << "\n[DEBUG ENVOI] -> Ce que le serveur répond au testeur :\n";
-        std::cout << "--------------------------------------\n";
-        // On affiche les 300 premiers caractères (pour voir les headers)
-        std::cout << buffer.substr(0, 300); 
-        std::cout << "\n--------------------------------------\n" << std::endl;
-    }
-    // =====================================================================
-
     ssize_t         bytes_sent = send(client_fd, buffer.c_str(), buffer.length(), MSG_NOSIGNAL);
 
-    if (bytes_sent < 0)
+    if (bytes_sent == -1)
         return (handleClientDisconnect_(client_fd));
     else if (bytes_sent == 0)
         return (handleClientDisconnect_(client_fd));
@@ -542,7 +540,6 @@ void    Server::handleClientWrite_(int client_fd) {
         client->getAnswer().clear();
         client->setState(Client::READING_REQUEST);
         setSocketToReadState_(client_fd);
-        std::cout << "[DEBUG] Envoi terminé sur FD " << client_fd << ". Client réinitialisé (Keep-Alive)." << std::endl;
     }
 }
 
@@ -592,13 +589,26 @@ void    Server::handleCgiRead_(int cgi_fd)
     this->prepareForWriting_(client_fd, *client);
 }
 
+void Server::handleCgiWrite_(int fd)
+{
+    int client_fd = this->cgi_write_to_client_[fd];
+    Client *client = this->clients_[client_fd];
+    CGIHandler *cgi = client->getAnswer().getCGIHandler();
+
+    cgi->handleWrite();
+
+    if (cgi->getBytesSent() >= client->getRequest().getBody().size())
+    {
+        epoll_ctl(this->epoll_fd_, EPOLL_CTL_DEL, fd, NULL);
+        this->cgi_write_to_client_.erase(fd);
+    }
+}
+
 // lance la boucle d'évènements principale du serveur
 void	Server::run() {
     struct epoll_event  events[MAX_EVENTS];
 	int	n_events;
 
-	//std::cout << "Entering the main server loop..." << std::endl;
-    //while (true) {
     while (g_running)
     {
         handleTimeouts_();
@@ -627,7 +637,7 @@ void	Server::run() {
                         if (client->getState() == Client::READING_REQUEST)
 				            handleClientRead_(fd);
                     }
-			        else if (events[i].events & EPOLLOUT)
+			        if (events[i].events & EPOLLOUT)
                     {
                         if (client->getState() == Client::WRITING_RESPONSE)
     				        handleClientWrite_(fd);
@@ -635,6 +645,11 @@ void	Server::run() {
                 }
                 else if (cgi_to_client_.count(fd) > 0)
                     handleCgiRead_(fd);
+                else if (cgi_write_to_client_.count(fd) > 0)
+                {
+                    if (events[i].events & EPOLLOUT)
+                        handleCgiWrite_(fd);
+                }
 		    }
             catch (const std::exception &e)
             {

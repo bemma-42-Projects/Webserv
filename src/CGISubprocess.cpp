@@ -3,21 +3,21 @@
 /*                                                        :::      ::::::::   */
 /*   CGISubprocess.cpp                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
+/*   By: juduchar <juduchar@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 10:14:43 by julien            #+#    #+#             */
-/*   Updated: 2026/05/04 12:20:14 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/13 09:44:55 by juduchar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CGISubprocess.hpp"
 #include "utils.hpp"
 
-#include <unistd.h>     // Pour pipe(), fork(), dup2(), close(), execve()
-#include <cstring>      // Pour strerror()
-#include <cstdlib>      // Pour exit()
-#include <stdexcept>    // Pour std::runtime_error
-#include <sys/wait.h>   // Pour waitpid
+#include <unistd.h>
+#include <cstring>
+#include <cstdlib>
+#include <stdexcept>
+#include <sys/wait.h>
 #include <string>
 #include <iostream>
 

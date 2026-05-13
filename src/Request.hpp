@@ -2,6 +2,7 @@
 #include <string>
 #include <map>
 #include "ServerConfig.hpp"
+#include <utility>
 
 enum	ParsingStatus {
 	PARSING_FAILED = 0,
@@ -26,8 +27,7 @@ class Request {
 		std::string 						getErrorMessage() const;
 		const LocationConfig				&getLocation() const;
 		const ServerConfig*					getServer() const;
-		std::string							getClientIP() const;
-		//int								requestHttp();							
+		std::string							getClientIP() const;					
 		ParsingStatus						parsingHttp(const std::string &raw_data);
 		int 								complete();
 		int									initFirstLine();
@@ -36,10 +36,6 @@ class Request {
 		int									checkOfLocation();
 		void								setServerConfig(const ServerConfig *server);
 		const LocationConfig				*matchExtensionLocation() const;
-		//void								setError(int error);
-
-		//std::string						answer();
-		//std::string						methodGet();
 		void								splitUri_();
 		std::string							getRequestUri() const;
 		std::string							getQueryString() const;
@@ -65,6 +61,7 @@ class Request {
 		std::string							query_string_;
 		std::string							client_ip_;
 		const ServerConfig*					server_;
+		std::pair<int, std::string>			return_;
 
 };
 

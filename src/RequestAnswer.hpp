@@ -31,7 +31,7 @@ class RequestAnswer
 		const std::string		&getAnswer() const;
 		int						getError() const;
 		CGIHandler				*getCGIHandler() const;
-		std::string 			findIndex(/*LocationConfig loc*/);
+		std::string 			findIndex();
 		std::string 			findContentType(const std::string& path);
 		int						fileName();
 		bool					isCgi();
@@ -41,6 +41,9 @@ class RequestAnswer
 		void					eraseSentBytes(size_t bytes_sent);
 		void					clear();		std::string Itoa(int nbr);
 		void					setFullAnswer(const std::string& full_response);
+		void					setCloseConnection(bool close);
+		bool					getCloseConnection() const;
+
 
 	private:
 		LocationConfig	loc_;
@@ -54,4 +57,5 @@ class RequestAnswer
 		std::string		body_;		
 		std::string		post_file_name_;
 		std::string		cgi_interpreter_;
+		bool			close_connection_;
 };

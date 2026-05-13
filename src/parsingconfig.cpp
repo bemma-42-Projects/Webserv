@@ -88,58 +88,53 @@ bool directiveIsAllowed(std::string name, State state) {
 
 //validation globale des directive on va juste check si les attentes communes a 
 //toutes les directives sont respecter 
-bool validateOneDirective(std::vector<std::string> tokens, size_t& i, State state, ServerConfig& srv) {
+void validateOneDirective(std::vector<std::string> tokens, size_t& i, State state, ServerConfig& srv) {
 	std::vector<std::string> args;
 	std::string name = tokens[i];
 
 	if (directiveIsAllowed(name, state) == false)
 	{
-		std::cout << "Pas dans le bon bloc..." << std::endl; 
-		return (false);
+		throw std::runtime_error("directive '" + name + "' is not allowed in this context");
+		// std::cout << "Pas dans le bon bloc..." << std::endl; 
+		// return (false);
 	}
 	i++;
 	for ( ;i < tokens.size() && tokens[i] != ";" ;i++)
 	{
 		if (tokens[i] == "}" || tokens[i] == "{")
-			return (false);
+			throw std::runtime_error("directive '" + name + "': unexpected '" + tokens[i] + "' found before ';'");
+
 		if (isSimpleDirective(tokens[i]) == true)
-			return (false);
+			throw std::runtime_error("directive '" + name + "': missing ';' before '" + tokens[i] + "'");
+
 		args.push_back(tokens[i]);
 	}
-	if (args.size() == 0)
-		return (false);
-	if (i >= tokens.size() || tokens[i] != ";")
-		return (false);
-	if (validateSpecificDirective(name, args, state, srv) == false)
-	{
-		//std::cout << "[DEBUG] Echec de validation sur la directive : " << name << std::endl;
-		return (false);
-	}
-	return (true);
-}
+	if (args.empty())
+		throw std::runtime_error("directive '" + name + "' requires at least one argument");
 
+	if (i >= tokens.size() || tokens[i] != ";")
+		throw std::runtime_error("directive '" + name + "': missing termination ';' at end of line");
+
+	validateSpecificDirective(name, args, state, srv);
+
+}
 
 // fonction qui valide la structure du fichier de config (pour l'instant elle check si le 
 // nb d'accolade est bon, si les blocs sont bien fait qu'il n'y a pas de location dans location
 // etc, je ne check pas pour l'instant les directives et les ;)
-bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
-
-	// std::cout << "--> DEBUG PARSING: Nombre de tokens trouves = " << tokens.size() << std::endl;
-    // for (size_t i = 0; i < tokens.size(); i++) {
-    //     std::cout << "[" << tokens[i] << "] ";
-    // }
-    // std::cout << std::endl;
+void validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfig> &all_servers) {
 	State state = OUTSIDE;
 	std::stack<std::string> context;
+
 	for (size_t i = 0; i < tokens.size() ; i++)
 	{
 		
 		if (tokens[i] == "server")
 		{
 			if (state != OUTSIDE)
-				return (false);
+				throw std::runtime_error("structure: 'server' block cannot be nested inside another block");
 			else if (i + 1 >= tokens.size() || tokens[i + 1] != "{")
-				return (false);
+				throw std::runtime_error("structure: expected '{' after 'server'");
 			ServerConfig server;
 			all_servers.push_back(server);
 			context.push("server");
@@ -149,14 +144,14 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 		else if (tokens[i] == "location")
 		{
 			if (state != IN_SERVER)
-			{
-				// std::cout << "c'est pas bon ici " << state << std::endl;
-				return (false);
-			}
+				throw std::runtime_error("structure: 'location' must be inside a 'server' block");
+
 			if (i + 1 >= tokens.size() || tokens[i + 1].find_first_of("{}") != std::string::npos)
-				return (false);
+				throw std::runtime_error("structure: 'location' requires a valid path before '{'");
+
 			if (i + 2 >= tokens.size() || tokens[i + 2] != "{")
-				return (false);
+				throw std::runtime_error("structure: expected '{' after location path");
+
 			LocationConfig location;
 			location.setPath(tokens[i + 1]);
 			all_servers.back().addLocation(location);
@@ -165,17 +160,11 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 			i += 2;
 		}
 		else if (tokens[i] == "{")
-		{
-			// std::cout << "c'est pas bon ici" << std::endl;
-			return (false);
-		}
-		else if (tokens[i] == "}")
-		{
+			throw std::runtime_error("structure: unexpected '{' (check your block opening syntax)");
+		else if (tokens[i] == "}") {
 			if (context.empty())
-			{
-				// std::cout << "c'est pas bon ici" << std::endl;
-				return (false);
-			}
+				throw std::runtime_error("structure: unexpected closing brace '}' (no block open)");
+
 			context.pop();
 			if (context.empty())
 				state = OUTSIDE;
@@ -185,100 +174,77 @@ bool validateStructure(std::vector<std::string> &tokens, std::vector<ServerConfi
 				else if (context.top() == "location")
 					state = IN_LOCATION;
 			}
-			
-			
-		}
-		else if (isSimpleDirective(tokens[i]) == true)
-		{
-			if (all_servers.empty()) {
-				std::cout << "directive hors bloc server" << std::endl;
-				return (false);
-			}
 
-			// std::cout << "         Je suis sur une directive!" << std::endl;
-			if (validateOneDirective(tokens, i, state, all_servers.back()) == false)
-			{
-				// std::cout << "c'est pas bon ici" << std::endl;
-				return (false);
-			}
+		}
+		else if (isSimpleDirective(tokens[i]) == true) {
+			if (all_servers.empty())
+				throw std::runtime_error("structure: directive '" + tokens[i] + "' found outside of any 'server' block");
+
+			validateOneDirective(tokens, i, state, all_servers.back());
 		}
 		else
-			return false;
+			throw std::runtime_error("structure: unknown token '" + tokens[i] + "'");
 	}
-	if (state == OUTSIDE && context.empty())
-		return (true);
-	std::cout << "c'est pas bon ici" << std::endl;
-	return (false);
+	if (state != OUTSIDE && !context.empty())
+		throw std::runtime_error("structure: reached end of file with unclosed '" + context.top() + "' block");
 }
 
 
+// int main(int argc, char **argv) {
+// 	if (argc != 2)
+// 		return (1);
+
+// 	std::vector<ServerConfig> all_configs;
+// 	std::string text = readFile(argv[1]);
+// 	std::vector<std::string> res = tokenizeConfig(text);
+// 	if (validateStructure(res, all_configs) == false) {
+// 		// std::cout << "Erreur bad configuration" << std::endl;
+// 		return (1);
+// 	}
+// 	else 
+// 		std::cout << "Everything's good!" << std::endl;
+
+// 	for (size_t i = 0; i < all_configs.size(); i++) 
+// 		all_configs[i].finalize();
 
 
-/*
-int main(int argc, char **argv) {
-	if (argc != 2)
-		return (1);
+// 	for (size_t i = 0; i < all_configs.size(); i++) {
 
-	std::vector<ServerConfig> all_configs;
-	std::string text = readFile(argv[1]);
-	std::vector<std::string> res = tokenizeConfig(text);
-	if (validateStructure(res, all_configs) == false)
-	{
-		std::cout << "Erreur bad configuration" << std::endl;
-		return (1);
-	}
-	std::cout << "Everything's good!" << std::endl;
+// 		std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
+// 		std::cout << all_configs[i] << std::endl << std::endl;
+// 	}
 
-	for (size_t i = 0; i < all_configs.size(); i++) 
-		all_configs[i].finalize();
-	// for (size_t i = 0; i < all_configs.size(); i++) {
+// 	// std::cout << all_configs[0].getLocations()[0].getPath() << std::endl;
 
-	// 	std::cout << std::endl << std::endl << "Serveur " << i << ";" << std::endl;
-	// 	std::cout << all_configs[i] << std::endl << std::endl;
-	// }
-	std::cout << "testtttt" << std::endl;
-
-	if (all_configs.empty())
-		return (1);
-	if (all_configs[0].getLocations().empty())
-		return (1);
-	// std::cout << "testtttt" << std::endl;
-	// if (all_configs[1].get)
-	// std::cout << all_configs[0].getLocations()[0].getPath() << std::endl;
-	// std::cout << "end" << std::endl;
-	const char *buffer = 
-	"POST /upload HTTP/1.1\r\n"
-	"Host: localhost:8080\r\n"
-	"Content-Type: multipart/form-data; boundary=boundary123\r\n"
-	"Content-Length: 162\r\n"
-	"\r\n"
-	"--boundary123\r\n"
-	"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
-	"Content-Type: text/plain\r\n"
-	"\r\n"
-	"Ceci est le contenu de ton fichier !\r\n"
-	"--boundary123--";
+// 	const char *buffer = 
+// 	"POST /upload HTTP/1.1\r\n"
+// 	"Host: localhost:8080\r\n"
+// 	"Content-Type: multipart/form-data; boundary=boundary123\r\n"
+// 	"Content-Length: 162\r\n"
+// 	"\r\n"
+// 	"--boundary123\r\n"
+// 	"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
+// 	"Content-Type: text/plain\r\n"
+// 	"\r\n"
+// 	"Ceci est le contenu de ton fichier !\r\n"
+// 	"--boundary123--";
 	
-	Request file((char *)buffer, all_configs[0]);
-	int result = file.parsingHttp(buffer);
-	std::cout << "request\n\n\n\n\n" << std::endl;
-	std::cout << file << std::endl;
-	if (result == 0)
-	{
-		std::cout << "error " << file.getError() << std::endl;
-		std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), all_configs[0].getErrorPage());
-		return 0;
-	}
-	else if (result == 2)
-	{
-		std::cout << "requette non complete" << std::endl;
-		return 0;
-	}
-	RequestAnswer answer(file);
-	if (answer.setAnswer() == 1)
-		std::cout << "anser =" << answer.getAnswer() << std::endl;
+// 	Request file((char *)buffer, all_configs[0]);
+// 	int result = file.parsingHttp();
+// 	if (result == 0)
+// 	{
+// 		std::cout << "error " << file.getError() << std::endl;
+// 		std::cout << Error::AnswerError(file.getError(), file.getErrorMessage(), all_configs[0].getErrorPage());
+// 		return 0;
+// 	}
+// 	else if (result == 2)
+// 	{
+// 		std::cout << "requette non complete" << std::endl;
+// 		return 0;
+// 	}
+// 	// std::cout << file << std::endl;
+// 	RequestAnswer answer(file);
+// 	if (answer.setAnswer() == 1) {}
+// 		// std::cout << "anser =" << answer.getAnswer() << std::endl;
 
-}
-*/
-
-//probleme avec le getpath, ca segfault
+// }

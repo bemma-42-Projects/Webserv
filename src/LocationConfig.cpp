@@ -1,38 +1,12 @@
 #include "LocationConfig.hpp"
 
-
-
 LocationConfig::LocationConfig() {
 	autoindex_ = -1;
 	allowed_upload_ =-1;
 	client_max_body_size_ = 0;
-	/*path_ = "/src";
-	//autoindex_ = false;
-	//allowed_upload_ = false;//utiliser dans answerrequest
-	std::set<std::string> methods;
-	methods.insert("DELETE");
-	methods.insert("POST");
-	allowed_methods_ = methods;
-	std::vector<std::string> index;
-	index.push_back("indexj.html"); 
-	index.push_back("index.html");
-	index_ = index;
-	root_ = "/home/rmetge/cursus/github/webserv";
-	upload_path_ = "./data/tmp";*/
+	//return_.first = 0;
+	//return_.second = "";
 }
-
-// LocationConfig::LocationConfig(ServerConfig conf) {
-	
-// 	client_max_body_size_ = conf.getClientMaxBodySize();
-// 	root_ = conf.getRoot();
-// 	index_ = conf.getIndex();
-// 	autoindex_ = conf.getAutoIndex();
-// 	allowed_upload_ = false;//utiliser dans answerrequest
-// 	error_page_ = conf.getErrorPage();
-
-
-// 	//avec la configue
-// }
 
 const std::string&	LocationConfig::getPath() const {
 	return (path_);
@@ -69,9 +43,7 @@ const std::string&	LocationConfig::getUploadPath() const {
 
 
 size_t	LocationConfig::getClientMaxBodySize() const {
-	//if (client_max_body_size_)
 	return (client_max_body_size_);
-	//return (Config::getBodySize());
 }
 
 const std::map<int, std::string>&	LocationConfig::getErrorPage() const {
@@ -147,7 +119,7 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	}
 	stream << std::endl;
 
-	if (loc.getReturn().first != 0) { // On vérifie si un code est défini
+	if (loc.getReturn().first != 0) {
 		stream << "Return: " << loc.getReturn().first;
 		if (!loc.getReturn().second.empty()) {
 			stream << " (" << loc.getReturn().second << ")";
@@ -184,5 +156,5 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 
 	if (!loc.getUploadPath().empty())
 		stream << "Upload path: " << loc.getUploadPath() << std::endl;
-	return stream;
+	return (stream);
 }

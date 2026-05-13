@@ -136,7 +136,6 @@ void ServerConfig::finalize() {
 
 	if (this->allowed_methods_.empty()) {
 		this->allowed_methods_.insert("GET");
-		// this->allowed_methods_.insert("POST"); a voir
 	}
 
 	if (this->allowed_upload_ == -1)
@@ -152,8 +151,6 @@ void ServerConfig::finalize() {
 
 	if (this->upload_path_.empty() && this->allowed_upload_ == true)
 		this->allowed_upload_ = false; 
-
-	// if (this->locations_.empty) a voir avec romane 
 
 	for (size_t i = 0; i < locations_.size(); i++) {
 
@@ -226,7 +223,7 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 	}
 	stream << std::endl;
 
-	if (srv.getReturn().first != 0) { // On vconst_érifie si un code est défini
+	if (srv.getReturn().first != 0) {
 		stream << "Return: " << srv.getReturn().first;
 		if (!srv.getReturn().second.empty()) {
 			stream << " (" << srv.getReturn().second << ")";
@@ -267,14 +264,10 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 			stream << srv.getLocations()[i] << " ";
 		}
 	}
-	
-	
 	return (stream);
 }
 
-
-//cherche la location par raport au path 
-//int	Request::parsingHttp()
+//cherche la location par raport au path
 const LocationConfig* ServerConfig::matchLocation(std::string requestPath) const
 {
     const LocationConfig* bestMatch = NULL;
@@ -290,7 +283,6 @@ const LocationConfig* ServerConfig::matchLocation(std::string requestPath) const
             {
                 longestLen = locPath.length();
                 bestMatch = &(*it);
-				// std::cout << bestMatch->getPath() << std::endl;
             }
         }
     }

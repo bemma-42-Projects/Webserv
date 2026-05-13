@@ -91,23 +91,13 @@ const std::string   &Client::getRequestData() const {
 
 void    Client::clearBuffers()
 {
-    std::cout << "\n[DEBUG CLEAR] --- Début du nettoyage du Client ---" << std::endl;
-    std::cout << "[DEBUG CLEAR] request_buffer_ contient actuellement : " << this->request_buffer_.size() << " octets." << std::endl;
-    
-    if (this->request_buffer_.size() > 0) {
-        std::cout << "[🚨 DANGER] On s'apprête à effacer ces données brutes : \n[" << this->request_buffer_ << "]" << std::endl;
-    }
-
     this->request_buffer_.clear();
     this->response_buffer_.clear();
 
-    // Ajoute un petit debug ici aussi pour vérifier que c'est appelé
-    std::cout << "[DEBUG CLEAR] Appel de request_.clear() et answer_.clear()..." << std::endl;
     this->request_.clear();
     this->answer_.clear();
 
     this->last_activity_ = time(NULL);
-    std::cout << "[DEBUG CLEAR] --- Nettoyage terminé ---" << std::endl;
 }
 
 Client::~Client()
