@@ -264,8 +264,6 @@ std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 			stream << srv.getLocations()[i] << " ";
 		}
 	}
-	
-	
 	return (stream);
 }
 

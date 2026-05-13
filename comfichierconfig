@@ -154,3 +154,96 @@ struct stat {
     time_t    st_mtime;    /* Heure dernière modification */
     time_t    st_ctime;    /* Heure dernier changement état */
 };
+
+nom des directives:
+
+-listen
+-root
+-client_max_body_size
+-server_name
+-error_page
+-index
+-return
+-autoindex
+-allowed_methods
+-upload_path
+-allowed_upload
+-cgi_handler
+
+
+1. Règles de Syntaxe Globales
+Commentaires : Toute ligne commençant par # est ignorée.
+
+Blocs :
+	server { ... } : Bloc principal. Ne peut pas être imbriqué. Donc pas de server dans un server.
+	
+	location [path] { ... } : Doit être obligatoirement à l'intérieur d'un bloc server. Donc pas de location seul et pas de location dans une location
+
+	Directives simples : Doivent se terminer par un point-virgule ;, pas de nom de directive en argument.
+
+	Arguments : Séparés par des withespaces.
+
+2. Directives et Validations
+
+listen : listen [IP]:PORT; ou listen PORT; ou IP; ou localhost (on peut declarer plusieurs listen mais pas plusieur args de listen)
+	Le port doit être entre 1 et 65535. (que des digits)
+	L'IP doit être au format IPv4 valide (0-255). doit etre sous la forme X.X.X.X
+
+server_name : server_name nom1 nom2; (doit avoir au moins 1arg )
+	le nom peut comporter que des Alphanumériques, des '.', des '-' et des '_'
+
+Chemins et Fichiers
+root : root /chemin/vers/dossier;
+
+Doit être un dossier existant (S_ISDIR).
+
+Doit avoir les droits de lecture.
+
+Règle de doublon : Ne peut pas être défini deux fois dans le même bloc.
+
+index : index fichier1 fichier2;
+
+Si un argument commence par /, il doit être le dernier de la liste.
+
+error_page : error_page CODE /chemin/fichier.html;
+
+Codes autorisés : entre 300 et 599.
+
+Le dernier argument doit être un fichier existant et lisible.
+
+Limites et Méthodes
+client_max_body_size : client_max_body_size 100M;
+
+Accepte les unités K, M, G (insensible à la casse).
+
+La valeur numérique doit être positive.
+
+allowed_methods : allowed_methods GET POST DELETE;
+
+Seules ces trois méthodes sont acceptées.
+
+Entre 1 et 3 arguments maximum.
+
+Upload et CGI
+allowed_upload : on ou off.
+
+upload_path : upload_path /chemin/dossier;
+
+Doit être un dossier existant.
+
+CRITIQUE : Doit impérativement avoir les droits d'écriture (W_OK).
+
+cgi_handler : cgi_handler .extension /chemin/binaire;
+
+L'extension doit commencer par un ..
+
+Le binaire doit être un fichier régulier et avoir les droits d'exécution (X_OK).
+
+Redirections et Listing
+return : return CODE [URL]; ou return URL;
+
+Si le code est 301 ou 302, une URL est obligatoire.
+
+Si un seul argument est une URL (commence par /, http ou https), le code par défaut est 302.
+
+autoindex : on ou off.

@@ -154,5 +154,5 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 
 	if (!loc.getUploadPath().empty())
 		stream << "Upload path: " << loc.getUploadPath() << std::endl;
-	return stream;
+	return (stream);
 }
