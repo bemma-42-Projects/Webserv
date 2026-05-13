@@ -232,7 +232,6 @@ void    Server::handleTimeouts_() {
         Client *client = it->second;
 
         if (std::difftime(current_time, client->getLastActivity()) > MAX_TIMEOUT) {
-            std::cout << "Client on socket " << client->getSocketFd() << " timed out due to inactivity. Closing connection." << std::endl;
             client->setState(Client::DISCONNECTED);
             epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client->getSocketFd(), NULL);
             close(client->getSocketFd());

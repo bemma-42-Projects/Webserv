@@ -9,8 +9,7 @@ html_content = """
 <html>
 <head><title>Test CGI Python</title></head>
 <body>
-    <h1>Bravo ! Ton CGI Python fonctionne.</h1>
-    <h3>Variables d'environnement reçues :</h3>
+    <h1>Variables d'environnement recues :</h3>
     <ul>
 """
 sys.stdout.write(html_content)
