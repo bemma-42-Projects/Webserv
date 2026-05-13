@@ -54,6 +54,10 @@ const std::map<std::string, std::string>&	LocationConfig::getCgiHandler() const 
 	return (cgi_handler_);
 }
 
+const std::string&	LocationConfig::getAlias() const {
+	return (alias_);
+}
+
 void	LocationConfig::setPath(const std::string& path_loc) {
 	path_ = path_loc;
 }
@@ -90,6 +94,10 @@ void	LocationConfig::setAllowedMethods(const std::set<std::string>& methods) {
 void	LocationConfig::setReturn(int code, const std::string& url) {
 	return_.first = code;
 	return_.second = url;
+}
+
+void	LocationConfig::setAlias(const std::string& str) {
+	this->alias_ = str;
 }
 
 void	LocationConfig::addErrorPage(int code, const std::string& path) {
@@ -131,6 +139,8 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	stream << "Client max body size: " << loc.getClientMaxBodySize() << std::endl;
 	if (!loc.getRoot().empty())
 		stream << "Root: " << loc.getRoot() << std::endl;
+	if (!loc.getAlias().empty())
+		stream << "Alias: " << loc.getAlias() << std::endl;
 
 	if (!loc.getIndex().empty()) {
 		stream << "Index: ";

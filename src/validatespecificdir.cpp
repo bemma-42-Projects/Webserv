@@ -420,6 +420,28 @@ void validateCgi(std::vector<std::string> args, ServerConfig& srv, State state) 
 		throw std::runtime_error("cgi: directive not allowed in this context");
 }
 
+void validateAlias(std::vector<std::string> args) {
+	if (args.size() != 1)
+		throw std::runtime_error("directive 'root' requires exactly 1 argument");
+
+	if (args[0].empty())
+		throw std::runtime_error("directive 'root' has an empty argument");
+
+	if (access(args[0].c_str(), F_OK) == -1)
+		throw std::runtime_error("root '" + args[0] + "': path does not exist");
+
+	if (access(args[0].c_str(), R_OK | X_OK) == -1)
+		throw std::runtime_error("root '" + args[0] + "': permission denied (read/execute required)");
+
+	struct stat sb;
+	if (stat(args[0].c_str(), &sb) == -1)
+		throw std::runtime_error("root '" + args[0] + "': failed to get file status (stat)");
+
+	if (!S_ISDIR(sb.st_mode))
+		throw std::runtime_error("root '" + args[0] + "': is not a directory");
+
+}
+
 void validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv) {
 	
 		if (name == "listen") {
@@ -439,6 +461,8 @@ void validateSpecificDirective(std::string name, std::vector<std::string> args, 
 					throw std::runtime_error(name + ": location context missing");
 				if (!srv.getLastLocation().getRoot().empty())
 					throw std::runtime_error("root: duplicate directive in location");
+				if (!srv.getLastLocation().getAlias().empty())
+					throw std::runtime_error("root cannot be defined if alias is already present.");
 				srv.getLastLocation().setRoot(args[0]);
 			}
 		}
@@ -532,6 +556,22 @@ void validateSpecificDirective(std::string name, std::vector<std::string> args, 
 
 		else if (name == "cgi_handler") {
 			validateCgi(args, srv, state);
+		}
+		else if (name == "alias") {
+			validateAlias(args);
+
+			if (state == IN_SERVER) {
+				throw std::runtime_error("alias can only be in a location ");
+			}
+			else if (state == IN_LOCATION) {
+				if (srv.getLocations().empty())
+					throw std::runtime_error(name + ": location context missing");
+				if (!srv.getLastLocation().getAlias().empty())
+					throw std::runtime_error("alias: duplicate directive in location");
+				if (!srv.getLastLocation().getRoot().empty())
+					throw std::runtime_error("alias cannot be defined if root is already present.");
+				srv.getLastLocation().setAlias(args[0]);
+			}
 		}
 		else 
 			throw std::runtime_error("unknown directive '" + name + "'");
