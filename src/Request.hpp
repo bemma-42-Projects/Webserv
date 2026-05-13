@@ -29,7 +29,7 @@ class Request {
 		const ServerConfig*					getServer() const;
 		std::string							getClientIP() const;					
 		ParsingStatus						parsingHttp(const std::string &raw_data);
-		int 								complete();
+		bool 								complete();
 		int									initFirstLine();
 		int									initHeader();
 		int									initBody();
