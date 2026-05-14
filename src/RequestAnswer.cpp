@@ -226,29 +226,20 @@ AnswerStatus	RequestAnswer::methodGet()
 
 	if (stat(request_->getPath().c_str(), &info) != 0)
 	{
-		//this->error_ = 404;
 		this->code_ = 404;
 		this->message_ = "Not Found";
 		return (ERROR);
 	}
 	std::string res;
-	// si c'est un REGULAR FILE
 	if (S_ISREG(info.st_mode))
 	{
 		if (this->isCgi())
 			return (this->methodCGI());
 		return (getIfFile(request_->getPath()));
 	}
-	// si c'est un DIRECTORY
-	// ...
 	else if (S_ISDIR(info.st_mode))
 	{
-		//LocationConfig	loc = request_.getLocation();
-		//divier la fontion
-		//!!!Le chemin relatif à la racine de ton serveur (l'URL). Si ton dossier webserv est la racine, l'utilisateur devrait juste voir Index of /.
-		// std::cout << "dir" << std::endl;
 		std::string index = findIndex();
-		// std::cout << "dir" << std::endl;
 		if (!index.empty())
 		{
 			
@@ -259,13 +250,11 @@ AnswerStatus	RequestAnswer::methodGet()
 
 			
 			return (getIfFile(target_index));	
-			//Sinon, renvoie la page par défaut (ex: index.html).
 		}
 		else if (loc_.getAutoIndex() == true)
 			return (getIfDir());
 		else
 		{
-			//this->error_ = 403;
 			this->code_ = 403;
 			message_ = "Forbidden";
 			return (ERROR);
@@ -277,9 +266,8 @@ AnswerStatus	RequestAnswer::methodGet()
 //recupere le path du file name pour upload les fichier
 int RequestAnswer::fileName()
 {
-    //LocationConfig    loc = request_.getLocation();
-    std::string root_path = loc_.getRoot() + loc_.getPath(); // Chemin dossier sur disque
-    std::string url_path = request_->getPath();           // Chemin demandé dans l'URL
+    std::string root_path = loc_.getRoot() + loc_.getPath();
+    std::string url_path = request_->getPath();
 
     struct stat s;
     bool is_directory = false;
@@ -319,23 +307,19 @@ int RequestAnswer::fileName()
 			start = s + 1;
 		std::string file_name = body.substr(start, end - start);
 
-        // On construit le chemin final : Dossier + / + Nom
         this->post_file_name_ = url_path;
         if (this->post_file_name_[this->post_file_name_.size() - 1] != '/')
             this->post_file_name_ += '/';
         this->post_file_name_ += file_name;
     } 
-    // ÉTAPE 3 : Si ce n'est pas un dossier, le nom est déjà dans l'URL
     else {
         this->post_file_name_ = url_path;
     }
 
-    // ÉTAPE 4 : Vérification finale - Est-ce que le dossier parent existe ?
     size_t last_slash = this->post_file_name_.find_last_of('/');
     if (last_slash != std::string::npos) {
         std::string dir_to_check = this->post_file_name_.substr(0, last_slash);
         if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) {
-            //std::cerr << "Erreur : Le dossier de destination n'existe pas : " << dir_to_check << std::endl;
             return (1);
         }
     }

@@ -432,8 +432,7 @@ int Request::checkOfLocation()
     else
     {
         std::string root = prefix_loc->getRoot();
-        
-        // Cas particulier Upload
+
         if (method_ == "POST" && location_.getAllowedUpload() == true && !location_.getUploadPath().empty())
             root = location_.getUploadPath();
 
