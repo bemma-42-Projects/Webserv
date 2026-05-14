@@ -333,88 +333,87 @@ const	LocationConfig	*Request::matchExtensionLocation() const {
 	return (NULL);
 }
 
-int	Request::checkOfLocation() {
-	if (this->server_ == NULL) {
+int Request::checkOfLocation() {
+    if (this->server_ == NULL)
 		return 1;
-	}
 
-	const LocationConfig*	prefix_loc = server_->matchLocation(url_path_);
+    const LocationConfig* prefix_loc = server_->matchLocation(url_path_);
 
 	if (prefix_loc == NULL || prefix_loc->getPath() == "/" ) {
-		if (!url_path_.empty() && url_path_[url_path_.size() -1] != '/') {
-			std::string				retry_path = url_path_ + "/";
-			const LocationConfig	*retry_loc = server_->matchLocation(retry_path);
-			if (retry_loc != NULL && retry_loc->getPath() != "/" )
-				prefix_loc = retry_loc;
-		}
-	}
+        if (!url_path_.empty() && url_path_[url_path_.size() - 1] != '/') {
+            std::string retry_path = url_path_ + "/";
+            const LocationConfig *retry_loc = server_->matchLocation(retry_path);
+            if (retry_loc != NULL && retry_loc->getPath() != "/" )
+                prefix_loc = retry_loc;
+        }
+    }
 
-	if (prefix_loc == NULL) {
-		return (1);
-	}
+    if (prefix_loc == NULL)
+		return 1;
 
-	const LocationConfig*	final_loc = prefix_loc;
-	const LocationConfig*	ext_loc = matchExtensionLocation();
-	
-	if (ext_loc != NULL) {
+    const LocationConfig* final_loc = prefix_loc;
+    const LocationConfig* ext_loc = matchExtensionLocation();
+    if (ext_loc != NULL)
 		final_loc = ext_loc;
-	}
 
-	location_ = *final_loc;
+    location_ = *final_loc;
 
-	std::set<std::string>	allowedMethods = location_.getAllowedMethods();
-	if (std::find(allowedMethods.begin(), allowedMethods.end(), method_) == allowedMethods.end()) {
-		return (2);
-	}
+    std::set<std::string> allowedMethods = location_.getAllowedMethods();
+    if (std::find(allowedMethods.begin(), allowedMethods.end(), method_) == allowedMethods.end())
+        return (2);
 
-	std::string	alias = prefix_loc->getAlias();
-	if (!alias.empty()) {
-		std::string	loc_p = prefix_loc->getPath();
-		std::string	clean_loc = loc_p;
-
+    std::string alias = prefix_loc->getAlias();
+    if (!alias.empty()) {
+		std::string loc_p = prefix_loc->getPath();
+		std::string clean_loc = loc_p;
 		if (clean_loc.size() > 1 && clean_loc[clean_loc.size() - 1] == '/')
 			clean_loc.erase(clean_loc.size() - 1);
 
-		std::string	clean_url = url_path_;
+		std::string clean_url = url_path_;
+
 		if (clean_url.size() > 1 && clean_url[clean_url.size() - 1] == '/')
 			clean_url.erase(clean_url.size() - 1);
-
-		std::string	remaining = "";
+		std::string remaining = "";
+		
 		if (clean_url.find(clean_loc) == 0) {
 			remaining = url_path_.substr(clean_loc.size());
 			if (remaining.size() > 0 && remaining[0] == '/')
 				remaining = remaining.substr(1);
 		}
-
 		if (alias[alias.size() - 1] == '/')
 			this->path_ = alias + remaining;
 		else
 			this->path_ = alias + '/' + remaining;
 	}
-	else {
-		std::string	root = prefix_loc->getRoot();
+    else {
+		std::string root = prefix_loc->getRoot();
 
-		if (method_ == "POST" && location_.getAllowedUpload() == true && !location_.getUploadPath().empty())
+		std::string remaining_path = url_path_;
+
+		if (method_ == "POST" && location_.getAllowedUpload() == true && !location_.getUploadPath().empty()) {
 			root = location_.getUploadPath();
+			if (url_path_.find(prefix_loc->getPath()) == 0) {
+				remaining_path = url_path_.substr(prefix_loc->getPath().size());
+			}
+		}
 
 		if (root.empty() && this->server_ != NULL)
 			root = this->server_->getRoot();
 
-		std::string	clean_root = root;
+		std::string clean_root = root;
 		if (!clean_root.empty() && clean_root[clean_root.size() - 1] == '/')
 			clean_root.erase(clean_root.size() - 1);
 
-		std::string	clean_url = url_path_;
-		if (clean_url.empty() || clean_url[0] != '/')
-			clean_url = "/" + clean_url;
+		if (remaining_path.empty() || remaining_path[0] != '/')
+			remaining_path = "/" + remaining_path;
 
-		this->path_ = clean_root + clean_url;
+		this->path_ = clean_root + remaining_path;
 	}
 
-	if (this->path_.size() > 1 && this->path_[this->path_.size() - 1] == '/')
-		this->path_.erase(this->path_.size() - 1);
+    if (this->path_.size() > 1 && this->path_[this->path_.size() - 1] == '/')
+        this->path_.erase(this->path_.size() - 1);
 
-	return (0);
+    return (0);
 }
 
 void	Request::setServerConfig(const ServerConfig *server) {

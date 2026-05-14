@@ -400,7 +400,7 @@ void	Server::processClientRequest_(int client_fd) {
 				err_code = 400;
 				err_msg = "Bad Request";
 			}
-			
+
 			response.setCode(err_code);
 			response.setMessage(err_msg);
 
