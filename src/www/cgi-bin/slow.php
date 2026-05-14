@@ -13,6 +13,5 @@ echo "<p>Début de l'exécution : <strong>" . date('H:i:s') . "</strong></p>\n";
 sleep(5);
 
 echo "<p>Fin de l'exécution : <strong>" . date('H:i:s') . "</strong></p>\n";
-echo "<p>Si tu as pu charger une autre page pendant ces 5 secondes, ton epoll est 100% parfait !</p>\n";
 echo "</body>\n</html>\n";
 ?>
