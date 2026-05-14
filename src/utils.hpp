@@ -5,6 +5,6 @@
 #include <stdexcept>
 #include <string>
 
-void setNonBlocking(int fd);
+void	setNonBlocking(int fd);
 
 #endif

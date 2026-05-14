@@ -24,33 +24,33 @@
 # include <cstdlib>
 # include <unistd.h>
 
-class   CGIHandler
+class	CGIHandler
 {
-    public:
-        CGIHandler(Request &request, const std::string &interpreter);
-        ~CGIHandler();
-        void        execute();
-        int         getPid() const;
-        int         getReadFd() const;
-        int         getWriteFd() const;
-        void        appendOutput(const std::string &chunk);
-        std::string getRawOutput() const;
-        size_t      getBytesSent() const;
-        void        handleWrite();
+	public:
+		CGIHandler(Request &request, const std::string &interpreter);
+		~CGIHandler();
+		void		execute();
+		int			getPid() const;
+		int			getReadFd() const;
+		int			getWriteFd() const;
+		void		appendOutput(const std::string &chunk);
+		std::string	getRawOutput() const;
+		size_t		getBytesSent() const;
+		void		handleWrite();
 
-    private:
-        std::string getAbsolutePath_() const;
-        void        setupStandardEnv_(std::vector<std::string> &env) const;
-        char        **vectorToCharArray_(const std::vector<std::string> &env) const;
-        char		**getEnvp();
+	private:
+		std::string	getAbsolutePath_() const;
+		void		setupStandardEnv_(std::vector<std::string> &env) const;
+		char		**vectorToCharArray_(const std::vector<std::string> &env) const;
+		char		**getEnvp();
 		void		addHeadersToEnv(std::vector<std::string>& env_vector);
-        void        freeEnvp(char **envp);
+		void		freeEnvp(char **envp);
 
-        Request         &request_;
-        std::string     interpreter_;
-        CGISubprocess   subprocess_;
-        std::string     cgi_raw_output_;
-        size_t          bytes_sent_;
+		Request			&request_;
+		std::string		interpreter_;
+		CGISubprocess	subprocess_;
+		std::string		cgi_raw_output_;
+		size_t			bytes_sent_;
 };
 
 #endif

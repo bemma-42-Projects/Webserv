@@ -1,45 +1,53 @@
 #include "Server.hpp"
-#include "parsingconfig.hpp"
-#include "ServerConfig.hpp"
-#include "Error.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <csignal>
 #include <vector>
 
-bool g_running = true;
+#include "parsingconfig.hpp"
+#include "ServerConfig.hpp"
+#include "Error.hpp"
 
-void    handle_sigint(int sig) {
-    (void)sig;
-    g_running = false;
+bool	g_running = true;
+
+void	handle_sigint(int sig) {
+	(void)sig;
+	g_running = false;
 }
 
-int main(int argc, char **argv) {
-    if (argc != 2)
-    {
-        std::cerr << "Usage: ./webserv <config_file>" << std::endl;
-        return (1);
-    }
-    std::signal(SIGINT, handle_sigint);
 
-    try {
-		std::string text = readFile(argv[1]);
-		std::vector<std::string> res = tokenizeConfig(text);
+int	main(int argc, char **argv) {
+	if (argc != 2) {
+		std::cerr << "Usage: ./webserv <config_file>" << std::endl;
+		return (1);
+	}
+
+	std::string	filename = argv[1];
+	if (filename.length() < 5 || filename.substr(filename.length() - 5) != ".conf") {
+		std::cerr << "Error: configuration file must end with .conf" << std::endl;
+		return (1);
+	}
 	
-		std::vector<ServerConfig> all_configs;
+	std::signal(SIGINT, handle_sigint);
+
+	try {
+		std::string					text = readFile(argv[1]);
+		std::vector<std::string>	res = tokenizeConfig(text);
+	
+		std::vector<ServerConfig>	all_configs;
 		
 		validateStructure(res, all_configs);
 
 		for (size_t i = 0; i < all_configs.size(); i++) 
 			all_configs[i].finalize();
 
-		Server  webServer(all_configs);
-        webServer.init();
-        webServer.run();
-    }
-    catch(const std::exception& e) {
-        std::cerr << "Fatal error: " << e.what() << std::endl;
-        return (1);
-    }
-    return (0);
+		Server	webServer(all_configs);
+		webServer.init();
+		webServer.run();
+	}
+	catch(const std::exception& e) {
+		std::cerr << "Fatal error: " << e.what() << std::endl;
+		return (1);
+	}
+	return (0);
 }

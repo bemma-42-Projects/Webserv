@@ -1,5 +1,5 @@
 #include "ServerConfig.hpp"
-#include "parsingconf.hpp"
+#include "parsingconfig.hpp"
 
 ServerConfig::ServerConfig() {
 	autoindex_ = -1;
@@ -44,6 +44,7 @@ int ServerConfig::getAutoIndex() const {
 	return (autoindex_);
 }
 
+//permet d'avoir la derniere location du serveur et de pouvoir la modifier
 LocationConfig&	ServerConfig::getLastLocation() {
 	if (locations_.empty()) {
 		throw std::runtime_error("Tentative d'accès à une location dans un serveur vide !");
@@ -123,6 +124,7 @@ void	ServerConfig::addErrorPage(int code, const std::string& path) {
 	error_page_[code] = path;
 }
 
+//une fois que j'ai parcouru tout mon .conf j'initialise les variable qui ont besoin d'etre initialiser (par defaut)
 void ServerConfig::finalize() {
 
 	if (this->root_.empty())
@@ -186,6 +188,7 @@ void ServerConfig::finalize() {
 	}
 }
 
+//permet de print tous les parametre du serveur 
 std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv) {
 	if (!srv.getListen().empty()) {
 		stream << "Listen : ";

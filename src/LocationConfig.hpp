@@ -1,18 +1,17 @@
 #pragma once
 
-
 #include <string>
 #include <vector>
 #include <iostream>
 #include <map>
 #include <utility>
-#include "ServerConfig.hpp"
-
 #include <set>
 
-class ServerConfig;
+#include "ServerConfig.hpp"
 
-class LocationConfig {
+class	ServerConfig;
+
+class	LocationConfig {
 public:
 
 	LocationConfig();
@@ -57,4 +56,4 @@ private:
 	std::map<std::string, std::string>	cgi_handler_;
 };
 
-std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc);
+std::ostream&	operator<<(std::ostream &stream, const LocationConfig& loc);

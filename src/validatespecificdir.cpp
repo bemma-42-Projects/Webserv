@@ -1,8 +1,8 @@
 
-#include "parsingconf.hpp"
+#include "parsingconfig.hpp"
 
 //fais les check pour le port ex:8080
-int validatePort(std::string port_str) {
+int	validatePort(std::string port_str) {
 	if (port_str.empty())
 		throw std::runtime_error("port is empty");
 
@@ -10,34 +10,34 @@ int validatePort(std::string port_str) {
 		if (!isdigit(port_str[i]))
 			throw std::runtime_error("invalid port: '" + port_str + "' contains non-digits");
 	}
-	char *end;
-	long port = strtol(port_str.c_str(), &end, 10 );
+	char	*end;
+	long	port = strtol(port_str.c_str(), &end, 10 );
 	if (port >= 0 && port <= 65535)
 		return (port);
 	throw std::runtime_error("port out of range");
 }
 
 //fais tous les check concernant l'ip donc soit localhost soit qqch comme 127.0.0.1
-void validateIP(std::string str) {
+void	validateIP(std::string str) {
 	if (str == "localhost")
 		return ;
 
-	size_t i = 0;
-	int count = 0;
+	size_t	i = 0;
+	int		count = 0;
 
 	while (i < str.size()) {
-		size_t start = i;
+		size_t	start = i;
 		while (i < str.size() && isdigit(str[i]))
 			i++;
 
 		if (start == i)
 			throw std::runtime_error("invalid host: empty octet in IP '" + str + "'");
 
-		std::string number(str, start, i - start);
+		std::string	number(str, start, i - start);
 		if (number.size() > 3)
 			throw std::runtime_error("invalid host: octet '" + number + "' is too long");
 
-		int val = atoi(number.c_str());
+		int	val = atoi(number.c_str());
 		if (val < 0 || val > 255)
 			throw std::runtime_error("invalid host: octet '" + number + "' is out of range (0-255)");
 		
@@ -56,12 +56,11 @@ void validateIP(std::string str) {
 }
 
 //pour listen valide la premiere ip adresse
-void validateOneArg(std::string str, ServerConfig& srv) {
+void	validateOneArg(std::string str, ServerConfig& srv) {
 	if (str.empty())	
 		throw std::runtime_error("listen: empty argument");
-	size_t pos = str.find(':');
+	size_t	pos = str.find(':');
 	if (pos == str.npos) {
-
 		if (str.find('.') != std::string::npos || str == "localhost") {
 			validateIP(str);
 
@@ -71,43 +70,42 @@ void validateOneArg(std::string str, ServerConfig& srv) {
 			return ;
 		}
 
-		int prt = validatePort(str);
+		int	prt = validatePort(str);
 		if (prt != -1) {
 			srv.addListen("0.0.0.0", prt);
 			return ;
 		}
 	}
 
-	std::string ip_str = str.substr(0, pos);
+	std::string	ip_str = str.substr(0, pos);
 	validateIP(ip_str);
 	if (ip_str == "localhost")
 		ip_str = "127.0.0.1";
 
-	std::string port_str = str.substr(pos + 1);
+	std::string	port_str = str.substr(pos + 1);
 	if (port_str.empty())
 		throw std::runtime_error("listen: missing port after ':' in '" + str + "'");
-	int portres = validatePort(port_str);
+	int	portres = validatePort(port_str);
 	srv.addListen(ip_str, portres);
 
 }
 
-void validateListen(std::vector<std::string> args, State state, ServerConfig& srv) {
+void	validateListen(std::vector<std::string> args, State state, ServerConfig& srv) {
 	if (args.size() < 1 || args.size() > 1)
 		throw std::runtime_error("directive 'listen' requires exactly 1 argument");
 	if (state != IN_SERVER)
 		throw std::runtime_error("directive 'listen' is only allowed in server block");
 	validateOneArg(args[0], srv);
 	if (!srv.getListen().empty()) {
-		for (size_t i = 0; i < srv.getListen().size() - 1; i++)
-		{
+		for (size_t i = 0; i < srv.getListen().size() - 1; i++) {
 			if (srv.getListen()[i].ip == srv.getListen().back().ip && srv.getListen()[i].port == srv.getListen().back().port)
 				throw std::runtime_error("listen: duplicate directive");
 		}
 	}
 }
 
-std::string combineRootUri(std::string root, std::string uri) {
-	std::string res;
+std::string	combineRootUri(std::string root, std::string uri) {
+	std::string	res;
 	if (root.empty())
 		return (res);
 	if (uri.empty())
@@ -124,7 +122,7 @@ std::string combineRootUri(std::string root, std::string uri) {
 	return (res);
 }
 
-void validateRoot(std::vector<std::string> args) {
+void	validateRoot(std::vector<std::string> args) {
 	if (args.size() != 1)
 		throw std::runtime_error("directive 'root' requires exactly 1 argument");
 
@@ -137,7 +135,7 @@ void validateRoot(std::vector<std::string> args) {
 	if (access(args[0].c_str(), R_OK | X_OK) == -1)
 		throw std::runtime_error("root '" + args[0] + "': permission denied (read/execute required)");
 
-	struct stat sb;
+	struct stat	sb;
 	if (stat(args[0].c_str(), &sb) == -1)
 		throw std::runtime_error("root '" + args[0] + "': failed to get file status (stat)");
 
@@ -146,20 +144,20 @@ void validateRoot(std::vector<std::string> args) {
 
 }
 
-void validateClientMaxBodySize(std::vector<std::string> args) {
+void	validateClientMaxBodySize(std::vector<std::string> args) {
 	if (args.size() != 1)
 		throw std::runtime_error("directive 'client_max_body_size' requires exactly 1 argument");
 
 	if (args[0].empty())
 		throw std::runtime_error("directive 'client_max_body_size' is empty");
 
-	size_t i = 0;
+	size_t	i = 0;
 	while (i < args[0].size() && isdigit(args[0][i]))
 		i++;
 	if (!isdigit(args[0][i]) && i < args[0].size())
 		throw std::runtime_error("client_max_body_size: must be a digit");
 
-	long long val = std::atoll(args[0].c_str());
+	long long	val = std::atoll(args[0].c_str());
 	if (val < 0)
 		throw std::runtime_error("client_max_body_size: value must be positive");
 	if (val > 2147483647)
@@ -167,17 +165,16 @@ void validateClientMaxBodySize(std::vector<std::string> args) {
 
 }
 
-bool isErrorCode(std::string code) {
+bool	isErrorCode(std::string code) {
 	if (code == "400" || code == "403" || code == "404" || code == "405" || code == "413" || code == "500"
 			|| code == "501" || code == "502" || code == "503" || code == "504" || code == "413" || code == "414" || code == "408")
 		return (true);
 	return (false);
 }
 
-void validateErrorPage(std::vector<std::string> args) {
+void	validateErrorPage(std::vector<std::string> args) {
 	if (args.size() < 2)
 		throw std::runtime_error("directive 'error_page' requires at least 2 arguments (code and path)");
-
 
 	for (size_t i = 0; i < args.size() - 1; i++) {
 		if (isErrorCode(args[i]) == false)
@@ -193,7 +190,7 @@ void validateErrorPage(std::vector<std::string> args) {
 	if (access(args.back().c_str(), R_OK) == -1)
 		throw std::runtime_error("error_page path '" + args.back() + "': permission denied (read required)");
 
-	struct stat sb;
+	struct stat	sb;
 	if (stat(args.back().c_str(), &sb) == -1)
 		throw std::runtime_error("error_page path '" + args.back() + "': stat failed");
 
@@ -202,7 +199,7 @@ void validateErrorPage(std::vector<std::string> args) {
 
 }
 
-void isValidUrl(const std::string& url) {
+void	isValidUrl(const std::string& url) {
 	if (url.empty())
 		throw std::runtime_error("return: URL or message is empty");
 
@@ -218,7 +215,7 @@ void isValidUrl(const std::string& url) {
 	throw std::runtime_error("return: '" + url + "' is not a valid URL (must start with / or http)");
 }
 
-void validateReturn(std::vector<std::string> args) {
+void	validateReturn(std::vector<std::string> args) {
 	if (args.size() < 1 || args.size() > 2)
 		throw std::runtime_error("directive 'return' requires 1 or 2 arguments");
 
@@ -250,7 +247,7 @@ void validateReturn(std::vector<std::string> args) {
 	
 }
 
-void  validateIndex(std::vector<std::string> args) {
+void	validateIndex(std::vector<std::string> args) {
 	if (args.size() < 1)
 		throw std::runtime_error("directive 'index' requires at least one argument");
 
@@ -266,11 +263,11 @@ void  validateIndex(std::vector<std::string> args) {
 	}
 }
 
-void validateAutoIndex(std::vector<std::string> args, State state, ServerConfig& srv) {
+void	validateAutoIndex(std::vector<std::string> args, State state, ServerConfig& srv) {
 	if (args.size() != 1)
 		throw std::runtime_error("directive 'autoindex' requires exactly 1 argument (on/off)");
 
-	bool value;
+	bool	value;
 	if (args[0] == "on")
 		value = true;
 	else if (args[0] == "off")
@@ -290,7 +287,7 @@ void validateAutoIndex(std::vector<std::string> args, State state, ServerConfig&
 		throw std::runtime_error("autoindex: directive is not allowed in this context");
 }
 
-void validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, State state) {
+void	validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, State state) {
 	if (args.empty())
 		throw std::runtime_error("directive 'allowed_methods' is empty");
 	if (args.size() > 3)
@@ -299,7 +296,7 @@ void validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, St
 		if (args[i] != "GET" && args[i] != "POST" && args[i] != "DELETE")
 			throw std::runtime_error("allowed_methods: unknown method '" + args[i] + "' (only GET, POST, DELETE are supported)");
 	}
-	std::set<std::string> setMethods(args.begin(), args.end());
+	std::set<std::string>	setMethods(args.begin(), args.end());
 	if (state == IN_SERVER)
 		srv.setAllowedMethods(setMethods);
 
@@ -312,10 +309,10 @@ void validateAllowedMethods(std::vector<std::string> args, ServerConfig& srv, St
 		throw std::runtime_error("allowed_methods: directive not allowed in this context");
 }
 
-void validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, State state) {
+void	validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, State state) {
 	if (args.size() != 1)
 		throw std::runtime_error("directive 'allowed_upload' requires exactly 1 argument (on/off)");
-	bool value;
+	bool	value;
 	if (args[0] == "on")
 		value = true;
 	else if (args[0] == "off")
@@ -336,7 +333,7 @@ void validateAllowedUpload(std::vector<std::string> args, ServerConfig& srv, Sta
 		throw std::runtime_error("allowed_upload: directive not allowed in this context");
 }
 
-void validateUploadPath(std::vector<std::string> args,ServerConfig& srv, State state) {
+void	validateUploadPath(std::vector<std::string> args,ServerConfig& srv, State state) {
 	if (args.size() != 1)
 		throw std::runtime_error("directive 'upload_path' requires exactly 1 argument");
 
@@ -349,7 +346,7 @@ void validateUploadPath(std::vector<std::string> args,ServerConfig& srv, State s
 	if (access(args[0].c_str(), W_OK) == -1)
 		throw std::runtime_error("upload_path '" + args[0] + "': permission denied (write access required)");
 
-	struct stat sb;
+	struct stat	sb;
 	if (stat(args[0].c_str(), &sb) == -1)
 		throw std::runtime_error("upload_path '" + args[0] + "': stat failed");
 
@@ -369,7 +366,7 @@ void validateUploadPath(std::vector<std::string> args,ServerConfig& srv, State s
 		throw std::runtime_error("upload_path: directive not allowed in this context");
 }
 
-void validateServerName(std::vector<std::string> args) {
+void	validateServerName(std::vector<std::string> args) {
 	if (args.empty())
 		throw std::runtime_error("directive 'server_name' requires at least one argument");
 
@@ -391,14 +388,14 @@ void validateServerName(std::vector<std::string> args) {
 	}
 }
 
-void validateCgi(std::vector<std::string> args, ServerConfig& srv, State state) {
+void	validateCgi(std::vector<std::string> args, ServerConfig& srv, State state) {
 	if (args.size() != 2)
 		throw std::runtime_error("directive 'cgi' requires exactly 2 arguments (extension and executable path)");
 
 	if (args[0].empty() || args[0][0] != '.')
 		throw std::runtime_error("cgi: extension '" + args[0] + "' must start with a dot (e.g., .php)");
 
-	struct stat sb;
+	struct stat	sb;
 	if (stat(args[1].c_str(), &sb) == -1)
 		throw std::runtime_error("cgi executable '" + args[1] + "': does not exist");
 
@@ -420,7 +417,7 @@ void validateCgi(std::vector<std::string> args, ServerConfig& srv, State state) 
 		throw std::runtime_error("cgi: directive not allowed in this context");
 }
 
-void validateAlias(std::vector<std::string> args) {
+void	validateAlias(std::vector<std::string> args) {
 	if (args.size() != 1)
 		throw std::runtime_error("directive 'root' requires exactly 1 argument");
 
@@ -433,7 +430,7 @@ void validateAlias(std::vector<std::string> args) {
 	if (access(args[0].c_str(), R_OK | X_OK) == -1)
 		throw std::runtime_error("root '" + args[0] + "': permission denied (read/execute required)");
 
-	struct stat sb;
+	struct stat	sb;
 	if (stat(args[0].c_str(), &sb) == -1)
 		throw std::runtime_error("root '" + args[0] + "': failed to get file status (stat)");
 
@@ -442,7 +439,7 @@ void validateAlias(std::vector<std::string> args) {
 
 }
 
-void validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv) {
+void	validateSpecificDirective(std::string name, std::vector<std::string> args, State state, ServerConfig& srv) {
 	
 		if (name == "listen") {
 			validateListen(args, state, srv);
@@ -474,8 +471,8 @@ void validateSpecificDirective(std::string name, std::vector<std::string> args, 
 
 		else if (name == "client_max_body_size") {
 			validateClientMaxBodySize(args);
-			char *end;
-			size_t size = strtol(args[0].c_str(), &end, 10);
+			char	*end;
+			size_t	size = strtol(args[0].c_str(), &end, 10);
 			if (state == IN_SERVER) {
 				srv.setClientMaxBodySize(size);
 			}
@@ -488,9 +485,9 @@ void validateSpecificDirective(std::string name, std::vector<std::string> args, 
 
 		else if (name == "error_page") {
 			validateErrorPage(args);
-			std::string path = args.back();
+			std::string	path = args.back();
 			for (size_t i = 0; i < args.size() - 1; i++) {
-				int code = std::atoi(args[i].c_str());
+				int	code = std::atoi(args[i].c_str());
 				if (state == IN_SERVER) 
 					srv.addErrorPage(code, path);
 				else if (state == IN_LOCATION ) {
@@ -513,8 +510,8 @@ void validateSpecificDirective(std::string name, std::vector<std::string> args, 
 
 		else if (name == "return") {
 			validateReturn(args);
-			int code = 0;
-			std::string url = "";
+			int			code = 0;
+			std::string	url = "";
 			if (args.size() == 1) {
 				if (args[0] == "200" || args[0] == "201" || args[0] == "204" || args[0] == "301" 
 						|| args[0] == "302" || isErrorCode(args[0]) == true)

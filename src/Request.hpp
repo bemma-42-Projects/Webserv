@@ -10,7 +10,7 @@ enum	ParsingStatus {
 	PARSING_INCOMPLETE = 2
 };
 
-class Request {
+class	Request {
 
 	public:
 		Request();
@@ -65,4 +65,4 @@ class Request {
 
 };
 
-std::ostream& operator<<(std::ostream& out, const Request& request);
+std::ostream&	operator<<(std::ostream& out, const Request& request);

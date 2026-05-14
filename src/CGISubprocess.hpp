@@ -16,26 +16,26 @@
 #include <unistd.h>
 #include <string>
 
-class   CGISubprocess
+class	CGISubprocess
 {
-    public:
-        CGISubprocess();
-        ~CGISubprocess();
-        void        createSubprocess(const std::string &path, const std::string &interpreter, char **envp);
-        int         getWriteFd() const;
-        int         getReadFd() const;
-        pid_t       getPid() const;
+	public:
+		CGISubprocess();
+		~CGISubprocess();
+		void		createSubprocess(const std::string &path, const std::string &interpreter, char **envp);
+		int			getWriteFd() const;
+		int			getReadFd() const;
+		pid_t		getPid() const;
 
-    private:
-        void    setupChildPipes_();
-        void    runChild_(const std::string &path, const std::string &interpreter, char **envp);
-        
-        int     pipe_to_cgi_[2];
-        int     pipe_from_cgi_[2];
-        pid_t   pid_;
+	private:
+		void		setupChildPipes_();
+		void		runChild_(const std::string &path, const std::string &interpreter, char **envp);
+		
+		int		pipe_to_cgi_[2];
+		int		pipe_from_cgi_[2];
+		pid_t	pid_;
 
-        CGISubprocess(const CGISubprocess &src);
-        CGISubprocess   &operator=(const CGISubprocess &rhs);
+		CGISubprocess(const CGISubprocess &src);
+		CGISubprocess	&operator=(const CGISubprocess &rhs);
 };
 
 #endif

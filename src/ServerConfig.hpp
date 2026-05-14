@@ -6,21 +6,20 @@
 #include <ostream>
 #include <map>
 #include <utility>
+#include <set>
 
 #include "LocationConfig.hpp"
 
-#include <set>
+class	LocationConfig;
 
-class LocationConfig;
-
-struct Listen {
+struct	Listen {
 	std::string	ip;
 	int			port;
 	Listen() : ip("0.0.0.0"), port(80) {}
 };
 
 
-class ServerConfig {
+class	ServerConfig {
 public:
 
 	ServerConfig();
@@ -74,5 +73,5 @@ private:
 
 };
 
-std::ostream& operator<<(std::ostream &stream, const ServerConfig& srv);
+std::ostream&	operator<<(std::ostream &stream, const ServerConfig& srv);
 

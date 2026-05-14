@@ -2,7 +2,7 @@
 #include <string>
 #include "LocationConfig.hpp"
 
-class Error 
+class	Error 
 {
 	public:
 		Error();

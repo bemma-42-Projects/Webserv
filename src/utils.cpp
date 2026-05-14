@@ -14,10 +14,10 @@
 
 // rend un file descriptor non bloquant
 // permet de s'assurer que les appels recv et send ne bloquent jamais la boucle epoll
-void    setNonBlocking(int fd) {
-    int flags;
+void	setNonBlocking(int fd) {
+	int flags;
 
-    flags = fcntl(fd, F_GETFL, 0);
+	flags = fcntl(fd, F_GETFL, 0);
 	if (flags == -1)
 		throw std::runtime_error("fcntl(F_GETFL) failed");
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)

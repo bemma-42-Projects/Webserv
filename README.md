@@ -9,7 +9,7 @@ Le serveur est conçu pour être résilient, totalement non-bloquant et capable 
 
 ## Fonctionnalités
 - **Multiplexage :** Gestion de multiples clients sur un seul thread avec `epoll`.
-- **Hébergement Virtuel :** Capacité d'écouter sur plusieurs paires IP:Port et de différencier les serveurs par le `server_name`.
+- **Hébergement Virtuel :** Capacité d'écouter sur plusieurs paires IP:Port.
 - **CGI :** Exécution de scripts basés sur l'extension du fichier (ex: `.php`, `.py`).
 - **Gestion des Fichiers :** Support de l'indexation de répertoire (`autoindex`), de l'upload de fichiers et du service de fichiers statiques.
 - **Robustesse :** Le serveur est conçu pour rester opérationnel même en cas de requêtes malformées ou volumineuses.
@@ -31,30 +31,36 @@ Lancez le serveur en passant le fichier de configuration en argument : ./webserv
 Le fichier de configuration utilise une syntaxe inspirée de NGINX, structurée en "directives simples" (terminées par un ;) et en "blocs/contextes" (délimités par {}).
 
 ### Directives du bloc server
-listen : Définit l'interface IP et le port (ex: listen 127.0.0.1:8080; ou listen 80;).
+listen : Définit l'interface IP et le port (ex: listen 127.0.0.1:8080; ou listen 80; ou listen IP/localhost).
 
 server_name : Permet de différencier plusieurs serveurs écoutant sur le même port.
 
-error_page : Associe un code d'erreur à un chemin de fichier (ex: error_page 404 /404.html;).
+error_page : Associe un code d'erreur à un chemin de fichier (ex: error_page 404 /404.html; ou error_page 500 502 503 504 /500.html).
 
 client_max_body_size : Limite la taille du corps de la requête (413 si dépassé). Une valeur de 0 désactive la vérification.
+
+root : Définit le répertoire racine (on ne peut en definir qu'un).
 
 ### Directives du bloc location (Routes)
 Le bloc location permet de définir des comportements spécifiques selon l'URL :
 
-methods : Liste des méthodes autorisées (ex: methods GET POST;).
+allowed_methods : Liste des méthodes autorisées (ex: methods GET POST;).
 
-root : Définit le répertoire racine pour la route.
+root : Définit le répertoire racine pour la route, si il n'y a pas d'alias (on peut en definir qu'un).
+
+alias : Définit le répertoire qui va remplacer l'url de la location, si il n'y a pas de root (on peut en definir qu'un).
 
 index : Fichier par défaut si la cible est un répertoire.
 
 autoindex : Active ou désactive l'affichage du contenu d'un dossier (on/off).
 
-return : Gère les redirections HTTP.
+return : Gère les redirections HTTP, 301 ou 302 (return 301 http://localhost:8080/new-page;).
 
-upload_store : Définit l'emplacement où les fichiers téléchargés sont stockés.
+upload_path : Définit l'emplacement où les fichiers téléchargés sont stockés.
 
-cgi_ext : Associe une extension de fichier à un exécutable CGI.
+allowed_upload : Active ou désactive le téléchargement de fichier (on/off)
+
+cgi_handler : Associe une extension de fichier à un exécutable CGI.
 
 ### Règles de parsing
 Les commentaires commencent par #.
@@ -63,7 +69,11 @@ Les espaces, tabulations et retours à la ligne sont autorisés entre les direct
 
 Les blocs location ne peuvent pas être imbriqués.
 
+Les blocs serveur ne peuvent pas être imbriqués
+
 Chaque serveur doit avoir au moins une location / définie.
+
+Une directive ne peut pas être defini en dehors d'un bloc.
 
 ## Détails Techniques (Système)
 Le serveur utilise la structure stat pour vérifier l'existence et les permissions des fichiers demandés.
