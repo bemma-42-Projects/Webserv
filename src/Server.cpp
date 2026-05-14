@@ -475,7 +475,7 @@ void    Server::handleClientRead_(int client_fd) {
             else if (bytes_received == 0) {
                 return(handleClientDisconnect_(client_fd));
             }
-            else {
+            else if (bytes_received == -1) {
                 break ;
             }
         }
@@ -553,13 +553,14 @@ void    Server::cleanCgiData_(int cgi_fd, std::map<int, int>::iterator it)
 
 void    Server::handleCgiRead_(int cgi_fd)
 {
-    std::map<int, int>::iterator    it = cgi_to_client_.find(cgi_fd);
-    if (it == cgi_to_client_.end())
+    std::map<int, int>::iterator it = cgi_to_client_.find(cgi_fd);
+    if (it == cgi_to_client_.end()) {
         return (cleanCgiData_(cgi_fd, it));
+    }
 
     int client_fd = it->second;
-    Client  *client = clients_[client_fd];
-    char    buffer[4096];
+    Client *client = clients_[client_fd];
+    char buffer[4096];
     ssize_t bytes_read = read(cgi_fd, buffer, sizeof(buffer));
 
     if (bytes_read > 0)
@@ -571,21 +572,21 @@ void    Server::handleCgiRead_(int cgi_fd)
     int status;
     waitpid(client->getAnswer().getCGIHandler()->getPid(), &status, 0);
 
-    bool    error_detected = false;
+    bool error_detected = false;
     if (bytes_read < 0 || client->getAnswer().getCGIHandler()->getRawOutput().empty())
         error_detected = true;
 
     if (error_detected)
     {
-        std::cerr << "[ERROR] CGI output is empty. Sending 500." << std::endl;
         client->getAnswer().setCode(500);
-        client->getAnswer().setMessage("Internal Server Error");
-        std::string errorResponse = Error::AnswerError(500, "Internal Server Error", client->getConfig()->getErrorPage());
-        client->getAnswer().setFullAnswer(errorResponse);
     }
     else
+    {
         client->getAnswer().buildCGIResponse();
+    }
+
     cleanCgiData_(cgi_fd, it);
+    
     this->prepareForWriting_(client_fd, *client);
 }
 
@@ -622,7 +623,7 @@ void	Server::run() {
         }
         for (int i = 0; i < n_events; i++) {
             int fd = events[i].data.fd;
-
+            
             try {
                 if (this->listen_sockets_.count(fd) > 0)
                     handleNewConnection_(fd);
@@ -632,23 +633,34 @@ void	Server::run() {
 
                     if (client->getState() == Client::DISCONNECTED)
                         continue ;
+                    
                     if (events[i].events & EPOLLIN)
                     {
                         if (client->getState() == Client::READING_REQUEST)
 				            handleClientRead_(fd);
                     }
-			        if (events[i].events & EPOLLOUT)
+
+			        if (this->clients_.count(fd) > 0 && events[i].events & EPOLLOUT)
                     {
                         if (client->getState() == Client::WRITING_RESPONSE)
     				        handleClientWrite_(fd);
                     }
+
+                    if (this->clients_.count(fd) > 0 && (events[i].events & (EPOLLERR | EPOLLHUP)))
+                    {
+                        this->handleClientDisconnect_(fd);
+                    }
                 }
+
                 else if (cgi_to_client_.count(fd) > 0)
                     handleCgiRead_(fd);
+                
                 else if (cgi_write_to_client_.count(fd) > 0)
                 {
                     if (events[i].events & EPOLLOUT)
                         handleCgiWrite_(fd);
+                    if (cgi_write_to_client_.count(fd) > 0 && (events[i].events & (EPOLLERR | EPOLLHUP)))
+                        close(fd);
                 }
 		    }
             catch (const std::exception &e)
