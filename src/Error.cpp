@@ -9,43 +9,35 @@ Error::Error(){}
 
 Error::~Error(){}
 
-int         Error::code_ = 0;
-std::string Error::message_ = "";
-//LocationConfig*	Error::loc_ = NULL;
-std::map<int, std::string> Error::page_error_;
+int							Error::code_ = 0;
+std::string					Error::message_ = "";
+std::map<int, std::string>	Error::page_error_;
 
 
-std::string Error::Itoa(int nbr)
+std::string	Error::Itoa(int nbr)
 {
-	std::stringstream ss;
-    
-    ss << nbr;
-    std::string str = ss.str();
-	return str;
+	std::stringstream	ss;
+	ss << nbr;
+	std::string	str = ss.str();
+	return (str);
 }
 
 std::string	Error::ErrorPage()
 {
-	if (!page_error_.empty())
-	{
-		std::map<int, std::string>::const_iterator it = page_error_.find(code_);
-		if (it != page_error_.end())
-		{
-			struct stat s;
-			if (stat(it->second.c_str(), &s) == 0 && S_ISREG(s.st_mode))
-			{
+	if (!page_error_.empty()) {
+		std::map<int, std::string>::const_iterator	it = page_error_.find(code_);
+		if (it != page_error_.end()) {
+			struct stat	s;
+			if (stat(it->second.c_str(), &s) == 0 && S_ISREG(s.st_mode)) {
 				int	fd = open((it->second).c_str(), O_RDONLY);
-				if (fd != -1)
-				{
+				if (fd != -1) {
 					std::string	res;
-					char buffer[4096];
-					ssize_t	bite_read;
-					while ((bite_read = read(fd, buffer, sizeof(buffer))) > 0)
-					{
+					char		buffer[4096];
+					ssize_t		bite_read;
+					while ((bite_read = read(fd, buffer, sizeof(buffer))) > 0) {
 						res.append(buffer, bite_read);
 					}
 					close(fd);
-				
 					return (res);
 				}
 			}	
@@ -71,10 +63,10 @@ std::string	Error::AnswerError(int code, std::string message, std::map<int, std:
 	else
 		message_ = "ERROR";
 	page_error_ = pageError;
-	std::string error_page = ErrorPage();
-	std::string header = "HTTP/1.1 " + Itoa(code_);
+	std::string	error_page = ErrorPage();
+	std::string	header = "HTTP/1.1 " + Itoa(code_);
 	header += " " + message_ + "\r\n";
-	std::string content_type = "text/html";
+	std::string	content_type = "text/html";
 
 	header += "Content-Type: " + content_type + "\r\n";
 	header += "Content-Length: " + Itoa(error_page.length()) + "\r\n";

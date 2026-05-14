@@ -4,8 +4,7 @@ LocationConfig::LocationConfig() {
 	autoindex_ = -1;
 	allowed_upload_ =-1;
 	client_max_body_size_ = 0;
-	//return_.first = 0;
-	//return_.second = "";
+
 }
 
 const std::string&	LocationConfig::getPath() const {
@@ -108,20 +107,20 @@ void	LocationConfig::setCgiHandler(const std::string& ext, const std::string& pa
 	cgi_handler_[ext] = path;
 }
 
-std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
+std::ostream&	operator<<(std::ostream &stream, const LocationConfig& loc) {
 	std::cout << std::endl;
 
 	stream << "Path: " << loc.getPath() << std::endl;
 
 	stream << "Error pages: ";
-	std::map<int, std::string>::const_iterator it;
+	std::map<int, std::string>::const_iterator	it;
 	for (it = loc.getErrorPage().begin(); it != loc.getErrorPage().end(); it++) {
 		stream << "Error:" << it->first << " Page:" << it->second << "  |  ";
 	}
 	stream << std::endl;
 
 	stream << "Cgi: ";
-	std::map<std::string, std::string>::const_iterator ite;
+	std::map<std::string, std::string>::const_iterator	ite;
 	for (ite = loc.getCgiHandler().begin(); ite != loc.getCgiHandler().end(); ite++) {
 		stream << "Ext:" << ite->first << " Path:" << ite->second << "  |  ";
 	}
@@ -136,29 +135,28 @@ std::ostream& operator<<(std::ostream &stream, const LocationConfig& loc) {
 	}
 
 	stream << "Auto index: " << loc.getAutoIndex() << std::endl;
+
 	stream << "Client max body size: " << loc.getClientMaxBodySize() << std::endl;
+
 	if (!loc.getRoot().empty())
 		stream << "Root: " << loc.getRoot() << std::endl;
 	if (!loc.getAlias().empty())
 		stream << "Alias: " << loc.getAlias() << std::endl;
 
 	if (!loc.getIndex().empty()) {
+		std::vector<std::string>::const_iterator	itin;
 		stream << "Index: ";
-		for (size_t i = 0; i < loc.getIndex().size(); i++)
-		{
-			stream << loc.getIndex()[i] << " ";
-		}
+		for (itin = loc.getIndex().begin(); itin != loc.getIndex().end(); itin++)
+			stream << *itin << " ";
 		std::cout << std::endl;
 	}
 	
 	if (!loc.getAllowedMethods().empty()) {
 		stream << "Allowed methods: ";
 
-		std::set<std::string>::const_iterator it;
-		for (it = loc.getAllowedMethods().begin(); it != loc.getAllowedMethods().end(); it++)
-		{
+		std::set<std::string>::const_iterator	it;
+		for (it = loc.getAllowedMethods().begin(); it != loc.getAllowedMethods().end(); it++) 
 			stream << *it << " ";
-		}
 		std::cout << std::endl;
 	}
 	

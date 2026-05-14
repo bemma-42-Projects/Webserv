@@ -12,7 +12,7 @@ enum	AnswerStatus
 	CGI_IN_PROGRESS = 2
 };
 
-class RequestAnswer
+class	RequestAnswer
 {
 	public:
 		RequestAnswer();
