@@ -6,7 +6,7 @@
 /*   By: julien <julien@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/20 10:14:43 by julien            #+#    #+#             */
-/*   Updated: 2026/05/14 11:07:27 by julien           ###   ########.fr       */
+/*   Updated: 2026/05/14 13:19:51 by julien           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,30 +52,30 @@ void    CGISubprocess::setupChildPipes_()
     close(pipe_from_cgi_[1]);
 }
 
-// transforme le clone du serveur web en script CGI
-void    CGISubprocess::runChild_(const std::string &path, const std::string &interpreter, char **envp)
-{
+void CGISubprocess::runChild_(const std::string &path, const std::string &interpreter, char **envp) {
     setupChildPipes_();
+
     std::string parent_dir = ".";
     std::string filename = path;
-    size_t      last_slash = path.find_last_of('/');
-    if (last_slash != std::string::npos)
+    size_t last_slash = path.find_last_of('/');
+
+    if (last_slash != std::string::npos) {
         parent_dir = path.substr(0, last_slash);
-    if (chdir(parent_dir.c_str()) == -1)
-    {
-        std::cerr << "CGI Error: chdir failed" << std::endl;
-        exit(EXIT_FAILURE);
+        filename = path.substr(last_slash + 1);
     }
-    char    *args[] = {
+
+    if (chdir(parent_dir.c_str()) == -1) {
+        exit(1);
+    }
+
+    char *args[] = {
         const_cast<char *>(interpreter.c_str()),
         const_cast<char *>(filename.c_str()),
         NULL
     };
-    if (execve(args[0], args, envp) == -1)
-    {
-        std::cerr << "CGI Error : execve failed" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    execve(args[0], args, envp);
+    
+    exit(1);
 }
 
 // fork permet de creer une copie du serveur web

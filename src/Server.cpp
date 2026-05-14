@@ -320,7 +320,7 @@ void	Server::setSocketToWriteState_(int client_fd) {
 
     struct epoll_event mod_ev;
     
-	mod_ev.events = EPOLLIN | EPOLLOUT;
+	mod_ev.events = EPOLLOUT;
     mod_ev.data.fd = client_fd;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, client_fd, &mod_ev) == -1) {
         this->handleClientDisconnect_(client_fd);
@@ -442,25 +442,21 @@ void    Server::handleClientRead_(int client_fd) {
     Client  *client = clients_[client_fd];
 
     try {
-        while (true)
-        {
-            memset(buffer, 0, sizeof(buffer));
-            bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+        memset(buffer, 0, sizeof(buffer));
+        bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
             
-            if (bytes_received > 0)
-            {
-                std::string chunk(buffer, bytes_received);
-                client->appendRequestData(chunk);
-                data_read = true;
-            }
-            else if (bytes_received == 0) {
-                return(handleClientDisconnect_(client_fd));
-            }
-            else if (bytes_received == -1) {
-                break ;
-            }
+        if (bytes_received > 0)
+        {
+            std::string chunk(buffer, bytes_received);
+            client->appendRequestData(chunk);
+            data_read = true;
         }
-    
+        else if (bytes_received == 0) {
+            return(handleClientDisconnect_(client_fd));
+        }
+        else if (bytes_received == -1)
+            return ;
+
         if (data_read)
         {
             client->updateLastActivity();
