@@ -29,8 +29,8 @@ class	Request {
 		const ServerConfig*					getServer() const;
 		std::string							getClientIP() const;					
 		ParsingStatus						parsingHttp(const std::string &raw_data);
-		bool								complete();
-		int									initFistLine();
+		bool 								complete();
+		int									initFirstLine();
 		int									initHeader();
 		int									initBody();
 		int									checkOfLocation();

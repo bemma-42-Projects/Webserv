@@ -178,7 +178,8 @@ void	Request::splitUri_() {
 }
 
 //parse la premier ligne et implemente la class (methode chemin version)
-int	Request::initFistLine() {
+int	Request::initFirstLine()
+{
 	size_t	begin = 0;
 	size_t	last = this->request_.find("\r\n");
 	if (last == std::string::npos)
@@ -424,10 +425,10 @@ void	Request::setServerConfig(const ServerConfig *server) {
 ParsingStatus	Request::parsingHttp(const std::string &raw_data) {
 	this->request_ = raw_data;
 
-	if (complete() == false)
+	if (complete()== false)
 		return (PARSING_INCOMPLETE);
 	
-	int	res = initFistLine();
+	int res = initFirstLine();
 
 	if (res == 1) {
 		error_ = 400;

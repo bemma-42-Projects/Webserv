@@ -202,20 +202,24 @@ std::string	RequestAnswer::findIndex() {
 AnswerStatus	RequestAnswer::methodGet() {
 	struct stat	info;
 
-	if (stat(request_->getPath().c_str(), &info) != 0) {
+	if (stat(request_->getPath().c_str(), &info) != 0)
+	{
 		this->code_ = 404;
 		this->message_ = "Not Found";
 		return (ERROR);
 	}
-	std::string	res;
-	if (S_ISREG(info.st_mode)) {
+	std::string res;
+	if (S_ISREG(info.st_mode))
+	{
 		if (this->isCgi())
 			return (this->methodCGI());
 		return (getIfFile(request_->getPath()));
 	}
-	else if (S_ISDIR(info.st_mode)) {
-		std::string	index = findIndex();
-		if (!index.empty()) {
+	else if (S_ISDIR(info.st_mode))
+	{
+		std::string index = findIndex();
+		if (!index.empty())
+		{
 			
 			std::string	target_index = request_->getPath();
 			if (target_index[target_index.size() - 1] != '/')
@@ -225,7 +229,8 @@ AnswerStatus	RequestAnswer::methodGet() {
 		}
 		else if (loc_.getAutoIndex() == true)
 			return (getIfDir());
-		else {
+		else
+		{
 			this->code_ = 403;
 			message_ = "Forbidden";
 			return (ERROR);
@@ -235,23 +240,24 @@ AnswerStatus	RequestAnswer::methodGet() {
 }
 
 //recupere le path du file name pour upload les fichier
-int	RequestAnswer::fileName() {
-	std::string	root_path = loc_.getRoot() + loc_.getPath();
-	std::string	url_path = request_->getPath();
-	struct stat	s;
-	bool		is_directory = false;
+int RequestAnswer::fileName()
+{
+    std::string root_path = loc_.getRoot() + loc_.getPath(); // Chemin dossier sur disque
+    std::string url_path = request_->getPath();           // Chemin demandé dans l'URL
 
-	if (stat(url_path.c_str(), &s) == 0) {
-		if (S_ISDIR(s.st_mode)) {
-			is_directory = true;
-		}
-	}
-	if (is_directory) {
-		std::string	body = this->request_->getBody();
-		size_t		id = body.find("Content-Disposition:");
-		if (id == std::string::npos)
-			return (1);
-		size_t	start = body.find("filename=", id);
+    struct stat s;
+    bool is_directory = false;
+    if (stat(url_path.c_str(), &s) == 0) {
+        if (S_ISDIR(s.st_mode)) {
+            is_directory = true;
+        }
+    }
+    if (is_directory) {
+        std::string body = this->request_->getBody();
+        size_t id = body.find("Content-Disposition:");
+        if (id == std::string::npos)
+			return 1;
+		size_t start = body.find("filename=", id);
 		if (start == std::string::npos)
 			return (1);
 		start += 9;
@@ -273,54 +279,54 @@ int	RequestAnswer::fileName() {
 		size_t	s = body.find_last_of('/', end);
 		if (s != std::string::npos)
 			start = s + 1;
-		std::string	file_name = body.substr(start, end - start);
-
+		std::string file_name = body.substr(start, end - start);
 		this->post_file_name_ = url_path;
-		if (this->post_file_name_[this->post_file_name_.size() - 1] != '/')
-			this->post_file_name_ += '/';
-		this->post_file_name_ += file_name;
-	} 
-	else {
-		this->post_file_name_ = url_path;
-	}
-
-	size_t	last_slash = this->post_file_name_.find_last_of('/');
-	if (last_slash != std::string::npos) {
-		std::string	dir_to_check = this->post_file_name_.substr(0, last_slash);
-		if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) {
-			return (1);
-		}
-	}
-	return (0);
+        if (this->post_file_name_[this->post_file_name_.size() - 1] != '/')
+            this->post_file_name_ += '/';
+        this->post_file_name_ += file_name;
+    } 
+    else {
+        this->post_file_name_ = url_path;
+    }
+	size_t last_slash = this->post_file_name_.find_last_of('/');
+    if (last_slash != std::string::npos) {
+        std::string dir_to_check = this->post_file_name_.substr(0, last_slash);
+        if (stat(dir_to_check.c_str(), &s) != 0 || !S_ISDIR(s.st_mode)) {
+            return (1);
+        }
+    }
+    return 0;
 }
 
-AnswerStatus	RequestAnswer::methodPost() {
-	if (this->isCgi()) {
-		try {
-			if (this->cgi_handler_) {
-				delete this->cgi_handler_;
+AnswerStatus RequestAnswer::methodPost()
+{
+	if (this->isCgi())
+    {   
+        try {
+            if (this->cgi_handler_)
+			{
+                delete this->cgi_handler_;
 				this->cgi_handler_ = NULL;
 			}
-			this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
-			this->cgi_handler_->execute();
-			return (CGI_IN_PROGRESS);
-		}
-		catch (const std::exception& e) {
-			std::cerr << "[CGI Error] " << e.what() << std::endl;
-			this->error_ = 500;
-			return (ERROR);
-		}
-	}
-
-	if (fileName() == 1) {
-		code_ = 400;
+            this->cgi_handler_ = new CGIHandler(*request_, this->cgi_interpreter_);
+            this->cgi_handler_->execute();
+            return (CGI_IN_PROGRESS);
+        } catch (const std::exception& e) {
+            std::cerr << "[CGI Error] " << e.what() << std::endl;
+            this->error_ = 500;
+            return (ERROR);
+        }
+    }
+    if (fileName() == 1) 
+    {
+        code_ = 400;
 		message_ = "Bad Request";
-		return (ERROR);
-	}
-
-	std::ofstream	outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
-	if (!outfile.is_open()) {
-		std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
+        return (ERROR);
+    }
+    std::ofstream outfile(post_file_name_.c_str(), std::ios::out | std::ios::binary);
+    if (!outfile.is_open())
+	{
+        std::cerr << "ERREUR : Impossible d'ouvrir le fichier. Verifiez que le dossier existe et les permissions." << std::endl;
 		code_ = 500;
 		message_ = "Internal Server Error";
 		return (ERROR);
@@ -395,12 +401,13 @@ AnswerStatus	RequestAnswer::methodDelete() {
 }
 
 //faire la reponse avec le header
-void	RequestAnswer::fullAnswer() {
-	if (code_ >= 400) {
-		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
-	}
-	else {
-		if (this->loc_.getReturn().first == 301 || this->loc_.getReturn().first == 302) {
+void    RequestAnswer::fullAnswer()
+{
+    if (code_ >= 400) 
+        answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+    else {
+		if (this->loc_.getReturn().first == 301 || this->loc_.getReturn().first == 302)
+		{
 			code_ = this->loc_.getReturn().first;
 			body_ = "";
 		}
@@ -447,7 +454,9 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request) {
 	AnswerStatus	status = ERROR;
 
 	try {
-		if (request_->getMethod() == "GET")
+		if (loc_.getReturn().first == 301 || loc_.getReturn().first == 302)
+			fullAnswer();
+		else if (request_->getMethod() == "GET")
 			status = methodGet();
 		else if (this->request_->getMethod() == "DELETE")
 			status = methodDelete();
@@ -470,11 +479,7 @@ AnswerStatus	RequestAnswer::setAnswer(Request &request) {
 	}
 	if (status == CGI_IN_PROGRESS)
 		return (status);
-	
-	if (code_ < 400)
-		fullAnswer();
-	else 
-		answer_ = Error::AnswerError(code_, message_, loc_.getErrorPage());
+	fullAnswer();
 	return (status);
 }
 

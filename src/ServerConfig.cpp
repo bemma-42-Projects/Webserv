@@ -148,8 +148,8 @@ void ServerConfig::finalize() {
 		listen_.push_back(newLis);
 	}
 
-	if (this->index_.empty() && this->autoindex_ == -1)
-		index_.push_back("index.html");
+	// if (this->index_.empty())
+	// 	index_.push_back("index.html");
 
 	if (this->upload_path_.empty() && this->allowed_upload_ == true)
 		this->allowed_upload_ = false; 
